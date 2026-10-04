@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -374,6 +374,18 @@ async def analyze(audio: UploadFile):
         "vocal_language": result.get("vocal_language") or "",
         "duration": result.get("duration") or 0,
     }
+
+
+@app.post("/api/shutdown")
+async def shutdown(x_lang: str = Header()):   # Pflicht-Header: fremde Webseiten können ihn nicht mitschicken
+    """Führt „Music Generator OFF“ aus: beendet Web-App und Modellserver, schließt die Browser-Tabs."""
+    script = db.ROOT / "Music Generator OFF.command"
+    if not script.is_file():
+        raise HTTPException(404, "Music Generator OFF.command fehlt")
+    # abgekoppelt und leicht verzögert, damit diese Antwort noch ankommt, bevor die App beendet wird
+    subprocess.Popen(["/bin/sh", "-c", 'sleep 0.5; exec bash "$0"', str(script)], cwd=db.ROOT, start_new_session=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {"ok": True}
 
 
 @app.get("/api/health")

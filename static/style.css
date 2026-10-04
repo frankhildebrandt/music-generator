@@ -295,3 +295,5 @@ button.chip { background: none; font: inherit; font-size: 12px; }
   cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .movemenu button:hover { background: rgba(255, 255, 255, .06); }
 .movemenu button.on { color: var(--accent2); }
+
+.sek.danger:hover { border-color: var(--error); color: var(--error); }

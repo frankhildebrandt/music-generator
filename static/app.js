@@ -550,6 +550,19 @@ updApply.onclick = async () => {
 };
 $("#btnSettings").addEventListener("click", () => { updInfo.textContent = ""; updList.hidden = true; updApply.hidden = true; updApply.disabled = false; });
 
+// Server stoppen = „Music Generator OFF“ ausführen
+$("#stopBtn").onclick = async () => {
+  const qu = await api("/api/queue").catch(() => null);
+  const busy = qu && (qu.running.length || qu.queued);
+  if (!confirm(t(busy ? "stop_q_busy" : "stop_q"))) return;
+  clearTimeout(refresh.t);
+  try {
+    await api("/api/shutdown", { method: "POST" });
+    $("#stopBtn").disabled = true;
+    $("#stopInfo").textContent = t("stopped");
+  } catch (e) { $("#stopInfo").className = "small err-t"; $("#stopInfo").textContent = e.message; refresh(); }
+};
+
 dlg.addEventListener("close", async () => { if (dlg.returnValue === "save") { await saveSettings(); checkHealth(); } });
 
 // Sprachumschalter (DE | EN)
