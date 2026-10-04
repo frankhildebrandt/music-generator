@@ -279,7 +279,7 @@ def page_steps(c):
                 "und füge diesen Befehl ein. Er lädt das Projekt in den Ordner <b>MusicGenerator</b> "
                 "in deinem Benutzerordner:", M, y, W - 2 * M)
     y -= 10
-    y = code(c, "git clone https://github.com/agent-cue/music-generator.git ~/MusicGenerator", M, y, W - 2 * M)
+    y = code(c, "git clone https://github.com/rabbitfiremediacreation/music-generator.git \\\n    ~/MusicGenerator", M, y, W - 2 * M)
     y -= 8
     y = para(c, "Fehlen dem Mac die Apple-Entwicklerwerkzeuge, "
                 "fragt macOS jetzt automatisch, ob sie installiert werden sollen: mit <b>Installieren</b> bestätigen, "

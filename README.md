@@ -11,7 +11,7 @@ Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installation
 Voraussetzungen: Mac mit Apple Silicon (M1–M4), mindestens 8 GB Arbeitsspeicher, 7–11 GB frei.
 
 ```bash
-git clone https://github.com/agent-cue/music-generator.git ~/MusicGenerator
+git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
 open ~/MusicGenerator/Install.command
 ```
 
