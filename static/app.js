@@ -58,10 +58,21 @@ function addChips(el, items, onClick) {
   el.innerHTML = items.map((t) => `<span class="chip">${esc(t)}</span>`).join("");
   el.querySelectorAll(".chip").forEach((c, i) => c.addEventListener("click", () => onClick(items[i])));
 }
-addChips($("#tagChips"), STYLE_TAGS, (t) => {
-  const f = form.style;
-  f.value = f.value.trim() ? `${f.value.trim().replace(/,$/, "")}, ${t}` : t;
+// Stil-Karten sind Schalter: an = steht im Stil-Feld (gold umrandet), aus = wird dort wieder entfernt
+const styleParts = () => form.style.value.split(",").map((x) => x.trim()).filter(Boolean);
+function syncStyleChips() {
+  const have = new Set(styleParts().map((x) => x.toLowerCase()));
+  $("#tagChips").querySelectorAll(".chip").forEach((c) => {
+    const on = have.has(c.textContent.toLowerCase());
+    c.classList.toggle("on", on); c.setAttribute("aria-pressed", on);
+  });
+}
+addChips($("#tagChips"), STYLE_TAGS, (tag) => {
+  const parts = styleParts(), rest = parts.filter((x) => x.toLowerCase() !== tag.toLowerCase());
+  form.style.value = (rest.length < parts.length ? rest : [...parts, tag]).join(", ");
+  syncStyleChips();
 });
+form.style.addEventListener("input", syncStyleChips);
 addChips($("#sectionChips"), SECTIONS, (t) => {
   if (t === "[instrumental]") { form.instrumental.checked = true; syncLyrics(); return; }   // zurück zu ohne Gesang
   const f = form.lyrics, pos = f.selectionStart ?? f.value.length;
@@ -116,7 +127,7 @@ function rollAnim(btn) { btn.classList.remove("roll"); void btn.offsetWidth; btn
 function rollDice(btn, field, gen) { field.value = gen(); rollAnim(btn); }
 $("#diceBtn").addEventListener("click", (e) => { rollDice(e.currentTarget, form.prompt, randomPrompt); });
 $("#titleDice").addEventListener("click", (e) => rollDice(e.currentTarget, form.title, randomTitle));
-$("#styleDice").addEventListener("click", (e) => rollDice(e.currentTarget, form.style, randomStyle));
+$("#styleDice").addEventListener("click", (e) => { rollDice(e.currentTarget, form.style, randomStyle); syncStyleChips(); });
 
 // Lyrics-Würfel: lässt das Modell bei der Generierung eigene Lyrics schreiben (kein Text hier, nur "auto"),
 // geht nur mit vorhandenem Prompt, weil das Modell sonst nichts hat, worüber es schreiben kann.
@@ -171,7 +182,7 @@ function fillForm(s) {
   const p = s.params;
   form.title.value = s.title || "";
   form.style.value = p.style ?? p.caption;   // ältere Songs haben nur einen Text
-  form.prompt.value = p.prompt ?? "";
+  form.prompt.value = p.prompt ?? ""; syncStyleChips();
   form.instrumental.checked = p.lyrics === "[Instrumental]";
   form.keep_caption.checked = true;   // Prompt wörtlich ist fest die Vorgabe
   lyricsStash = ""; form.lyrics.value = form.instrumental.checked ? "" : p.lyrics || "";
@@ -208,7 +219,7 @@ async function analyzeFile(file) {
   try {
     const r = await api("/api/analyze", { method: "POST", body });
     form.prompt.value = r.caption || "";
-    form.style.value = "";
+    form.style.value = ""; syncStyleChips();
     form.title.value = randomTitle();
    
     // Nur echter Text außerhalb von [Strukturmarkern] zählt als Gesang — sonst schreibt das
