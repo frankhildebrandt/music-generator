@@ -297,3 +297,19 @@ button.chip { background: none; font: inherit; font-size: 12px; }
 .movemenu button.on { color: var(--accent2); }
 
 .sek.danger:hover { border-color: var(--error); color: var(--error); }
+
+/* Lautstärke im Player: Regler klappt beim Zeigen oder per Tastatur aus */
+.vol { display: flex; align-items: center; gap: 0; flex: none; }
+.vol #volBtn { border-color: transparent; color: var(--muted); }
+.vol:hover #volBtn, .vol:focus-within #volBtn { color: var(--text); }
+.vol[data-level=off] .w1, .vol[data-level=off] .w2, .vol[data-level=low] .w2 { display: none; }
+.vol:not([data-level=off]) .mx { display: none; }
+#volRange { -webkit-appearance: none; appearance: none; width: 0; height: 22px; margin: 0; padding: 0; opacity: 0; background: transparent;
+  transition: width .18s ease, opacity .18s ease, margin .18s ease; cursor: pointer; }
+.vol:hover #volRange, .vol:focus-within #volRange { width: 90px; opacity: 1; margin-left: 4px; }
+#volRange::-webkit-slider-runnable-track { height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--brand) calc(var(--v, 1) * 100%), var(--border) calc(var(--v, 1) * 100%)); }
+#volRange::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); border: 2px solid var(--panel); margin-top: -5px; }
+#volRange::-moz-range-track { height: 4px; border-radius: 2px; background: var(--border); }
+#volRange::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--brand); }
+#volRange::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 2px solid var(--panel); }

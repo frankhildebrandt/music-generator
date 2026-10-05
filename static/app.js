@@ -470,10 +470,33 @@ function initPlayer() {
   ws.on("pause", () => { $("#playBtn").textContent = "▶"; render(); });
   ws.on("finish", () => { $("#playBtn").textContent = "▶"; render(); });
   $("#playBtn").onclick = () => ws.playPause();
+  initVolume();
   document.addEventListener("keydown", (e) => {
     if (e.code === "Space" && !["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(e.target.tagName) && currentId) { e.preventDefault(); ws.playPause(); }
   });
 }
+// Lautstärke: Regler klappt beim Zeigen auf den Lautsprecher aus; Klick auf den Lautsprecher = stumm
+let volume = 1, muted = false;
+try {
+  const saved = localStorage.getItem("volume");
+  if (saved !== null && isFinite(+saved)) volume = Math.min(1, Math.max(0, +saved));
+  muted = localStorage.getItem("muted") === "1";
+} catch {}
+function applyVolume() {
+  ws?.setVolume(muted ? 0 : volume);
+  const v = muted ? 0 : volume;
+  $("#vol").dataset.level = v === 0 ? "off" : v < 0.5 ? "low" : "high";
+  $("#volRange").value = Math.round(volume * 100);
+  $("#vol").style.setProperty("--v", volume);
+  $("#volBtn").title = $("#volBtn").ariaLabel = t(muted ? "unmute" : "mute");
+  try { localStorage.setItem("volume", String(volume)); localStorage.setItem("muted", muted ? "1" : "0"); } catch {}
+}
+function initVolume() {
+  $("#volRange").addEventListener("input", (e) => { volume = e.target.value / 100; muted = false; applyVolume(); });
+  $("#volBtn").addEventListener("click", () => { muted = !muted; if (!muted && volume === 0) volume = 0.5; applyVolume(); });
+  applyVolume();
+}
+
 async function play(s) {
   if (!ws) initPlayer();
   if (currentId === s.id) return ws.playPause();

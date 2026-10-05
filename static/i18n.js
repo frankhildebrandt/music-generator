@@ -53,6 +53,7 @@ const I18N = {
     stop_q: "Web-App und Modellserver beenden? Starten geht danach wieder mit „Music Generator ON“.",
     stop_q_busy: "Es laufen oder warten noch Songs. Trotzdem alles beenden? Sie werden beim nächsten Start fortgesetzt.",
     stopped: "Gestoppt. Neu starten mit „Music Generator ON“.",
+    mute: "Stumm", unmute: "Ton an", volume: "Lautstärke",
     // Updates
     upd_search: "Suche …", upd_current: (v) => `Aktuell (${v})`,
     upd_new: (n, a, b) => `${n} ${n > 1 ? "neue Updates" : "neues Update"} (${a} → ${b})`,
@@ -109,6 +110,7 @@ const I18N = {
     stop_q: "Stop the web app and the model servers? Start again with “Music Generator ON”.",
     stop_q_busy: "Songs are still running or waiting. Stop everything anyway? They continue on the next start.",
     stopped: "Stopped. Start again with “Music Generator ON”.",
+    mute: "Mute", unmute: "Unmute", volume: "Volume",
     upd_search: "Searching …", upd_current: (v) => `Up to date (${v})`,
     upd_new: (n, a, b) => `${n} new ${n > 1 ? "updates" : "update"} (${a} → ${b})`,
     upd_dirty: " · local file changes, automatic update not possible", upd_install: " · then run Install once",
