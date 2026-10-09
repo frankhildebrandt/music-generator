@@ -155,7 +155,7 @@ button { font: inherit; cursor: pointer; }
 .aktion.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 14px; flex: none; letter-spacing: 0; }
 .gear { background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 6px; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; }
 .gear:hover { color: var(--accent); border-color: var(--border); }
-.sek { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .8rem; font-size: 12px; }
+.sek { display: inline-block; text-decoration: none; line-height: normal; font-family: inherit; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .8rem; font-size: 12px; }
 .sek:hover { border-color: var(--accent); color: var(--accent); }
 .sek.on { color: var(--accent2); border-color: var(--accent2); }
 .download { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); border-radius: 8px; }

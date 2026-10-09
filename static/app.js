@@ -529,21 +529,10 @@ const dlg = $("#settingsDlg"), sf = $("#settingsForm");
 $("#btnSettings").onclick = async () => {
   const s = await api("/api/settings");
   for (const k of ["engine", "server_url", "lm_url", "timeout_minutes"]) sf[k].value = s[k];
-  $("#healthOut").textContent = "";
-  $("#healthOut").className = "box small";
   dlg.showModal();
 };
 const saveSettings = () => api("/api/settings", { method: "PUT", body: JSON.stringify({
   engine: sf.engine.value, server_url: sf.server_url.value.trim(), lm_url: sf.lm_url.value.trim(), timeout_minutes: Number(sf.timeout_minutes.value) || 30 }) });
-$("#testBtn").onclick = async () => {
-  const out = $("#healthOut");
-  out.className = "box small"; out.textContent = t("testing");
-  await saveSettings();
-  const h = await checkHealth();
-  out.className = "box small " + (h?.ok ? "done" : "err");
-  out.textContent = h?.ok ? t("connected") : t("offline");
-  out.title = h?.error || "";
-};
 // Anordnung: untereinander oder Generator links / Bibliothek rechts
 function setLayout(l) {
   document.querySelector(".wrap").classList.toggle("side", l === "side");
