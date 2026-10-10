@@ -58,7 +58,27 @@ Vom Installer erzeugt (nicht im Repo): `engine/acestep.cpp/build/Release/*.exe|d
 6. Selbsttest: ace-server auf Port 8099 starten, `metal_selftest.py` ausführen, Modus in `data/engine.conf` schreiben.
 7. Verknüpfungen `.lnk` (powershell -File …) in Programmordner und auf Desktop, dann ON ausführen.
 
-## Bekannte Unsicherheiten (hier zuerst nachsehen)
+## Ergebnis des Windows-Tests (10. Okt 2026, GTX 1060 6 GB, i7-7700, 64 GB RAM, Windows 10)
+
+Installation, ON, OFF, Song-Erzeugung (30 s und 90 s), „Server stoppen“ und Update-Check laufen. Gefunden und behoben:
+
+- **Python:** uv wählt das neueste Python (3.15.0), dafür hat pydantic-core keine Wheels, `uv sync` scheitert.
+  Installer ruft jetzt `uv sync --python 3.12` auf.
+- **CUDA fällt auf Pascal aus:** `ggml-cuda.dll` der fertigen Binaries ist mit CUDA 13 gebaut (importiert `cublas64_13.dll`,
+  die nicht mitgeliefert wird) und enthält nur sm_86/89/120/121 (RTX 30xx bis 50xx). ggml lädt die DLL nicht und nimmt
+  automatisch `Vulkan0` (GTX 1060 über den NVIDIA-Treiber, Vulkan 1.4). Kein Eingriff nötig, nur langsamer:
+  LM 1.7B 41-54 tok/s, DiT 50 Schritte für 30 s in ~30 s, VAE 30 s in 13 s. Mit RTX 30xx+ sollte CUDA0 greifen (ungetestet).
+- **Sprachmodell nach Grafikspeicher:** Nach RAM-Regel wäre 4B dran; es lädt 4,2 GB, dann scheitert der 1-GB-KV-Cache
+  (`ErrorOutOfDeviceMemory`), der Server stirbt, Selbsttest meldet nur „Verbindung verweigert“ → Modus split.
+  Installer deckelt jetzt nach VRAM (<6 GB 0.6B, <8 GB 1.7B, sonst 4B) und zeigt bei Absturz den Log-Schwanz. 1.7B: Modus single.
+- **VAE-Decoder:** braucht ohne Kachelung 6,7 GB für 30 s Audio. Installer schreibt `VAE_CHUNK` (128 bei <8 GB, 256 bei <12,
+  512 bei <16) nach `data/engine.conf`, ON gibt `--vae-chunk` an ace-server weiter. 90 s = 36 Kacheln, 33 s.
+- `*.lnk` in `.gitignore` (der Installer legt sie im Programmordner an).
+- Nicht geändert: Desktop-Verknüpfungen landen bei OneDrive-Umleitung unter `OneDrive\Desktop`, das ist korrekt so.
+- Hinweis für Tests aus Claude Code heraus: Die Shell des Claude-Desktop-Tools läuft in einer MSIX-Sandbox, die `AppData`
+  umleitet; uv-Installationen dort sind kaputt (Junction zeigt ins Leere). Installer und Skripte im Terminal-Panel laufen lassen.
+
+## Bekannte Unsicherheiten (Stand vor dem Test, zur Einordnung)
 
 - **Alle `.ps1` sind ohne PowerShell geschrieben und nie ausgeführt worden.** Syntax- oder Laufzeitfehler sind wahrscheinlich.
   Dateien haben UTF-8-BOM (wegen Umlauten in PowerShell 5.1) und per `.gitattributes` CRLF.

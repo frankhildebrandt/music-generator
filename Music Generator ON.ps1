@@ -4,14 +4,19 @@ Set-Location $ROOT
 
 # MODE=split  -> Sprachmodell auf CPU (Port 8086), Synthese auf der Grafikkarte (Port 8085)
 # MODE=single -> alles auf einem Server (Port 8085)
-$MODE = "single"; $LM_FILE = ""
+$MODE = "single"; $LM_FILE = ""; $VAE_CHUNK = ""
 if (Test-Path $CONF) {
     foreach ($line in Get-Content $CONF) {
-        if ($line -match '^MODE=(.+)$')    { $MODE = $Matches[1].Trim() }
-        if ($line -match '^LM_FILE=(.+)$') { $LM_FILE = $Matches[1].Trim() }
+        if ($line -match '^MODE=(.+)$')      { $MODE = $Matches[1].Trim() }
+        if ($line -match '^LM_FILE=(.+)$')   { $LM_FILE = $Matches[1].Trim() }
+        if ($line -match '^VAE_CHUNK=(.+)$') { $VAE_CHUNK = $Matches[1].Trim() }
     }
 }
 New-Item -ItemType Directory -Force -Path $DATA | Out-Null
+
+# Gemeinsame Server-Optionen; VAE_CHUNK (vom Installer nach Grafikspeicher gesetzt) kachelt den VAE-Decoder
+$SERVER_ARGS = @("--models", "`"$MODELS`"", "--max-batch", "1")
+if ($VAE_CHUNK) { $SERVER_ARGS += @("--vae-chunk", $VAE_CHUNK) }
 
 $ACE = Ace-Server
 if (-not $ACE) {
@@ -43,7 +48,7 @@ if ($MODE -eq "split") {
     } else {
         Write-Host "Starte Sprachmodell-Server (CPU)..."
         $env:GGML_BACKEND = "CPU"
-        Start-Hintergrund $ACE @("--host", "127.0.0.1", "--port", $LM_PORT, "--models", "`"$MODELS`"", "--max-batch", "1") (Join-Path $DATA "ace-lm.log") | Out-Null
+        Start-Hintergrund $ACE (@("--host", "127.0.0.1", "--port", $LM_PORT) + $SERVER_ARGS) (Join-Path $DATA "ace-lm.log") | Out-Null
         Remove-Item Env:\GGML_BACKEND
     }
 }
@@ -52,7 +57,7 @@ if (Port-Laeuft $SYNTH_PORT) {
     Write-Host "Synthese-Server läuft bereits (Port $SYNTH_PORT)."
 } else {
     Write-Host "Starte Synthese-Server (Grafikkarte)..."
-    Start-Hintergrund $ACE @("--host", "127.0.0.1", "--port", $SYNTH_PORT, "--models", "`"$MODELS`"", "--max-batch", "1") (Join-Path $DATA "ace-server.log") | Out-Null
+    Start-Hintergrund $ACE (@("--host", "127.0.0.1", "--port", $SYNTH_PORT) + $SERVER_ARGS) (Join-Path $DATA "ace-server.log") | Out-Null
 }
 
 # --- Web-App ----------------------------------------------------------------

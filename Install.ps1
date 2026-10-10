@@ -51,6 +51,14 @@ if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
     $mem = (& nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1)
     if ($mem) { $VRAM_GB = [int][math]::Round([double]$mem / 1024) }
 }
+# VAE-Decoder in Kacheln rechnen lassen (--vae-chunk, Latent-Frames pro Kachel, Standard 1024 = ein Stück).
+# Ohne Kachelung braucht er für 30 s Audio 6,7 GB am Stück; auf einer 6-GB-Karte scheitert das.
+$VAE_CHUNK = ""
+if ($VRAM_GB) {
+    if     ($VRAM_GB -lt 8)  { $VAE_CHUNK = "128" }
+    elseif ($VRAM_GB -lt 12) { $VAE_CHUNK = "256" }
+    elseif ($VRAM_GB -lt 16) { $VAE_CHUNK = "512" }
+}
 Write-Host "  Grafikkarte:     $($GPUS -join ', ')$(if ($VRAM_GB) { " ($VRAM_GB GB)" })"
 Write-Host "  Arbeitsspeicher: $RAM_GB GB"
 Write-Host "  Windows:         $($os.Caption) $($os.Version)"
@@ -66,15 +74,22 @@ if (-not $NVIDIA) {
 if     ($RAM_GB -lt 12) { $EMPF = "0.6B" }
 elseif ($RAM_GB -lt 24) { $EMPF = "1.7B" }
 else                    { $EMPF = "4B" }
+# Auf der Grafikkarte müssen Sprachmodell und KV-Cache (1 GB) zusammen hineinpassen, sonst stürzt der
+# Modellserver ab (GTX 1060 6 GB: 4B lädt 4,2 GB, dann scheitert der Cache). Der Grafikspeicher begrenzt also.
+if ($VRAM_GB) {
+    $GROESSEN = @("0.6B", "1.7B", "4B")
+    $VMAX = if ($VRAM_GB -lt 6) { "0.6B" } elseif ($VRAM_GB -lt 8) { "1.7B" } else { "4B" }
+    if ($GROESSEN.IndexOf($VMAX) -lt $GROESSEN.IndexOf($EMPF)) { $EMPF = $VMAX }
+}
 $LM_SIZE = $LM
 if (-not $LM_SIZE) {
     $LM_SIZE = $EMPF
     if (-not $Yes) {
         Write-Host ""
         Write-Host "  Sprachmodell (plant Aufbau, Tempo, Tonart; größer = bessere Songs, mehr Speicher):"
-        Write-Host "    1) 0.6B  – 0,7 GB, für 8 GB Arbeitsspeicher"
-        Write-Host "    2) 1.7B  – 2,0 GB, für 16 GB"
-        Write-Host "    3) 4B    – 4,5 GB, ab 24 GB"
+        Write-Host "    1) 0.6B  – 0,7 GB, für 8 GB Arbeitsspeicher, Grafikkarte unter 6 GB"
+        Write-Host "    2) 1.7B  – 2,0 GB, für 16 GB, Grafikkarte mit 6 GB"
+        Write-Host "    3) 4B    – 4,5 GB, ab 24 GB, Grafikkarte ab 8 GB"
         $a = Read-Host "  Auswahl [Enter = $EMPF empfohlen]"
         switch ($a) { "1" { $LM_SIZE = "0.6B" } "2" { $LM_SIZE = "1.7B" } "3" { $LM_SIZE = "4B" } }
     }
@@ -112,7 +127,9 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 Write-Host "  $(& uv --version)"
 
 Schritt "Python-Pakete der App"
-& uv sync --quiet
+# Python-Version festlegen: das neueste Python (3.15) hat noch keine fertigen Pakete (pydantic-core),
+# uv würde sonst versuchen, es aus dem Quellcode zu bauen, und daran scheitern.
+& uv sync --quiet --python 3.12
 if ($LASTEXITCODE -ne 0) { Abbruch "Python-Pakete konnten nicht installiert werden." }
 Write-Host "  ok"
 
@@ -206,7 +223,9 @@ if ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
 } else {
     $TEST_PORT = 8099
     if (Port-Laeuft $TEST_PORT) { Abbruch "Port $TEST_PORT ist belegt, bitte später erneut versuchen." }
-    $proc = Start-Hintergrund $ACE @("--host", "127.0.0.1", "--port", $TEST_PORT, "--models", "`"$MODELS`"", "--max-batch", "1") (Join-Path $DATA "selftest.log")
+    $args_ = @("--host", "127.0.0.1", "--port", $TEST_PORT, "--models", "`"$MODELS`"", "--max-batch", "1")
+    if ($VAE_CHUNK) { $args_ += @("--vae-chunk", $VAE_CHUNK) }
+    $proc = Start-Hintergrund $ACE $args_ (Join-Path $DATA "selftest.log")
     for ($i = 0; $i -lt 120; $i++) {
         try { Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$TEST_PORT/health" -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep -Milliseconds 500 }
     }
@@ -217,10 +236,14 @@ if ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
     Write-Host "  Sprachmodell probeweise auf der Grafikkarte (kann 1-2 Minuten dauern) ..."
     & uv run python scripts\metal_selftest.py $TEST_PORT $LM_FILE
     $MODE = if ($LASTEXITCODE -eq 0) { "single" } else { "split" }
+    if ($proc.HasExited) {   # abgestürzt (z. B. Grafikspeicher voll): Ursache zeigen statt nur "Verbindung verweigert"
+        Write-Host "  Der Modellserver ist beim Test abgestürzt (data\selftest.err.log):"
+        Get-Content (Join-Path $DATA "selftest.err.log") -Tail 4 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" }
+    }
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
     Write-Host "  -> Modus $MODE"
 }
-@("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP") | Set-Content $CONF
+@("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP", "VAE_CHUNK=$VAE_CHUNK") | Set-Content $CONF
 
 # --- 7. Verknüpfungen -----------------------------------------------------------
 Schritt "Verknüpfungen (Programmordner und Desktop)"

@@ -1,6 +1,7 @@
 # Vom Installer erzeugt oder heruntergeladen
 engine/
 .venv/
+*.lnk
 
 # Persönliche Daten: Songs, Datenbank, Logs, Installationsergebnis
 data/

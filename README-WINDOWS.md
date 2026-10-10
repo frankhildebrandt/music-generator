@@ -8,6 +8,10 @@ Der Installer lädt die fertigen Windows-Binaries von acestep.cpp (kein Compiler
 Voraussetzungen: Windows 10/11 (64 Bit), NVIDIA-Grafikkarte mit aktuellem Treiber,
 mindestens 8 GB Arbeitsspeicher, 7–11 GB frei.
 
+Die fertigen Binaries sind mit CUDA 13 gebaut und enthalten nur Code für RTX 30xx und neuer.
+Ältere Karten (GTX 10xx/16xx, RTX 20xx) laufen automatisch über Vulkan, das ist langsamer, aber es geht:
+auf einer GTX 1060 (6 GB) dauert ein 30-Sekunden-Song etwa 1 Minute, ein 90-Sekunden-Song etwa 2,5 Minuten.
+
 1. Falls `git` fehlt: PowerShell öffnen und `winget install Git.Git` ausführen (oder der Installer macht es).
 2. In der PowerShell:
 
@@ -20,7 +24,8 @@ git clone https://github.com/rabbitfiremediacreation/music-generator-windows.git
 Der Installer
 
 1. prüft Grafikkarte, Arbeitsspeicher und freien Platz,
-2. schlägt das passende Sprachmodell vor (0.6B unter 12 GB, 1.7B bis 24 GB, 4B darüber),
+2. schlägt das passende Sprachmodell vor (nach Arbeitsspeicher: 0.6B unter 12 GB, 1.7B bis 24 GB, 4B darüber;
+   der Grafikspeicher begrenzt zusätzlich: unter 6 GB 0.6B, 6–7 GB 1.7B, ab 8 GB 4B),
 3. installiert was fehlt: `git`, `uv` (ohne Admin-Rechte),
 4. lädt die fertigen acestep.cpp-Binaries (ca. 180 MB),
 5. lädt nur die benötigten Modelle (fortsetzbar),
@@ -50,5 +55,10 @@ Optionen (in der PowerShell): `.\Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-NoStar
 - **Modellserver startet nicht, Meldung wegen fehlender DLL:** NVIDIA-Treiber aktualisieren.
   Die Binaries bringen CUDA selbst mit, brauchen aber einen Treiber, der zur CUDA-Version passt.
 - **Alles sehr langsam:** In `data/ace-server.err.log` nachsehen, welches Backend gewählt wurde
-  (`[Load] ... backend: CUDA0` ist richtig, `CPU` falsch).
+  (`[Load] ... backend: CUDA0` oder `Vulkan0` ist richtig, `CPU` falsch).
+- **`ErrorOutOfDeviceMemory` im Log, Song endet mit Fehler:** Der Grafikspeicher reicht nicht.
+  Der Installer setzt dafür in `data/engine.conf` die Kachelgröße des VAE-Decoders (`VAE_CHUNK`, z. B. 128 bei 6 GB);
+  bei Bedarf kleiner setzen (64) oder mit `.\Install.ps1 -LM 0.6B` ein kleineres Sprachmodell wählen, danach OFF und ON.
+- **Installer bricht bei „Python-Pakete der App“ ab:** Der Installer legt Python 3.12 fest, weil für das neueste
+  Python (3.15) noch keine fertigen Pakete existieren. Falls uv trotzdem meckert: `uv python install 3.12` und erneut starten.
 - **Update in der App** holt wie auf dem Mac die neue Fassung von GitHub und startet neu.
