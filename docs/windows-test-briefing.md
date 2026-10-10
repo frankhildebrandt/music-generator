@@ -7,7 +7,7 @@
 https://github.com/rabbitfiremediacreation/music-generator
 
 Die Windows-Fassung ist ein **ungetesteter Erstentwurf** im privaten Repo:
-https://github.com/rabbitfiremediacreation/music-generator-windows
+https://github.com/rabbitfiremediacreation/music-generator
 (Branch `main`; auf dem Mac heißt derselbe Stand Branch `windows` im Hauptprojekt.)
 
 Ziel dieser Session: Installation auf diesem Windows-PC (NVIDIA-Grafikkarte) zum Laufen bringen,
@@ -16,7 +16,7 @@ Fehler in den Skripten beheben, Ergebnis ins private Repo pushen.
 ## Einstieg
 
 ```powershell
-git clone https://github.com/rabbitfiremediacreation/music-generator-windows.git $HOME\MusicGenerator
+git clone https://github.com/rabbitfiremediacreation/music-generator.git $HOME\MusicGenerator
 cd $HOME\MusicGenerator
 .\Install.bat        # oder: .\Install.ps1 -Yes  (ohne Rückfragen)
 ```

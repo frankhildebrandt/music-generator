@@ -1,10 +1,11 @@
 # Music Generator
 
-Eigene Songs lokal auf dem Mac erzeugen – ohne Limits, ohne Abo, ohne Cloud.
+Eigene Songs lokal erzeugen – ohne Limits, ohne Abo, ohne Cloud.
 Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) über
-[acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) (Metal).
+[acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp).
 
-Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
+- **Mac** (Apple Silicon, Metal): diese Seite. Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
+- **Windows** (NVIDIA, CUDA/Vulkan): **[README-WINDOWS.md](README-WINDOWS.md)**
 
 ## Installation
 
@@ -48,9 +49,11 @@ Songs und Einstellungen in `data/` bleiben erhalten.
 
 | Pfad | Inhalt |
 |---|---|
-| `Install.command` | Installer |
-| `Music Generator ON/OFF.command` | Start und Stopp |
-| `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version |
+| `Install.command` | Installer (Mac) |
+| `Music Generator ON/OFF.command` | Start und Stopp (Mac) |
+| `Install.ps1`, `Music Generator ON/OFF.ps1` + `.bat` | Installer, Start und Stopp (Windows) |
+| `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version, Modell-Prüfsummen (Mac und Windows) |
+| `scripts/common.ps1` | Windows-Gegenstück, liest die Werte aus `common.sh` |
 | `scripts/metal_selftest.py` | Grafikchip-Test des Installers |
 | `app/` | FastAPI-Backend: Queue, Bibliothek, Anbindung an ace-server |
 | `static/` | Oberfläche |

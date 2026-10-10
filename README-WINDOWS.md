@@ -1,4 +1,4 @@
-# Music Generator für Windows (Testfassung)
+# Music Generator für Windows
 
 Gleiche App wie auf dem Mac, Modellserver läuft über CUDA auf der NVIDIA-Grafikkarte.
 Der Installer lädt die fertigen Windows-Binaries von acestep.cpp (kein Compiler nötig).
@@ -16,7 +16,7 @@ auf einer GTX 1060 (6 GB) dauert ein 30-Sekunden-Song etwa 1 Minute, ein 90-Seku
 2. In der PowerShell:
 
 ```powershell
-git clone https://github.com/rabbitfiremediacreation/music-generator-windows.git $HOME\MusicGenerator
+git clone https://github.com/rabbitfiremediacreation/music-generator.git $HOME\MusicGenerator
 ```
 
 3. Im Ordner `MusicGenerator` die Datei **Install.bat** doppelklicken.

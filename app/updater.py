@@ -12,7 +12,7 @@ from . import db
 
 ROOT = Path(__file__).resolve().parent.parent
 BRANCH = "main"
-REPO_URL = "https://github.com/rabbitfiremediacreation/music-generator-windows.git"
+REPO_URL = "https://github.com/rabbitfiremediacreation/music-generator.git"
 router = APIRouter(prefix="/api/update")
 
 
