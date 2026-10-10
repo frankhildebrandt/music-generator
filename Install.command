@@ -49,7 +49,7 @@ echo "  Frei auf der Festplatte: $FREE_GB GB"
 
 if [ "$ARCH" != "arm64" ]; then
   echo ""
-  echo "  Hinweis: Intel-Mac. Getestet ist nur Apple Silicon (M1–M4); es kann sehr langsam sein."
+  echo "  Hinweis: Intel-Mac. Getestet ist nur Apple Silicon (M1 oder neuer); es kann sehr langsam sein."
   ja "  Trotzdem fortfahren?" || abbruch "Abgebrochen."
 fi
 

@@ -231,7 +231,7 @@ def page_overview(c):
     y -= 22
     y = h2(c, "Das brauchst du", y)
     rows = [["", "Voraussetzung", "Warum"],
-            ["Mac", "Apple Silicon (M1, M2, M3, M4 …)", "Die Klangerzeugung nutzt den Grafikchip. Intel-Macs sind nicht getestet. Seiten 3 und 4."],
+            ["Mac", "Apple Silicon (M1 oder neuer)", "Die Klangerzeugung nutzt den Grafikchip. Intel-Macs sind nicht getestet. Seiten 3 und 4."],
             ["Windows", "Windows 10/11, NVIDIA-Grafikkarte", "RTX 30xx oder neuer rechnet über CUDA, ältere Karten über Vulkan (langsamer). Seite 5."],
             ["Speicher", "mindestens 8 GB Arbeitsspeicher, 16 GB empfohlen", "Bestimmt, welches Sprachmodell passt (siehe Seite 4). Unter Windows zählt auch der Grafikspeicher."],
             ["Festplatte", "7 bis 11 GB frei", "Modelle, Modellserver und Platz für deine Songs."],
