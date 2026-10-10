@@ -83,7 +83,7 @@ def header(c, title, kicker):
 def footer(c, n):
     c.setFont("Arial", 8)
     c.setFillColor(MUTED)
-    c.drawString(M, 28, "Music Generator · Installationsanleitung für macOS")
+    c.drawString(M, 28, "Music Generator · Installationsanleitung für Mac und Windows")
     c.drawRightString(W - M, 28, str(n))
 
 
@@ -194,10 +194,10 @@ def page_cover(c):
     c.line(M, y - 228, M + 60, y - 228)
     c.setFillColor(white)
     c.setFont("Arial-Bold", 22)
-    c.drawString(M, y - 266, "Installationsanleitung für macOS")
+    c.drawString(M, y - 266, "Installationsanleitung für Mac und Windows")
     c.setFillColor(HexColor("#b8bcc8"))
     c.setFont("Arial", 12)
-    c.drawString(M, y - 290, "Eigene Songs lokal auf dem Mac erzeugen – ohne Limits, ohne Abo.")
+    c.drawString(M, y - 290, "Eigene Songs lokal erzeugen – ohne Limits, ohne Abo, ohne Cloud.")
 
     # Die drei Schritte als Vorschau
     sy = 250
@@ -225,14 +225,15 @@ def page_cover(c):
 # ═════════════════════════════════════════════════════════════════ Seite 2: Überblick
 def page_overview(c):
     y = header(c, "Auf einen Blick", "Bevor es losgeht")
-    y = para(c, "Der Music Generator erzeugt Songs direkt auf deinem Mac. Du beschreibst Stil und Stimmung, "
+    y = para(c, "Der Music Generator erzeugt Songs direkt auf deinem Rechner. Du beschreibst Stil und Stimmung, "
                 "die App komponiert daraus Musik in Studioqualität (WAV, 48 kHz). Alles läuft lokal: "
                 "keine Cloud, keine Download-Grenzen, dein Material bleibt auf deinem Rechner.", M, y, W - 2 * M)
     y -= 22
     y = h2(c, "Das brauchst du", y)
     rows = [["", "Voraussetzung", "Warum"],
-            ["Mac", "Apple Silicon (M1, M2, M3, M4 …)", "Die Klangerzeugung nutzt den Grafikchip. Intel-Macs sind nicht getestet."],
-            ["Speicher", "mindestens 8 GB Arbeitsspeicher, 16 GB empfohlen", "Bestimmt, welches Sprachmodell passt (siehe Seite 4)."],
+            ["Mac", "Apple Silicon (M1, M2, M3, M4 …)", "Die Klangerzeugung nutzt den Grafikchip. Intel-Macs sind nicht getestet. Seiten 3 und 4."],
+            ["Windows", "Windows 10/11, NVIDIA-Grafikkarte", "RTX 30xx oder neuer rechnet über CUDA, ältere Karten über Vulkan (langsamer). Seite 5."],
+            ["Speicher", "mindestens 8 GB Arbeitsspeicher, 16 GB empfohlen", "Bestimmt, welches Sprachmodell passt (siehe Seite 4). Unter Windows zählt auch der Grafikspeicher."],
             ["Festplatte", "7 bis 11 GB frei", "Modelle, Modellserver und Platz für deine Songs."],
             ["Internet", "für die Installation", "Die Modelle (4 bis 8 GB) werden einmalig geladen. Danach läuft alles offline."],
             ["Zeit", "etwa 15 bis 30 Minuten", "Hängt vor allem von der Download-Geschwindigkeit ab."]]
@@ -244,7 +245,7 @@ def page_overview(c):
     bw = (W - 2 * M - 40) / 3
     bh = 128
     items = [("Projekt holen", "Den Projektordner per Git laden oder als Ordner bekommen."),
-             ("Install starten", "Doppelklick auf „Install“. Der Installer prüft den Mac und richtet alles ein."),
+             ("Install starten", "Doppelklick auf „Install“. Der Installer prüft den Rechner und richtet alles ein."),
              ("Musik machen", "„Music Generator ON“ öffnet die App im Browser.")]
     for i, (t, s) in enumerate(items):
         x = M + i * (bw + 20)
@@ -273,7 +274,7 @@ def page_overview(c):
 
 # ═════════════════════════════════════════════════════════════════ Seite 3: Schritt 1+2
 def page_steps(c):
-    y = header(c, "Schritt 1 und 2", "Projekt holen, Installer starten")
+    y = header(c, "Schritt 1 und 2 auf dem Mac", "Projekt holen, Installer starten")
     y = h2(c, "1  Projekt holen", y)
     y = para(c, "Öffne das Programm <b>Terminal</b> (Spotlight: Cmd+Leertaste, „Terminal“ tippen) "
                 "und füge diesen Befehl ein. Er lädt das Projekt in den Ordner <b>MusicGenerator</b> "
@@ -336,7 +337,7 @@ def page_steps(c):
 
 # ═════════════════════════════════════════════════════════════════ Seite 4: Was passiert
 def page_flow(c):
-    y = header(c, "Was der Installer macht", "Automatisch, Schritt für Schritt")
+    y = header(c, "Was der Installer macht", "Automatisch, Schritt für Schritt (Mac)")
     steps = [
         ("Mac prüfen", "Chip, Arbeitsspeicher, macOS-Version und freien Platz ermitteln."),
         ("Modell wählen", "Passende Sprachmodell-Größe vorschlagen, Speicherplatz prüfen."),
@@ -431,7 +432,50 @@ def page_flow(c):
     footer(c, 4)
 
 
-# ═════════════════════════════════════════════════════════════════ Seite 5: Starten + App
+# ═════════════════════════════════════════════════════════════════ Seite 5: Windows
+def page_windows(c):
+    y = header(c, "Installation unter Windows", "Schritt 1 und 2 auf dem PC")
+    y = h2(c, "1  Projekt holen", y)
+    y = para(c, "Öffne <b>PowerShell</b> (Startmenü, „PowerShell“ tippen) und füge diesen Befehl ein. "
+                "Er lädt das Projekt in den Ordner <b>MusicGenerator</b> in deinem Benutzerordner:", M, y, W - 2 * M)
+    y -= 10
+    y = code(c, "git clone https://github.com/rabbitfiremediacreation/music-generator.git `\n    $HOME\\MusicGenerator", M, y, W - 2 * M)
+    y -= 8
+    y = para(c, "Kennt Windows den Befehl <b>git</b> nicht, vorher einmal <b>winget install Git.Git</b> ausführen "
+                "und die PowerShell neu öffnen. Ein ZIP geht auch: entpacken, Ordner an einen festen Ort legen.", M, y, W - 2 * M, small)
+    y -= 16
+
+    y = h2(c, "2  Installer starten", y)
+    y = para(c, "Im Ordner <b>MusicGenerator</b> einen <b>Doppelklick auf „Install“</b> (die Datei Install.bat). "
+                "Es öffnet sich ein PowerShell-Fenster, die Fragen sind dieselben wie auf dem Mac: "
+                "Sprachmodell wählen, mit Enter bestätigen, warten. Alternativ ohne Rückfragen:", M, y, W - 2 * M)
+    y -= 10
+    y = code(c, ".\\Install.ps1 -Yes", M, y, W - 2 * M)
+    y -= 10
+    y = para(c, "Der Installer braucht keine Admin-Rechte und keinen Compiler: Er lädt fertige Programmdateien des "
+                "Modellservers (etwa 180 MB) und die Modelle, prüft deren Prüfsummen, testet die Grafikkarte und legt "
+                "<b>Music Generator ON</b> und <b>OFF</b> als Verknüpfungen in den Ordner und auf den Desktop.", M, y, W - 2 * M)
+    y -= 12
+    y = note(c, "Meldet Windows „Der Computer wurde durch Windows geschützt“: auf <b>Weitere Informationen</b> "
+                "und dann <b>Trotzdem ausführen</b> klicken. Das passiert nur bei einem entpackten ZIP, nicht nach git clone.",
+             y, BLUE, "SmartScreen")
+    y -= 16
+
+    y = h2(c, "Was unter Windows anders ist", y)
+    rows = [["Thema", "Windows"],
+            ["Grafikkarte", "RTX 30xx und neuer rechnet über CUDA. Ältere Karten (GTX 10xx/16xx, RTX 20xx) nehmen automatisch "
+                            "Vulkan: 30 Sekunden Song dauern auf einer GTX 1060 etwa 1 Minute, 90 Sekunden etwa 2,5 Minuten."],
+            ["Sprachmodell", "Der Grafikspeicher begrenzt die Wahl zusätzlich: unter 6 GB 0.6B, 6 bis 7 GB 1.7B, ab 8 GB 4B. "
+                             "Der Installer schlägt passend vor."],
+            ["Start und Stopp", "Verknüpfungen auf dem Desktop und im Ordner. OFF beendet die Server, lässt aber den Browser-Tab offen."],
+            ["Logdateien", "Im Ordner data: server.log, ace-server.log und jeweils eine .err.log mit Fehlermeldungen."]]
+    y = table(c, rows, y, [95, W - 2 * M - 95])
+    y -= 12
+    para(c, "Weiter geht es wie auf dem Mac ab Seite 6. Hilfe bei Problemen unter Windows: Seite 8.", M, y, W - 2 * M, small)
+    footer(c, 5)
+
+
+# ═════════════════════════════════════════════════════════════════ Seite 6: Starten + App
 def page_app(c):
     y = header(c, "Starten, beenden, loslegen", "Die App benutzen")
     # ON/OFF
@@ -445,8 +489,8 @@ def page_app(c):
         c.drawString(x + iw + 12, y - 20, t)
         para(c, s, x + iw + 12, y - 26, (W - 2 * M) / 2 - iw - 20, small)
     y -= iw + 12
-    y = para(c, "Beide liegen im Projektordner. Tipp: ins Dock ziehen. Die App läuft unter "
-                "<b>http://localhost:8765</b>, die Fenster schließen sich nach dem Start selbst.", M, y, W - 2 * M, small)
+    y = para(c, "Beide liegen im Projektordner, unter Windows zusätzlich auf dem Desktop. Tipp auf dem Mac: ins Dock ziehen. "
+                "Die App läuft unter <b>http://localhost:8765</b>, die Fenster schließen sich nach dem Start selbst.", M, y, W - 2 * M, small)
     y -= 16
     y = h2(c, "Der Bildschirm", y)
 
@@ -481,10 +525,10 @@ def page_app(c):
     for n, (t, s) in enumerate(legend, 1):
         badge(c, n, lx + 8, ly - 8, 7.5)
         ly = para(c, f"<b>{t}</b> · {s}", lx + 22, ly - 1, lw - 22, st) - 7.5
-    footer(c, 5)
+    footer(c, 6)
 
 
-# ═════════════════════════════════════════════════════════════════ Seite 6: Bibliothek + Hilfe
+# ═════════════════════════════════════════════════════════════════ Seite 7: Bibliothek + Hilfe
 def page_help(c):
     y = header(c, "Bibliothek, Ordner, Updates", "Wenn der erste Song fertig ist")
     y = h2(c, "Ein Song in der Bibliothek", y)
@@ -537,32 +581,41 @@ def page_help(c):
     y = para(c, "In der App: <b>Zahnrad › Nach Updates suchen › Jetzt aktualisieren</b>. Die App holt die neue Fassung "
                 "von GitHub und startet neu, deine Songs bleiben erhalten. Meldet sie eine neue Modellversion, "
                 "danach einmal <b>Install</b> starten.", M, y, W - 2 * M)
-    footer(c, 6)
+    footer(c, 7)
 
 
-# ═════════════════════════════════════════════════════════════════ Seite 7: Hilfe
+# ═════════════════════════════════════════════════════════════════ Seite 8: Hilfe
 def page_trouble(c):
     y = header(c, "Hilfe", "Wenn etwas hakt")
     y = h2(c, "Wenn etwas hakt", y)
     rows = [["Problem", "Lösung"],
             ["„Zu wenig Speicherplatz“", "Platz schaffen (Papierkorb leeren!), dann Install erneut starten. Die Meldung nennt, wie viel nötig ist."],
             ["Download abgebrochen", "Install erneut starten, der Download läuft an der Stelle weiter."],
-            ["„OFFLINE“ oben in der App", "Music Generator OFF, dann ON. Hilft das nicht: Details im Ordner data/ (Logdateien)."],
+            ["„OFFLINE“ oben in der App", "Music Generator OFF, dann ON. Hilft das nicht: Details im Ordner data (Logdateien). Windows-Fälle auf Seite 5."],
             ["Song bricht mit Fehler ab", "Mauszeiger auf den Fehler halten zeigt den Grund. Mit dem Kreispfeil daneben neu versuchen."],
-            ["Sehr langsam", "Erweitert: Iterationen senken (z. B. 30) oder kürzere Länge wählen."]]
+            ["Sehr langsam", "Erweitert: Iterationen senken (z. B. 30) oder kürzere Länge wählen. Windows mit älterer Grafikkarte rechnet über Vulkan, das ist langsamer (Seite 5)."]]
     y = table(c, rows, y, [140, W - 2 * M - 140])
+    y -= 20
+    y = h2(c, "Nur unter Windows", y)
+    rows = [["Problem", "Lösung"],
+            ["Modellserver startet nicht, Meldung über eine fehlende DLL", "NVIDIA-Treiber aktualisieren (GeForce Experience oder nvidia.de), dann OFF und ON."],
+            ["„ErrorOutOfDeviceMemory“ im Log, Song endet mit Fehler", "Grafikspeicher reicht nicht: Install erneut starten und ein kleineres Sprachmodell wählen, "
+                                                                        "oder in data\\engine.conf den Wert VAE_CHUNK halbieren (z. B. 64). Danach OFF und ON."],
+            ["Installer bricht bei „Python-Pakete“ ab", "In der PowerShell <b>uv python install 3.12</b> ausführen und Install erneut starten."]]
+    y = table(c, rows, y, [190, W - 2 * M - 190])
     y -= 20
     y = h2(c, "Deinstallieren", y)
     para(c, "Music Generator OFF, dann den Ordner <b>MusicGenerator</b> in den Papierkorb legen. "
             "Vorher den Unterordner <b>data/songs</b> sichern, falls du deine Songs behalten willst. "
-            "Optional: das Hilfsprogramm uv liegt unter ~/.local/bin.", M, y, W - 2 * M)
-    footer(c, 7)
+            "Optional: das Hilfsprogramm uv liegt unter ~/.local/bin (Windows: im Benutzerordner unter .local\\bin). "
+            "Unter Windows zusätzlich die beiden Verknüpfungen vom Desktop löschen.", M, y, W - 2 * M)
+    footer(c, 8)
 
 
 c = canvas.Canvas(str(OUT), pagesize=A4)
 c.setTitle("Music Generator – Installationsanleitung")
 c.setAuthor("Alphatester")
-for fn in (page_cover, page_overview, page_steps, page_flow, page_app, page_help, page_trouble):
+for fn in (page_cover, page_overview, page_steps, page_flow, page_windows, page_app, page_help, page_trouble):
     fn(c)
     c.showPage()
 c.save()

@@ -3,6 +3,8 @@
 Gleiche App wie auf dem Mac, Modellserver läuft über CUDA auf der NVIDIA-Grafikkarte.
 Der Installer lädt die fertigen Windows-Binaries von acestep.cpp (kein Compiler nötig).
 
+Ausführliche Anleitung mit Bildern (Windows ab Seite 5): **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
+
 ## Installation
 
 Voraussetzungen: Windows 10/11 (64 Bit), NVIDIA-Grafikkarte mit aktuellem Treiber,
