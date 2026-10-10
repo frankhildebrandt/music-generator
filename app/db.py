@@ -32,9 +32,23 @@ DEFAULT_SETTINGS = {
     "lm_model": _conf.get("LM_FILE", ""),     # leer = erstes Sprachmodell im Modellordner
     "poll_interval": 1.5,
     "timeout_minutes": 30,
+    "songs_dir": "",                   # leer = data/songs im Programmordner, sonst absoluter Pfad
 }
 
 _lock = threading.Lock()
+
+
+def songs_dir() -> Path:
+    """Ordner für die fertigen Songs: Einstellung oder data/songs."""
+    custom = ""
+    try:
+        r = one("SELECT value FROM settings WHERE key='songs_dir'")
+        custom = json.loads(r["value"]) if r else ""
+    except Exception:  # noqa: BLE001 – vor der ersten Initialisierung oder bei kaputtem Wert
+        custom = ""
+    d = Path(custom).expanduser() if custom else SONGS_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 def connect() -> sqlite3.Connection:

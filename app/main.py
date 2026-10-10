@@ -3,6 +3,7 @@ import asyncio
 import json
 import random
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -62,7 +63,7 @@ async def worker():
             finally:
                 _running.clear()
             fname = f"{sid}.{ext}"
-            (db.SONGS_DIR / fname).write_bytes(audio)
+            (db.songs_dir() / fname).write_bytes(audio)
             if db.one("SELECT status FROM songs WHERE id=?", (sid,))["status"] == "running":
                 db.execute(
                     "UPDATE songs SET status='done', message=NULL, file=?, engine=?, result_meta=?, finished_at=? WHERE id=?",
@@ -251,7 +252,7 @@ async def delete_song(sid: str):
             _running["task"].cancel()
         return {"cancelled": True}
     if r["file"]:
-        (db.SONGS_DIR / r["file"]).unlink(missing_ok=True)
+        (db.songs_dir() / r["file"]).unlink(missing_ok=True)
     db.execute("DELETE FROM songs WHERE id=?", (sid,))
     return {"deleted": True}
 
@@ -261,7 +262,7 @@ def song_audio(sid: str, download: bool = False):
     r = db.one("SELECT * FROM songs WHERE id=?", (sid,))
     if not r or not r["file"]:
         raise HTTPException(404)
-    path = db.SONGS_DIR / r["file"]
+    path = db.songs_dir() / r["file"]
     name = None
     if download:
         base = r["title"] or r["caption"][:40]
@@ -315,7 +316,7 @@ def download_zip(folder: str = ""):
     """Alle fertigen Songs der Ansicht (alle / unsortiert / ein Ordner) als ZIP mit lesbaren Dateinamen."""
     fw, fa = folder_where(folder)
     rows = db.query("SELECT * FROM songs WHERE status='done' AND file IS NOT NULL" + fw + " ORDER BY created_at, rowid", tuple(fa))
-    rows = [r for r in rows if (db.SONGS_DIR / r["file"]).is_file()]
+    rows = [r for r in rows if (db.songs_dir() / r["file"]).is_file()]
     if not rows:
         raise HTTPException(404, "Keine fertigen Songs in dieser Ansicht.")
     clean = lambda s: re.sub(r"[^\w\- ]+", "", s).strip()   # noqa: E731
@@ -325,7 +326,7 @@ def download_zip(folder: str = ""):
     tmp = tempfile.NamedTemporaryFile(prefix="mg-", suffix=".zip", dir=db.DATA, delete=False)
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:   # WAV lässt sich kaum packen -> nur bündeln
         for r in rows:
-            path = db.SONGS_DIR / r["file"]
+            path = db.songs_dir() / r["file"]
             base = " ".join(x for x in (clean(r["title"] or r["caption"][:40]) or "Song", lt.get(r["id"], "")) if x)
             name = f"{base}{path.suffix}"
             if name.lower() in used:
@@ -340,19 +341,51 @@ def download_zip(folder: str = ""):
 @app.get("/api/queue")
 def queue():
     rows = db.query("SELECT id, status, message, caption FROM songs WHERE status IN ('queued','running') ORDER BY created_at, rowid")
-    files = [f.stat().st_size for f in db.SONGS_DIR.iterdir() if f.is_file()]
+    files = [f.stat().st_size for f in db.songs_dir().iterdir() if f.is_file()]
     return {"running": [r for r in rows if r["status"] == "running"], "queued": len([r for r in rows if r["status"] == "queued"]),
             "library": {"count": len(files), "bytes": sum(files)}}
 
 
 @app.get("/api/settings")
 def get_settings():
-    return db.get_settings()
+    return {**db.get_settings(), "songs_dir_default": str(db.SONGS_DIR)}
 
 
 @app.put("/api/settings")
-def put_settings(values: dict):
+def put_settings(values: dict, x_lang: str = Header("de")):
+    if "songs_dir" in values:
+        values["songs_dir"] = _move_songs(str(values["songs_dir"] or "").strip(), x_lang)
     return db.save_settings(values)
+
+
+def _move_songs(new: str, lang: str) -> str:
+    """Song-Ordner wechseln: prüfen, anlegen, vorhandene Songs hinüber verschieben. Gibt den zu speichernden Wert zurück."""
+    de = lang != "en"
+    old_dir = db.songs_dir()
+    new_dir = Path(new).expanduser() if new else db.SONGS_DIR
+    if new and not new_dir.is_absolute():
+        raise HTTPException(400, "Bitte einen vollständigen Pfad angeben (z. B. /Users/name/Musik oder C:\\Musik)." if de
+                            else "Please enter a full path (e.g. /Users/name/Music or C:\\Music).")
+    try:
+        new_dir.mkdir(parents=True, exist_ok=True)
+        probe = new_dir / ".schreibtest"
+        probe.write_text("ok"); probe.unlink()
+    except OSError as e:
+        raise HTTPException(400, (f"Ordner nicht nutzbar: {e.strerror or e}" if de else f"Folder not usable: {e.strerror or e}")) from e
+    if new_dir.resolve() != old_dir.resolve():
+        busy = db.one("SELECT COUNT(*) AS n FROM songs WHERE status IN ('queued','running')")["n"]
+        if busy:
+            raise HTTPException(409, "Es laufen noch Songs. Bitte erst fertig werden lassen oder abbrechen." if de
+                                else "Songs are still running. Please let them finish or cancel them first.")
+        for r in db.query("SELECT file FROM songs WHERE file IS NOT NULL"):
+            src = old_dir / r["file"]
+            if src.is_file() and not (new_dir / r["file"]).exists():
+                try:
+                    shutil.move(str(src), str(new_dir / r["file"]))
+                except OSError as e:
+                    raise HTTPException(400, (f"Verschieben von {r['file']} fehlgeschlagen: {e}" if de
+                                              else f"Moving {r['file']} failed: {e}")) from e
+    return "" if new_dir.resolve() == db.SONGS_DIR.resolve() else str(new_dir)
 
 
 @app.post("/api/analyze")
