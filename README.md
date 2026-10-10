@@ -6,6 +6,7 @@ Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) ü
 
 - **Mac** (Apple Silicon, Metal): diese Seite. Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
 - **Windows** (NVIDIA, CUDA/Vulkan): **[README-WINDOWS.md](README-WINDOWS.md)**
+- **Linux** (NVIDIA/AMD, ohne Installer): Abschnitt [Linux](#linux) unten
 
 ## Installation
 
@@ -44,6 +45,36 @@ open Install.command
 ```
 
 Songs und Einstellungen in `data/` bleiben erhalten.
+
+## Linux
+
+Die App selbst (Python, Oberfläche, Datenbank) ist plattformneutral und acestep.cpp baut auch unter Linux.
+Einen Installer gibt es dafür nicht, der Weg von Hand ist aber kurz. **Ungetestet**, Rückmeldungen willkommen.
+
+Voraussetzungen: git, cmake, ein C++-Compiler, [uv](https://docs.astral.sh/uv/), für NVIDIA das CUDA-Toolkit (AMD/Intel: Vulkan-SDK).
+
+```bash
+git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
+cd ~/MusicGenerator && uv sync
+# Modellserver in der getesteten Version bauen (Hash steht in scripts/common.sh)
+git clone --recurse-submodules https://github.com/ServeurpersoCom/acestep.cpp engine/acestep.cpp
+(cd engine/acestep.cpp && git checkout b7ba6d9 && ./buildcuda.sh)     # oder ./buildvulkan.sh, ./buildcpu.sh
+# Modelle laden: die drei festen plus ein Sprachmodell (Adresse und SHA-256 in scripts/common.sh)
+(cd engine/acestep.cpp && ./models.sh --lm 1.7B --sft)
+# Betriebsart: ein Server für alles
+mkdir -p data && printf 'MODE=single\nLM_FILE=acestep-5Hz-lm-1.7B-Q8_0.gguf\n' > data/engine.conf
+```
+
+Starten (zwei Terminals oder mit `&` im Hintergrund), dann http://localhost:8765 öffnen:
+
+```bash
+engine/acestep.cpp/build/ace-server --host 127.0.0.1 --port 8085 --models engine/acestep.cpp/models --max-batch 1
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8765
+```
+
+Hinweise: `models.sh` lädt mehr Varianten als nötig, gebraucht werden `vae-BF16`, `Qwen3-Embedding-0.6B-Q8_0`, `acestep-v15-sft-Q8_0`
+und das gewählte `acestep-5Hz-lm-*-Q8_0`. Die Knöpfe „Server stoppen" und der Neustart nach einem Update rufen die Mac-Skripte auf
+und funktionieren unter Linux nicht; Server im Terminal beenden und neu starten. Songs liegen wie überall in `data/songs`.
 
 ## Aufbau
 
