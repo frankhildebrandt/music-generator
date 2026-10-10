@@ -37,23 +37,10 @@ function Port-Pids([int]$port) {
              Select-Object -ExpandProperty OwningProcess -Unique)
 }
 
-# MODE=split  -> Sprachmodell auf CPU (Port 8086), Synthese auf der Grafikkarte (Port 8085)
-# MODE=single -> alles auf einem Server (Port 8085)
-function Lade-Conf {
-    $script:MODE = "single"
-    $script:LM_FILE = ""
-    if (Test-Path $CONF) {
-        foreach ($line in Get-Content $CONF) {
-            if ($line -match '^MODE=(.+)$')    { $script:MODE = $Matches[1].Trim() }
-            if ($line -match '^LM_FILE=(.+)$') { $script:LM_FILE = $Matches[1].Trim() }
-        }
-    }
-}
-
 # Hintergrundprozess ohne Fenster starten, Ausgabe in eine Log-Datei
-function Start-Hintergrund([string]$exe, [string[]]$args, [string]$log) {
+function Start-Hintergrund([string]$exe, [string[]]$argumente, [string]$log) {
     $err = [System.IO.Path]::ChangeExtension($log, ".err.log")
-    return Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory $ROOT -WindowStyle Hidden `
+    return Start-Process -FilePath $exe -ArgumentList $argumente -WorkingDirectory $ROOT -WindowStyle Hidden `
         -RedirectStandardOutput $log -RedirectStandardError $err -PassThru
 }
 

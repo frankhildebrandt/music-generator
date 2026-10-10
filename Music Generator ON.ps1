@@ -1,7 +1,16 @@
 ﻿# Startet Modellserver + Web-App und öffnet den Browser.
 . (Join-Path $PSScriptRoot "scripts\common.ps1")
 Set-Location $ROOT
-Lade-Conf
+
+# MODE=split  -> Sprachmodell auf CPU (Port 8086), Synthese auf der Grafikkarte (Port 8085)
+# MODE=single -> alles auf einem Server (Port 8085)
+$MODE = "single"; $LM_FILE = ""
+if (Test-Path $CONF) {
+    foreach ($line in Get-Content $CONF) {
+        if ($line -match '^MODE=(.+)$')    { $MODE = $Matches[1].Trim() }
+        if ($line -match '^LM_FILE=(.+)$') { $LM_FILE = $Matches[1].Trim() }
+    }
+}
 New-Item -ItemType Directory -Force -Path $DATA | Out-Null
 
 $ACE = Ace-Server
