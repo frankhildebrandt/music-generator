@@ -118,7 +118,7 @@ def _apply_nogit(s: dict) -> dict:
 
 
 @router.post("/apply")
-async def apply(request: Request, x_lang: str = Header("de")):
+async def apply(request: Request, x_lang: str = Header()):   # Pflicht-Header wie bei /api/shutdown: ein Formular-POST fremder Webseiten kann ihn nicht setzen
     busy = db.one("SELECT COUNT(*) AS n FROM songs WHERE status IN ('queued','running')")["n"]
     if busy:
         raise HTTPException(409, tr(x_lang, "Es laufen noch Songs. Bitte erst fertig werden lassen oder abbrechen.", "Songs are still running. Please let them finish or cancel them first."))

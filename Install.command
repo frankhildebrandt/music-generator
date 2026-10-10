@@ -74,11 +74,13 @@ case "$LM_SIZE" in 0.6B|1.7B|4B) ;; *) abbruch "Unbekannte Modellgröße: $LM_SI
 LM_FILE="acestep-5Hz-lm-${LM_SIZE}-Q8_0.gguf"
 echo "  → Sprachmodell $LM_SIZE, Klangmodell SFT (hohe Qualität)"
 
-# Dateien + Größe in MB (für die Speicherplatz-Prüfung)
-FILES="vae-BF16.gguf:340 Qwen3-Embedding-0.6B-Q8_0.gguf:780 acestep-v15-sft-Q8_0.gguf:2550"
-case "$LM_SIZE" in 0.6B) FILES="$FILES $LM_FILE:710" ;; 1.7B) FILES="$FILES $LM_FILE:1980" ;; 4B) FILES="$FILES $LM_FILE:4460" ;; esac
+# Benötigte Dateien (Name:MB:SHA-256 aus common.sh): die drei festen plus das gewählte Sprachmodell
+FILES=$(echo "$MODEL_FILES" | grep -v 'acestep-5Hz-lm-' ; echo "$MODEL_FILES" | grep "^$LM_FILE:")
 NEED_MB=0
-for e in $FILES; do [ -f "$MODELS/${e%%:*}" ] || NEED_MB=$(( NEED_MB + ${e##*:} )); done
+for e in $FILES; do
+  IFS=: read -r f mb _ <<< "$e"
+  [ -f "$MODELS/$f" ] || NEED_MB=$(( NEED_MB + mb ))
+done
 NEED_GB=$(( (NEED_MB + 1023) / 1024 + 3 ))   # + Build, Python und etwas Platz für Songs
 echo "  Download: $(( (NEED_MB + 1023) / 1024 )) GB · benötigt insgesamt etwa $NEED_GB GB frei"
 [ "$FREE_GB" -ge "$NEED_GB" ] || abbruch "Zu wenig Speicherplatz: $FREE_GB GB frei, etwa $NEED_GB GB nötig."
@@ -120,7 +122,7 @@ fi
   && git checkout --quiet "$ACESTEP_REV" \
   && git submodule update --init --recursive --quiet ) || abbruch "acestep.cpp konnte nicht auf Version $ACESTEP_REV gebracht werden."
 
-if "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "$ACESTEP_REV"; then
+if "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "${ACESTEP_REV:0:7}"; then   # --help zeigt den kurzen Hash
   echo "  bereits gebaut"
 else
   echo "  wird gebaut (dauert einige Minuten) …"
@@ -132,11 +134,17 @@ fi
 schritt "Modelle laden"
 mkdir -p "$MODELS"
 for e in $FILES; do
-  f="${e%%:*}"
+  IFS=: read -r f _ sha <<< "$e"
   if [ -f "$MODELS/$f" ]; then echo "  ✓ $f"; continue; fi
   echo "  ↓ $f"
   curl -L --fail -C - --progress-bar -o "$MODELS/$f.part" "$HF_BASE/$f" \
-    && mv "$MODELS/$f.part" "$MODELS/$f" || abbruch "Download von $f fehlgeschlagen. Install erneut starten setzt den Download fort."
+    || abbruch "Download von $f fehlgeschlagen. Install erneut starten setzt den Download fort."
+  echo "    Prüfsumme …"
+  if [ "$(shasum -a 256 "$MODELS/$f.part" | cut -d' ' -f1)" != "$sha" ]; then
+    rm -f "$MODELS/$f.part"
+    abbruch "Prüfsumme von $f stimmt nicht. Die Datei wurde gelöscht; Install erneut starten lädt sie neu."
+  fi
+  mv "$MODELS/$f.part" "$MODELS/$f"
 done
 
 # --- 6. Grafikchip testen ------------------------------------------------------
@@ -145,7 +153,7 @@ done
 schritt "Grafikchip testen"
 OLD_MODE=""; OLD_LM=""; OLD_REV=""
 [ -f "$CONF" ] && { OLD_MODE=$(sed -n 's/^MODE=//p' "$CONF"); OLD_LM=$(sed -n 's/^LM_FILE=//p' "$CONF"); OLD_REV=$(sed -n 's/^TESTED_REV=//p' "$CONF"); }
-if [ -n "$OLD_MODE" ] && [ "$OLD_LM" = "$LM_FILE" ] && [ "$OLD_REV" = "$ACESTEP_REV" ]; then
+if [ -n "$OLD_MODE" ] && [ "$OLD_LM" = "$LM_FILE" ] && [ "${OLD_REV:0:7}" = "${ACESTEP_REV:0:7}" ]; then   # alte Installationen haben den kurzen Hash
   MODE="$OLD_MODE"
   echo "  schon getestet: Modus $MODE"
 else
