@@ -387,7 +387,9 @@ async def shutdown(x_lang: str = Header()):   # Pflicht-Header: fremde Webseiten
     if sys.platform == "win32":
         cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
                f'Start-Sleep -Milliseconds 500; & "{script}"']
-        flags = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+        # CREATE_NO_WINDOW (eigene unsichtbare Konsole), nicht DETACHED_PROCESS: ohne Konsole startet
+        # PowerShell 5.1 zwar, führt den Befehl aber nicht aus (Exit 0, keine Ausgabe).
+        flags = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP}
     else:
         cmd = ["/bin/sh", "-c", 'sleep 0.5; exec bash "$0"', str(script)]
         flags = {"start_new_session": True}

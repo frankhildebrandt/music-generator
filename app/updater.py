@@ -137,7 +137,8 @@ def _restart(port: int) -> None:
         script = (f'while (Get-NetTCPConnection -State Listen -LocalPort {port} -ErrorAction SilentlyContinue) {{ Start-Sleep -Milliseconds 300 }}; '
                   f'& "{sys.executable}" -m uvicorn app.main:app --host 127.0.0.1 --port {port}')
         cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
-        flags = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+        # CREATE_NO_WINDOW statt DETACHED_PROCESS: ohne Konsole führt PowerShell 5.1 den Befehl nicht aus
+        flags = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP}
     else:
         script = f'while lsof -i :{port} -sTCP:LISTEN -t >/dev/null 2>&1; do sleep 0.3; done; ' \
                  f'exec "{sys.executable}" -m uvicorn app.main:app --host 127.0.0.1 --port {port}'

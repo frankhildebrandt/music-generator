@@ -73,6 +73,10 @@ Installation, ON, OFF, Song-Erzeugung (30 s und 90 s), „Server stoppen“ und 
   Installer deckelt jetzt nach VRAM (<6 GB 0.6B, <8 GB 1.7B, sonst 4B) und zeigt bei Absturz den Log-Schwanz. 1.7B: Modus single.
 - **VAE-Decoder:** braucht ohne Kachelung 6,7 GB für 30 s Audio. Installer schreibt `VAE_CHUNK` (128 bei <8 GB, 256 bei <12,
   512 bei <16) nach `data/engine.conf`, ON gibt `--vae-chunk` an ace-server weiter. 90 s = 36 Kacheln, 33 s.
+- **„Server stoppen“ tat nichts:** Python startete PowerShell mit `DETACHED_PROCESS` (keine Konsole). PowerShell 5.1
+  startet dann, führt den Befehl aber nicht aus (Exit 0, keine Ausgabe, kein Fehler). Mit `CREATE_NO_WINDOW` (eigene
+  unsichtbare Konsole) läuft es. Gefixt in `app/main.py` (Shutdown, getestet) und `app/updater.py` (`_restart`, gleicher
+  Mechanismus, nicht getestet, weil die Installation nach dem Push auf dem neuesten Stand ist).
 - `*.lnk` in `.gitignore` (der Installer legt sie im Programmordner an).
 - Nicht geändert: Desktop-Verknüpfungen landen bei OneDrive-Umleitung unter `OneDrive\Desktop`, das ist korrekt so.
 - Hinweis für Tests aus Claude Code heraus: Die Shell des Claude-Desktop-Tools läuft in einer MSIX-Sandbox, die `AppData`
