@@ -516,7 +516,7 @@ def page_app(c):
         ("Lyrics", "Eingeklappt = instrumental. Würfel: „Automatisch“, das Modell schreibt beim Generieren eigene Texte. Aufgeklappt: Sprache und eigene Lyrics."),
         ("Erweitert", "Iterationen (Qualität), Varianz (Abwechslung), Tonart, Takt, Seed."),
         ("Generieren", "Unten die Zahl der Versionen (1 bis 10) wählen und los. Mehrere heißen dann A, B, C … Die Leiste bleibt beim Scrollen sichtbar."),
-        ("Zahnrad", "Verbindungstest, Anordnung (untereinander oder nebeneinander) und „Nach Updates suchen“. Darunter: Sprache DE | EN."),
+        ("Zahnrad", "Einstellungen: Song-Ordner, Anordnung (untereinander oder nebeneinander), „Nach Updates suchen“, Server stoppen. Darunter: Sprache DE | EN."),
     ]
     lx = ix + iw_pt + 18
     lw = W - M - lx
@@ -575,6 +575,14 @@ def page_help(c):
                 "neue Songs landen im gerade offenen Ordner. <b>Alle laden</b> bzw. <b>Ordner laden</b> lädt die "
                 "fertigen Songs der Ansicht als ZIP. Ordner löschen entfernt nur den Ordner, nicht die Songs.",
              M, y, W - 2 * M, small)
+    y -= 16
+
+    y = h2(c, "Wo die Songs liegen", y)
+    y = para(c, "Fertige Songs liegen als WAV im Unterordner <b>data/songs</b> des Programmordners, also "
+                "<b>~/MusicGenerator/data/songs</b> auf dem Mac bzw. <b>C:\\Users\\&lt;Name&gt;\\MusicGenerator\\data\\songs</b> unter Windows. "
+                "Die Dateinamen sind Kennungen, die Titel stehen in der App. Ein anderer Ort: <b>Zahnrad › Song-Ordner</b>, "
+                "vollständigen Pfad eintragen und speichern. Die App legt den Ordner an und verschiebt die vorhandenen Songs dorthin; "
+                "leer lassen heißt wieder Standard.", M, y, W - 2 * M, small)
     y -= 16
 
     y = h2(c, "Aktualisieren", y)
