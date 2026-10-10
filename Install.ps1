@@ -99,8 +99,11 @@ $LM_FILE = "acestep-5Hz-lm-$LM_SIZE-Q8_0.gguf"
 Write-Host "  -> Sprachmodell $LM_SIZE, Klangmodell SFT (hohe Qualität)"
 
 # Dateien + Größe in MB (für die Speicherplatz-Prüfung)
-$FILES = [ordered]@{ "vae-BF16.gguf" = 340; "Qwen3-Embedding-0.6B-Q8_0.gguf" = 780; "acestep-v15-sft-Q8_0.gguf" = 2550 }
-$FILES[$LM_FILE] = @{ "0.6B" = 710; "1.7B" = 1980; "4B" = 4460 }[$LM_SIZE]
+$FILES = [ordered]@{}
+foreach ($f in @("vae-BF16.gguf", "Qwen3-Embedding-0.6B-Q8_0.gguf", "acestep-v15-sft-Q8_0.gguf", $LM_FILE)) {
+    if (-not $MODEL_SHA[$f]) { Abbruch "Datei $f fehlt in der Modell-Tabelle (scripts\common.sh)." }
+    $FILES[$f] = $MODEL_MB[$f]
+}
 $NEED_MB = 0
 foreach ($f in $FILES.Keys) { if (-not (Test-Path (Join-Path $MODELS $f))) { $NEED_MB += $FILES[$f] } }
 $NEED_GB = [int][math]::Ceiling($NEED_MB / 1024) + 3   # + Modellserver, Python und etwas Platz für Songs
@@ -167,7 +170,7 @@ if ($ACE -and -not $Build) {
     & git submodule update --init --recursive --quiet
     Pop-Location
 
-    if ($ACE -and ((& $ACE --help 2>&1 | Select-Object -First 1) -match $ACESTEP_REV)) {
+    if ($ACE -and ((& $ACE --help 2>&1 | Select-Object -First 1) -match $ACESTEP_REV.Substring(0, 7))) {   # --help zeigt den kurzen Hash
         Write-Host "  bereits gebaut ($ACESTEP_REV)"
     } else {
         if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { & uv tool install cmake | Out-Null }
@@ -207,7 +210,13 @@ foreach ($f in $FILES.Keys) {
     $ziel = Join-Path $MODELS $f
     if (Test-Path $ziel) { Write-Host "  ok $f"; continue }
     Write-Host "  v $f"
-    if (-not (Download "$HF_BASE/$f" $ziel)) { Abbruch "Download von $f fehlgeschlagen. Install erneut starten setzt den Download fort." }
+    if (-not (Download "$HF_BASE/$f" "$ziel.neu")) { Abbruch "Download von $f fehlgeschlagen. Install erneut starten setzt den Download fort." }
+    Write-Host "    Prüfsumme ..."
+    if ((Get-FileHash -Algorithm SHA256 "$ziel.neu").Hash.ToLower() -ne $MODEL_SHA[$f]) {
+        Remove-Item -Force "$ziel.neu"
+        Abbruch "Prüfsumme von $f stimmt nicht. Die Datei wurde gelöscht; Install erneut starten lädt sie neu."
+    }
+    Move-Item -Force "$ziel.neu" $ziel
 }
 
 # --- 6. Grafikkarte testen ------------------------------------------------------

@@ -108,3 +108,18 @@ Installation, ON, OFF, Song-Erzeugung (30 s und 90 s), „Server stoppen“ und 
 - Mac-Dateien (`*.command`, `scripts/symbole.sh`, `Install.command`) nicht anfassen; sie werden später zurückgemerged.
 - Werte, die Mac und Windows teilen (Ports, acestep-Version, HF-Adresse), nur in `scripts/common.sh` ändern.
 - Songs/Einstellungen liegen in `data/` und sind in `.gitignore`.
+
+## Nachtrag vom Mac (10. Okt 2026, nach dem PC-Test)
+
+Die Härtung aus dem öffentlichen Repo (Hinweise von Jürgen/schimmilab.de) ist in diesen Branch gemerged:
+TrustedHostMiddleware (nur localhost/127.0.0.1), `/api/update/apply` mit Pflicht-Header `X-Lang`,
+Modelle von fester Hugging-Face-Revision, `ACESTEP_REV` als voller Hash, `MODEL_FILES`-Tabelle
+(Name:MB:SHA-256) in `scripts/common.sh`.
+
+**Ungetestet auf Windows, bitte prüfen:**
+- `scripts/common.ps1` liest jetzt zusätzlich `MODEL_FILES` aus `common.sh` in `$MODEL_MB` / `$MODEL_SHA`.
+- `Install.ps1` baut `$FILES` daraus und prüft nach jedem Download die SHA-256 per `Get-FileHash`
+  (Download nach `<datei>.neu`, dann Hash, dann umbenennen). Vorhandene Dateien werden nicht erneut geprüft.
+- Beim `-Build`-Pfad wird `--help` gegen die ersten 7 Zeichen des Hashes verglichen.
+- Schnelltest ohne Neuinstallation: eine Modelldatei umbenennen, `.\Install.ps1 -Yes -NoStart` laufen lassen,
+  Prüfsumme muss „ok" melden; danach die umbenannte Datei löschen.

@@ -8,9 +8,14 @@ $DATA   = Join-Path $ROOT "data"
 $CONF   = Join-Path $DATA "engine.conf"      # vom Installer geschrieben: MODE, LM_FILE
 
 # KEY=value-Zeilen aus common.sh übernehmen (PORT, SYNTH_PORT, LM_PORT, ACESTEP_REPO, ACESTEP_REV, HF_BASE)
+# sowie die Modell-Tabelle MODEL_FILES (Name:MB:SHA-256, eine Datei je Zeile)
+$MODEL_SHA = @{}; $MODEL_MB = @{}
 foreach ($line in Get-Content (Join-Path $PSScriptRoot "common.sh")) {
     if ($line -match '^(PORT|SYNTH_PORT|LM_PORT|ACESTEP_REPO|ACESTEP_REV|HF_BASE)="?([^"#]+?)"?\s*(#.*)?$') {
         Set-Variable -Name $Matches[1] -Value $Matches[2].Trim()
+    }
+    if ($line -match '^(?:MODEL_FILES=")?([\w.-]+\.gguf):(\d+):([0-9a-f]{64})"?$') {
+        $MODEL_MB[$Matches[1]] = [int]$Matches[2]; $MODEL_SHA[$Matches[1]] = $Matches[3]
     }
 }
 
