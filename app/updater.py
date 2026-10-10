@@ -12,7 +12,7 @@ from . import db
 
 ROOT = Path(__file__).resolve().parent.parent
 BRANCH = "main"
-REPO_URL = "https://github.com/rabbitfiremediacreation/music-generator.git"
+REPO_URL = "https://github.com/rabbitfiremediacreation/music-generator-windows.git"
 router = APIRouter(prefix="/api/update")
 
 
@@ -59,7 +59,7 @@ def _status(lang: str = "de") -> dict:
         "current": git("rev-parse", "--short", "HEAD"), "latest": git("rev-parse", "--short", remote),
         "behind": behind, "ahead": ahead, "changes": changes, "dirty": dirty,
         # Neue acestep.cpp-Version oder neue Pakete: der Installer muss danach noch einmal laufen
-        "needs_install": "scripts/common.sh" in changed_files,
+        "needs_install": "scripts/common.sh" in changed_files or "scripts/common.ps1" in changed_files,
     }
 
 
@@ -133,8 +133,15 @@ async def apply(request: Request, x_lang: str = Header("de")):
 def _restart(port: int) -> None:
     """Neuen Server abgekoppelt starten, der wartet, bis der Port frei ist; dann diesen beenden."""
     log = open(ROOT / "data" / "server.log", "ab")
-    script = f'while lsof -i :{port} -sTCP:LISTEN -t >/dev/null 2>&1; do sleep 0.3; done; ' \
-             f'exec "{sys.executable}" -m uvicorn app.main:app --host 127.0.0.1 --port {port}'
-    subprocess.Popen(["/bin/sh", "-c", script], cwd=ROOT, stdout=log, stderr=log,
-                     stdin=subprocess.DEVNULL, start_new_session=True)
+    if sys.platform == "win32":
+        script = (f'while (Get-NetTCPConnection -State Listen -LocalPort {port} -ErrorAction SilentlyContinue) {{ Start-Sleep -Milliseconds 300 }}; '
+                  f'& "{sys.executable}" -m uvicorn app.main:app --host 127.0.0.1 --port {port}')
+        cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
+        flags = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+    else:
+        script = f'while lsof -i :{port} -sTCP:LISTEN -t >/dev/null 2>&1; do sleep 0.3; done; ' \
+                 f'exec "{sys.executable}" -m uvicorn app.main:app --host 127.0.0.1 --port {port}'
+        cmd = ["/bin/sh", "-c", script]
+        flags = {"start_new_session": True}
+    subprocess.Popen(cmd, cwd=ROOT, stdout=log, stderr=log, stdin=subprocess.DEVNULL, **flags)
     os.kill(os.getpid(), signal.SIGTERM)

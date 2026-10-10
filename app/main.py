@@ -379,12 +379,19 @@ async def analyze(audio: UploadFile):
 @app.post("/api/shutdown")
 async def shutdown(x_lang: str = Header()):   # Pflicht-Header: fremde Webseiten können ihn nicht mitschicken
     """Führt „Music Generator OFF“ aus: beendet Web-App und Modellserver, schließt die Browser-Tabs."""
-    script = db.ROOT / "Music Generator OFF.command"
+    name = "Music Generator OFF." + ("ps1" if sys.platform == "win32" else "command")
+    script = db.ROOT / name
     if not script.is_file():
-        raise HTTPException(404, "Music Generator OFF.command fehlt")
+        raise HTTPException(404, f"{name} fehlt")
     # abgekoppelt und leicht verzögert, damit diese Antwort noch ankommt, bevor die App beendet wird
-    subprocess.Popen(["/bin/sh", "-c", 'sleep 0.5; exec bash "$0"', str(script)], cwd=db.ROOT, start_new_session=True,
-                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if sys.platform == "win32":
+        cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+               f'Start-Sleep -Milliseconds 500; & "{script}"']
+        flags = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+    else:
+        cmd = ["/bin/sh", "-c", 'sleep 0.5; exec bash "$0"', str(script)]
+        flags = {"start_new_session": True}
+    subprocess.Popen(cmd, cwd=db.ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **flags)
     return {"ok": True}
 
 
