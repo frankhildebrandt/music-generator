@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
@@ -89,6 +90,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Music Generator", lifespan=lifespan)
+# Nur Aufrufe an localhost annehmen: schützt gegen DNS-Rebinding (fremde Domain, die auf 127.0.0.1 zeigt)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 app.include_router(updater.router)
 
 
