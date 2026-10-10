@@ -22,7 +22,9 @@ def tr(lang: str, de: str, en: str) -> str:
 
 def git(*args: str, timeout: int = 60) -> str:
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}   # nie nach Passwort fragen
-    r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, timeout=timeout, env=env)
+    # encoding fest auf UTF-8: git gibt Commit-Texte als UTF-8 aus, text=True nähme unter Windows cp1252 (Umlaute kaputt)
+    r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=timeout, env=env)
     if r.returncode:
         raise RuntimeError((r.stderr or r.stdout).strip() or f"git {args[0]} fehlgeschlagen")
     return r.stdout.strip()

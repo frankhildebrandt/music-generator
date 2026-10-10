@@ -217,6 +217,7 @@ foreach ($f in $FILES.Keys) {
         Abbruch "Prüfsumme von $f stimmt nicht. Die Datei wurde gelöscht; Install erneut starten lädt sie neu."
     }
     Move-Item -Force "$ziel.neu" $ziel
+    Write-Host "    Prüfsumme ok"
 }
 
 # --- 6. Grafikkarte testen ------------------------------------------------------

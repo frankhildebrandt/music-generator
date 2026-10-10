@@ -116,7 +116,13 @@ TrustedHostMiddleware (nur localhost/127.0.0.1), `/api/update/apply` mit Pflicht
 Modelle von fester Hugging-Face-Revision, `ACESTEP_REV` als voller Hash, `MODEL_FILES`-Tabelle
 (Name:MB:SHA-256) in `scripts/common.sh`.
 
-**Ungetestet auf Windows, bitte prüfen:**
+**Auf dem PC geprüft (10. Okt 2026, nach dem Nachtrag):** Das In-App-Update von 67e852b auf ce4ba5a lief komplett durch
+(`git pull`, Windows-Neustart per `_restart` mit `CREATE_NO_WINDOW`, App wieder da). Fremder `Host`-Header bekommt 400.
+`common.ps1` liest alle 6 Tabelleneinträge; die SHA-256 der bereits geladenen Modelle stimmen mit der Tabelle überein.
+Schnelltest mit beiseitegelegter `vae-BF16.gguf`: Download, Prüfsumme, Umbenennen ok, Installer gibt jetzt „Prüfsumme ok" aus.
+Nebenbefund behoben: `updater.py` dekodierte Git-Ausgabe mit cp1252, Commit-Texte hatten kaputte Umlaute; jetzt UTF-8.
+
+**Vom Mac als ungetestet markiert:**
 - `scripts/common.ps1` liest jetzt zusätzlich `MODEL_FILES` aus `common.sh` in `$MODEL_MB` / `$MODEL_SHA`.
 - `Install.ps1` baut `$FILES` daraus und prüft nach jedem Download die SHA-256 per `Get-FileHash`
   (Download nach `<datei>.neu`, dann Hash, dann umbenennen). Vorhandene Dateien werden nicht erneut geprüft.
