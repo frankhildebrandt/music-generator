@@ -219,7 +219,7 @@ def page_cover(c):
 
     c.setFillColor(HexColor("#6b7080"))
     c.setFont("Arial", 8.5)
-    c.drawString(M, 52, "Basis: ACE-Step 1.5 (Apache 2.0) über acestep.cpp · läuft komplett lokal, kein Konto nötig")
+    c.drawString(M, 52, "Basis: ACE-Step 1.5 (MIT-Lizenz) über acestep.cpp · läuft komplett lokal, kein Konto nötig")
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 2: Überblick
@@ -612,11 +612,18 @@ def page_trouble(c):
             ["Installer bricht bei „Python-Pakete“ ab", "In der PowerShell <b>uv python install 3.12</b> ausführen und Install erneut starten."]]
     y = table(c, rows, y, [190, W - 2 * M - 190])
     y -= 20
+    y = h2(c, "Modell, Lizenz und Trainingsdaten", y)
+    y = para(c, "Die Musik erzeugt <b>ACE-Step 1.5</b>, ein offenes Modell unter MIT-Lizenz; die Ergebnisse dürfen laut den "
+                "Entwicklern auch kommerziell genutzt werden. Laut den Entwicklern wurde es auf lizenzierter, gemeinfreier "
+                "und synthetischer Musik trainiert. Der Datensatz selbst ist nicht veröffentlicht, die Angabe lässt sich also "
+                "nicht nachprüfen. Die Entwickler bitten, erzeugte Stücke auf stilistische Nähe zu bestehenden Werken zu prüfen "
+                "und den Einsatz von KI offenzulegen.", M, y, W - 2 * M)
+    y -= 16
+
     y = h2(c, "Deinstallieren", y)
-    para(c, "Music Generator OFF, dann den Ordner <b>MusicGenerator</b> in den Papierkorb legen. "
-            "Vorher den Unterordner <b>data/songs</b> sichern, falls du deine Songs behalten willst. "
-            "Optional: das Hilfsprogramm uv liegt unter ~/.local/bin (Windows: im Benutzerordner unter .local\\bin). "
-            "Unter Windows zusätzlich die beiden Verknüpfungen vom Desktop löschen.", M, y, W - 2 * M)
+    para(c, "Music Generator OFF, dann den Ordner <b>MusicGenerator</b> in den Papierkorb legen; vorher <b>data/songs</b> sichern, "
+            "falls du deine Songs behalten willst. Windows: zusätzlich die beiden Desktop-Verknüpfungen löschen. "
+            "Das Hilfsprogramm uv liegt im Benutzerordner unter .local/bin.", M, y, W - 2 * M, small)
     footer(c, 8)
 
 
