@@ -601,8 +601,7 @@ def page_trouble(c):
             ["Download abgebrochen", "Install erneut starten, der Download läuft an der Stelle weiter."],
             ["„OFFLINE“ oben in der App", "Music Generator OFF, dann ON. Hilft das nicht: Details im Ordner data (Logdateien). Windows-Fälle auf Seite 5."],
             ["Song bricht mit Fehler ab", "Mauszeiger auf den Fehler halten zeigt den Grund. Mit dem Kreispfeil daneben neu versuchen."],
-            ["Generieren bleibt stehen", "Der Rechner war im Ruhezustand. Seit Oktober 2026 hält die App ihn während der Berechnung wach; "
-                                           "ältere Fassung: Update einspielen (Zahnrad › Nach Updates suchen)."],
+            ["Generieren bleibt stehen", "Rechner war im Ruhezustand. Seit Oktober 2026 hält die App ihn wach; sonst Update einspielen."],
             ["Sehr langsam", "Erweitert: Iterationen senken (z. B. 30) oder kürzere Länge wählen. Windows mit älterer Grafikkarte rechnet über Vulkan, das ist langsamer (Seite 5)."]]
     y = table(c, rows, y, [140, W - 2 * M - 140])
     y -= 20
@@ -619,8 +618,8 @@ def page_trouble(c):
                 "Entwicklern auch kommerziell genutzt werden. Laut den Entwicklern wurde es auf lizenzierter, gemeinfreier "
                 "und synthetischer Musik trainiert. Der Datensatz selbst ist nicht veröffentlicht, die Angabe lässt sich also "
                 "nicht nachprüfen. Die Entwickler bitten, erzeugte Stücke auf stilistische Nähe zu bestehenden Werken zu prüfen "
-                "und den Einsatz von KI offenzulegen.", M, y, W - 2 * M)
-    y -= 16
+                "und den Einsatz von KI offenzulegen.", M, y, W - 2 * M, small)
+    y -= 14
 
     y = h2(c, "Deinstallieren", y)
     para(c, "Music Generator OFF, dann den Ordner <b>MusicGenerator</b> in den Papierkorb legen; vorher <b>data/songs</b> sichern, "
