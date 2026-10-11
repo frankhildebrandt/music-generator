@@ -1,6 +1,7 @@
 """FastAPI-Backend: Job-Queue, Bibliothek, Einstellungen."""
 import asyncio
 import json
+import os
 import random
 import re
 import shutil
@@ -34,14 +35,47 @@ def now() -> str:
 
 # ---------------------------------------------------------------- Worker
 
+class WachHalten:
+    """Verhindert den Ruhezustand, solange Songs gerechnet werden (sonst bleibt die Berechnung
+    nach 10-20 Minuten Inaktivität einfach stehen). Mac: caffeinate, Windows: SetThreadExecutionState."""
+    def __init__(self):
+        self._proc = None
+
+    def an(self):
+        try:
+            if sys.platform == "darwin" and self._proc is None:
+                self._proc = subprocess.Popen(["caffeinate", "-i", "-w", str(os.getpid())],
+                                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif sys.platform == "win32":
+                import ctypes
+                ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)   # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+        except Exception:  # noqa: BLE001 – Wachhalten ist Komfort, kein Grund zum Abbruch
+            pass
+
+    def aus(self):
+        try:
+            if self._proc is not None:
+                self._proc.terminate(); self._proc = None
+            elif sys.platform == "win32":
+                import ctypes
+                ctypes.windll.kernel32.SetThreadExecutionState(0x80000000)   # ES_CONTINUOUS
+        except Exception:  # noqa: BLE001
+            pass
+
+
+_wach = WachHalten()
+
+
 async def worker():
     """Arbeitet die Queue strikt nacheinander ab (eine GPU, ein Job)."""
     while True:
         job = db.one("SELECT * FROM songs WHERE status='queued' ORDER BY created_at, rowid LIMIT 1")
         if not job:
+            _wach.aus()
             _wakeup.clear()
             await _wakeup.wait()
             continue
+        _wach.an()
         sid = job["id"]
         db.execute("UPDATE songs SET status='running', message='0:00' WHERE id=?", (sid,))
         engine = make_engine(db.get_settings())

@@ -601,6 +601,8 @@ def page_trouble(c):
             ["Download abgebrochen", "Install erneut starten, der Download läuft an der Stelle weiter."],
             ["„OFFLINE“ oben in der App", "Music Generator OFF, dann ON. Hilft das nicht: Details im Ordner data (Logdateien). Windows-Fälle auf Seite 5."],
             ["Song bricht mit Fehler ab", "Mauszeiger auf den Fehler halten zeigt den Grund. Mit dem Kreispfeil daneben neu versuchen."],
+            ["Generieren bleibt stehen", "Der Rechner war im Ruhezustand. Seit Oktober 2026 hält die App ihn während der Berechnung wach; "
+                                           "ältere Fassung: Update einspielen (Zahnrad › Nach Updates suchen)."],
             ["Sehr langsam", "Erweitert: Iterationen senken (z. B. 30) oder kürzere Länge wählen. Windows mit älterer Grafikkarte rechnet über Vulkan, das ist langsamer (Seite 5)."]]
     y = table(c, rows, y, [140, W - 2 * M - 140])
     y -= 20
