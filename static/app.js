@@ -319,7 +319,9 @@ function render() {
         ? `<input class="t-edit" data-id="${s.id}" value="${esc(s.title || "")}" placeholder="${esc(s.caption.split(",").slice(0, 3).join(","))}">`
         : `<div class="t" data-a="rename" title="${t("rename")}">${esc(title)}</div>`
       }<div class="m" title="${t("meta_tip")}">${esc(meta)}</div>${state}</div>
-      <div class="actions">${actions}</div>${lyr && openLyrics.has(s.id) ? `<pre class="lyr">${esc(lyr)}</pre>` : ""}</div>`;
+      <div class="actions">${actions}</div>${lyr && openLyrics.has(s.id)
+        ? `<div class="lyr-wrap"><pre class="lyr">${esc(lyr)}</pre><a class="download mini lyr-dl" download="${esc((title || s.id).replace(/[\\/:*?"<>|]+/g, "_"))}.txt" href="data:text/plain;charset=utf-8,${encodeURIComponent(lyr)}" title="${t("lyrics_dl")}">TXT ↓</a></div>`
+        : ""}</div>`;
   }).join("");
   // Symbolknöpfe: Tooltip auch als Name für Screenreader
   lib.querySelectorAll("button[title]:not([aria-label]), a[title]:not([aria-label])")

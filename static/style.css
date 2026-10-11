@@ -269,7 +269,9 @@ dialog .col-title { margin-bottom: 16px; }
 .langsw button[aria-pressed=true] { color: var(--accent2); background: var(--gold-tint); }
 
 /* Generierte Lyrics unter der Songzeile */
-.song .lyr { grid-column: 1 / -1; margin: 2px 0 4px; padding: 10px 12px; max-height: 260px; overflow: auto; white-space: pre-wrap;
+.song .lyr-wrap { grid-column: 1 / -1; position: relative; }
+.song .lyr-dl { position: absolute; right: 10px; bottom: 12px; }
+.song .lyr { margin: 2px 0 4px; padding: 10px 12px 40px; max-height: 260px; overflow: auto; white-space: pre-wrap;
   font: inherit; font-size: 12px; line-height: 1.5; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
 .song .actions .txt { font-size: 10px; font-weight: 600; letter-spacing: .06em; }
 .song .actions .txt.on { color: var(--accent2); border-color: var(--accent2); }
