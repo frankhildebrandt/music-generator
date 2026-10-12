@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 SONGS_DIR = DATA / "songs"
+MODELS_DIR = ROOT / "engine" / "acestep.cpp" / "models"
 DB_PATH = DATA / "music.db"
 
 def _engine_conf() -> dict:
@@ -32,6 +33,7 @@ DEFAULT_SETTINGS = {
     "lm_model": _conf.get("LM_FILE", ""),     # leer = erstes Sprachmodell im Modellordner
     "poll_interval": 1.5,
     "timeout_minutes": 30,
+    "dit": "standard",                 # Klangmodell: "standard" (2B) oder "xl" (4B, braucht die XL-Datei)
     "songs_dir": "",                   # leer = data/songs im Programmordner, sonst absoluter Pfad
 }
 

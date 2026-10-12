@@ -40,15 +40,16 @@ ACE_FIELDS = {
 }
 
 
-# DiT-Modell: nur noch SFT (50 Schritte, klingt deutlich besser als turbo)
-DIT_MODEL = "acestep-v15-sft-Q8_0.gguf"
+# DiT-Modell: SFT (50 Schritte, klingt deutlich besser als turbo). Standard mit 2 Mrd. Parametern, optional XL mit 4 Mrd.
+DIT_MODELS = {"standard": "acestep-v15-sft-Q8_0.gguf", "xl": "acestep-v15-xl-sft-Q8_0.gguf"}
 
 
 class AceStepCpp:
     name = "acestep_cpp"
 
     def __init__(self, base_url: str, lm_url: str = "", poll_interval: float = 1.5, timeout_minutes: float = 30,
-                 lm_model: str = ""):
+                 lm_model: str = "", dit: str = "standard"):
+        self.dit_model = DIT_MODELS.get(dit, DIT_MODELS["standard"])
         self.base = base_url.rstrip("/")
         # Auf Apple M4 liefert das LM unter Metal Unsinn (0 Codes) -> eigener CPU-Server
         self.lm_base = (lm_url or base_url).rstrip("/")
@@ -111,7 +112,7 @@ class AceStepCpp:
         req = {k: v for k, v in params.items() if k in ACE_FIELDS and v not in (None, "")}
         req.setdefault("use_cot_caption", False)  # Prompt wörtlich übernehmen
         req["output_format"] = "wav16"            # 48 kHz / 16 Bit, verlustfrei
-        req["synth_model"] = DIT_MODEL
+        req["synth_model"] = self.dit_model
         if self.lm_model:
             req["lm_model"] = self.lm_model
         start = time.monotonic()   # zählt über beide Phasen (Sprachmodell + Synthese) durch
@@ -236,4 +237,4 @@ def make_engine(settings: dict):
     if settings.get("engine") == "mock":
         return MockEngine()
     return AceStepCpp(settings["server_url"], settings.get("lm_url", ""), settings["poll_interval"],
-                      settings["timeout_minutes"], settings.get("lm_model", ""))
+                      settings["timeout_minutes"], settings.get("lm_model", ""), settings.get("dit", "standard"))

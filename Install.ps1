@@ -5,9 +5,10 @@
 # Optionen:  -Yes         keine Rückfragen, Empfehlung übernehmen
 #            -LM SIZE     Sprachmodell erzwingen: 0.6B, 1.7B oder 4B
 #            -NoStart     App am Ende nicht starten
+#            -XL          zusätzlich das XL-Klangmodell laden (5,3 GB, in den Einstellungen wählbar)
 #            -Build       Modellserver selbst kompilieren statt fertige Binaries zu laden
 #                         (braucht Visual Studio Build Tools + CUDA Toolkit)
-param([switch]$Yes, [string]$LM = "", [switch]$NoStart, [switch]$Build)
+param([switch]$Yes, [string]$LM = "", [switch]$NoStart, [switch]$Build, [switch]$XL)
 
 . (Join-Path $PSScriptRoot "scripts\common.ps1")
 Set-Location $ROOT
@@ -98,9 +99,25 @@ if ($LM_SIZE -notin @("0.6B", "1.7B", "4B")) { Abbruch "Unbekannte Modellgröße
 $LM_FILE = "acestep-5Hz-lm-$LM_SIZE-Q8_0.gguf"
 Write-Host "  -> Sprachmodell $LM_SIZE, Klangmodell SFT (hohe Qualität)"
 
+# Optional: XL-Klangmodell (4 statt 2 Mrd. Parameter). Ist es schon da, bleibt es; sonst nur auf Wunsch.
+$XL_FILE = "acestep-v15-xl-sft-Q8_0.gguf"
+if (Test-Path (Join-Path $MODELS $XL_FILE)) { $XL = [switch]$true }
+if (-not $XL -and -not $Yes) {
+    Write-Host ""
+    Write-Host "  Klangmodell XL (zusätzlich, 5,3 GB): laut den Entwicklern bessere Klangqualität,"
+    Write-Host "  rechnet etwa doppelt so lange und braucht mehr Speicher. Standard bleibt das kleinere Modell;"
+    Write-Host "  XL lässt sich danach in den Einstellungen der App auswählen."
+    if ($VRAM_GB -and $VRAM_GB -lt 12) { Write-Host "  Mit $VRAM_GB GB Grafikspeicher nicht empfohlen (ab 12 GB)." }
+    $a = Read-Host "  XL zusätzlich laden? [Enter = nein, j = ja]"
+    if ($a -match '^[jJyY]') { $XL = [switch]$true }
+}
+if ($XL) { Write-Host "  -> zusätzlich XL-Klangmodell" }
+
 # Dateien + Größe in MB (für die Speicherplatz-Prüfung)
 $FILES = [ordered]@{}
-foreach ($f in @("vae-BF16.gguf", "Qwen3-Embedding-0.6B-Q8_0.gguf", "acestep-v15-sft-Q8_0.gguf", $LM_FILE)) {
+$WANT = @("vae-BF16.gguf", "Qwen3-Embedding-0.6B-Q8_0.gguf", "acestep-v15-sft-Q8_0.gguf", $LM_FILE)
+if ($XL) { $WANT += $XL_FILE }
+foreach ($f in $WANT) {
     if (-not $MODEL_SHA[$f]) { Abbruch "Datei $f fehlt in der Modell-Tabelle (scripts\common.sh)." }
     $FILES[$f] = $MODEL_MB[$f]
 }

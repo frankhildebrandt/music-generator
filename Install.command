@@ -5,15 +5,17 @@
 #
 # Optionen:  --yes        keine Rückfragen, Empfehlung übernehmen
 #            --lm SIZE    Sprachmodell erzwingen: 0.6B, 1.7B oder 4B
+#            --xl         zusätzlich das XL-Klangmodell laden (5,3 GB, in den Einstellungen wählbar)
 #            --no-start   App am Ende nicht starten
 source "$(dirname "$0")/scripts/common.sh"
 cd "$ROOT" || exit 1
 
-AUTO=0; START=1; LM_SIZE=""
+AUTO=0; START=1; LM_SIZE=""; XL=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --yes) AUTO=1 ;;
     --no-start) START=0 ;;
+    --xl) XL=1 ;;
     --lm) LM_SIZE="$2"; shift ;;
   esac
   shift
@@ -74,8 +76,23 @@ case "$LM_SIZE" in 0.6B|1.7B|4B) ;; *) abbruch "Unbekannte Modellgröße: $LM_SI
 LM_FILE="acestep-5Hz-lm-${LM_SIZE}-Q8_0.gguf"
 echo "  → Sprachmodell $LM_SIZE, Klangmodell SFT (hohe Qualität)"
 
-# Benötigte Dateien (Name:MB:SHA-256 aus common.sh): die drei festen plus das gewählte Sprachmodell
-FILES=$(echo "$MODEL_FILES" | grep -v 'acestep-5Hz-lm-' ; echo "$MODEL_FILES" | grep "^$LM_FILE:")
+# Optional: XL-Klangmodell (4 statt 2 Mrd. Parameter). Ist es schon da, bleibt es; sonst nur auf Wunsch.
+XL_FILE=$(echo "$MODEL_FILES" | grep 'xl-sft' | cut -d: -f1)
+[ -f "$MODELS/$XL_FILE" ] && XL=1
+if [ "$XL" != 1 ] && [ "$AUTO" != 1 ]; then
+  echo ""
+  echo "  Klangmodell XL (zusätzlich, 5,3 GB): laut den Entwicklern bessere Klangqualität,"
+  echo "  rechnet etwa doppelt so lange und braucht mehr Speicher. Standard bleibt das kleinere Modell;"
+  echo "  XL lässt sich danach in den Einstellungen der App auswählen."
+  [ "$RAM_GB" -lt 16 ] && echo "  Mit $RAM_GB GB Arbeitsspeicher nicht empfohlen."
+  read -r -p "  XL zusätzlich laden? [Enter = nein, j = ja] " a
+  [[ "$a" =~ ^[jJyY] ]] && XL=1
+fi
+[ "$XL" = 1 ] && echo "  → zusätzlich XL-Klangmodell"
+
+# Benötigte Dateien (Name:MB:SHA-256 aus common.sh): die drei festen, das gewählte Sprachmodell, auf Wunsch XL
+FILES=$(echo "$MODEL_FILES" | grep -v 'acestep-5Hz-lm-\|xl-sft' ; echo "$MODEL_FILES" | grep "^$LM_FILE:")
+[ "$XL" = 1 ] && FILES=$(echo "$FILES"; echo "$MODEL_FILES" | grep 'xl-sft')
 NEED_MB=0
 for e in $FILES; do
   IFS=: read -r f mb _ <<< "$e"

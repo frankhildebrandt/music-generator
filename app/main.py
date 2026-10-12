@@ -22,7 +22,8 @@ from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from . import db, updater
-from .engines import EngineError, make_engine
+from .engines import DIT_MODELS, EngineError, make_engine
+from .messages import tr
 
 STATIC = db.ROOT / "static"
 _wakeup = asyncio.Event()
@@ -382,11 +383,17 @@ def queue():
 
 @app.get("/api/settings")
 def get_settings():
-    return {**db.get_settings(), "songs_dir_default": str(db.SONGS_DIR)}
+    return {**db.get_settings(), "songs_dir_default": str(db.SONGS_DIR),
+            "dit_xl_available": (db.MODELS_DIR / DIT_MODELS["xl"]).is_file()}
 
 
 @app.put("/api/settings")
 def put_settings(values: dict, x_lang: str = Header("de")):
+    if "dit" in values:
+        if values["dit"] not in DIT_MODELS:
+            values["dit"] = "standard"
+        if values["dit"] == "xl" and not (db.MODELS_DIR / DIT_MODELS["xl"]).is_file():
+            raise HTTPException(400, tr(x_lang, "xl_missing"))
     if "songs_dir" in values:
         values["songs_dir"] = _move_songs(str(values["songs_dir"] or "").strip(), x_lang)
     return db.save_settings(values)
