@@ -1,0 +1,105 @@
+"""Meldungen des Servers in der Sprache der Oberfläche (Header X-Lang). Unbekannte Sprache -> Englisch."""
+
+LANGS = ("de", "en", "es", "fr", "it", "pt", "tr", "pl")
+
+MSG = {
+    "no_prompt": {
+        "de": "Prompt oder Stil fehlt", "en": "Prompt or style missing", "es": "Falta el prompt o el estilo",
+        "fr": "Prompt ou style manquant", "it": "Manca il prompt o lo stile", "pt": "Falta o prompt ou o estilo",
+        "tr": "Prompt veya tarz eksik", "pl": "Brak promptu lub stylu"},
+    "no_name": {
+        "de": "Name fehlt", "en": "Name missing", "es": "Falta el nombre", "fr": "Nom manquant",
+        "it": "Manca il nome", "pt": "Falta o nome", "tr": "Ad eksik", "pl": "Brak nazwy"},
+    "no_done_songs": {
+        "de": "Keine fertigen Songs in dieser Ansicht.", "en": "No finished songs in this view.",
+        "es": "No hay canciones terminadas en esta vista.", "fr": "Aucun morceau terminé dans cette vue.",
+        "it": "Nessun brano completato in questa vista.", "pt": "Nenhuma música concluída nesta visualização.",
+        "tr": "Bu görünümde tamamlanmış şarkı yok.", "pl": "Brak gotowych utworów w tym widoku."},
+    "path_abs": {
+        "de": "Bitte einen vollständigen Pfad angeben (z. B. /Users/name/Musik oder C:\\Musik).",
+        "en": "Please enter a full path (e.g. /Users/name/Music or C:\\Music).",
+        "es": "Indica una ruta completa (p. ej. /Users/nombre/Música o C:\\Música).",
+        "fr": "Indique un chemin complet (p. ex. /Users/nom/Musique ou C:\\Musique).",
+        "it": "Inserisci un percorso completo (es. /Users/nome/Musica o C:\\Musica).",
+        "pt": "Informe um caminho completo (ex. /Users/nome/Música ou C:\\Música).",
+        "tr": "Tam bir yol gir (örn. /Users/ad/Müzik veya C:\\Müzik).",
+        "pl": "Podaj pełną ścieżkę (np. /Users/nazwa/Muzyka lub C:\\Muzyka)."},
+    "folder_unusable": {
+        "de": "Ordner nicht nutzbar: {e}", "en": "Folder not usable: {e}", "es": "Carpeta no utilizable: {e}",
+        "fr": "Dossier inutilisable : {e}", "it": "Cartella non utilizzabile: {e}", "pt": "Pasta não utilizável: {e}",
+        "tr": "Klasör kullanılamıyor: {e}", "pl": "Folder nie nadaje się do użycia: {e}"},
+    "busy": {
+        "de": "Es laufen noch Songs. Bitte erst fertig werden lassen oder abbrechen.",
+        "en": "Songs are still running. Please let them finish or cancel them first.",
+        "es": "Todavía hay canciones en curso. Espera a que terminen o cancélalas.",
+        "fr": "Des morceaux sont encore en cours. Attends la fin ou annule-les d'abord.",
+        "it": "Ci sono ancora brani in corso. Attendi che finiscano o annullali prima.",
+        "pt": "Ainda há músicas em andamento. Espere terminarem ou cancele-as primeiro.",
+        "tr": "Hâlâ çalışan şarkılar var. Önce bitmelerini bekle veya iptal et.",
+        "pl": "Niektóre utwory wciąż się generują. Poczekaj na zakończenie lub je anuluj."},
+    "move_failed": {
+        "de": "Verschieben von {f} fehlgeschlagen: {e}", "en": "Moving {f} failed: {e}", "es": "No se pudo mover {f}: {e}",
+        "fr": "Déplacement de {f} impossible : {e}", "it": "Spostamento di {f} non riuscito: {e}", "pt": "Falha ao mover {f}: {e}",
+        "tr": "{f} taşınamadı: {e}", "pl": "Nie udało się przenieść {f}: {e}"},
+    "audio_only": {
+        "de": "Bitte eine Audiodatei hochladen (WAV, MP3, FLAC, M4A, OGG).", "en": "Please upload an audio file (WAV, MP3, FLAC, M4A, OGG).",
+        "es": "Sube un archivo de audio (WAV, MP3, FLAC, M4A, OGG).", "fr": "Importe un fichier audio (WAV, MP3, FLAC, M4A, OGG).",
+        "it": "Carica un file audio (WAV, MP3, FLAC, M4A, OGG).", "pt": "Envie um arquivo de áudio (WAV, MP3, FLAC, M4A, OGG).",
+        "tr": "Lütfen bir ses dosyası yükle (WAV, MP3, FLAC, M4A, OGG).", "pl": "Prześlij plik audio (WAV, MP3, FLAC, M4A, OGG)."},
+    "too_big": {
+        "de": "Datei zu groß (max. 60 MB).", "en": "File too large (max. 60 MB).", "es": "Archivo demasiado grande (máx. 60 MB).",
+        "fr": "Fichier trop volumineux (max. 60 Mo).", "it": "File troppo grande (max 60 MB).", "pt": "Arquivo grande demais (máx. 60 MB).",
+        "tr": "Dosya çok büyük (en fazla 60 MB).", "pl": "Plik za duży (maks. 60 MB)."},
+    "script_missing": {
+        "de": "{name} fehlt", "en": "{name} is missing", "es": "Falta {name}", "fr": "{name} manquant",
+        "it": "Manca {name}", "pt": "Falta {name}", "tr": "{name} eksik", "pl": "Brak {name}"},
+    # Updates
+    "gh_unreachable": {
+        "de": "GitHub ist nicht erreichbar (Internetverbindung?).", "en": "GitHub is not reachable (internet connection?).",
+        "es": "No se puede acceder a GitHub (¿conexión a internet?).", "fr": "GitHub est injoignable (connexion internet ?).",
+        "it": "GitHub non è raggiungibile (connessione internet?).", "pt": "GitHub inacessível (conexão com a internet?).",
+        "tr": "GitHub'a ulaşılamıyor (internet bağlantısı?).", "pl": "GitHub jest niedostępny (połączenie z internetem?)."},
+    "gh_timeout": {
+        "de": "Keine Antwort von GitHub (Internetverbindung?).", "en": "No response from GitHub (internet connection?).",
+        "es": "GitHub no responde (¿conexión a internet?).", "fr": "Pas de réponse de GitHub (connexion internet ?).",
+        "it": "Nessuna risposta da GitHub (connessione internet?).", "pt": "Sem resposta do GitHub (conexão com a internet?).",
+        "tr": "GitHub'dan yanıt yok (internet bağlantısı?).", "pl": "Brak odpowiedzi z GitHub (połączenie z internetem?)."},
+    "nogit_change": {
+        "de": "Neue Fassung von GitHub. Die Installation wird dabei auf Git-Updates umgestellt.",
+        "en": "Latest version from GitHub. The installation is switched to Git updates.",
+        "es": "Nueva versión de GitHub. La instalación pasa a actualizarse por Git.",
+        "fr": "Nouvelle version depuis GitHub. L'installation passe aux mises à jour Git.",
+        "it": "Nuova versione da GitHub. L'installazione passa agli aggiornamenti Git.",
+        "pt": "Nova versão do GitHub. A instalação passa a usar atualizações por Git.",
+        "tr": "GitHub'dan yeni sürüm. Kurulum Git güncellemelerine geçirilir.",
+        "pl": "Nowa wersja z GitHub. Instalacja zostanie przełączona na aktualizacje przez Git."},
+    "up_to_date": {
+        "de": "Du hast bereits die aktuelle Version.", "en": "You already have the latest version.",
+        "es": "Ya tienes la versión más reciente.", "fr": "Tu as déjà la dernière version.",
+        "it": "Hai già la versione più recente.", "pt": "Você já tem a versão mais recente.",
+        "tr": "Zaten en güncel sürüme sahipsin.", "pl": "Masz już najnowszą wersję."},
+    "dirty": {
+        "de": "Im Programmordner gibt es eigene Änderungen an Dateien. Das Update würde sie überschreiben.",
+        "en": "There are local changes to files in the program folder. The update would overwrite them.",
+        "es": "Hay cambios locales en archivos de la carpeta del programa. La actualización los sobrescribiría.",
+        "fr": "Des fichiers du dossier du programme ont été modifiés localement. La mise à jour les écraserait.",
+        "it": "Ci sono modifiche locali ai file nella cartella del programma. L'aggiornamento le sovrascriverebbe.",
+        "pt": "Há alterações locais em arquivos da pasta do programa. A atualização as sobrescreveria.",
+        "tr": "Program klasöründe dosyalarda yerel değişiklikler var. Güncelleme bunların üzerine yazardı.",
+        "pl": "W folderze programu są lokalne zmiany w plikach. Aktualizacja by je nadpisała."},
+    "ahead": {
+        "de": "Diese Installation hat eigene Commits, die nicht auf GitHub sind. Automatisch geht das nicht.",
+        "en": "This installation has its own commits that are not on GitHub. Not possible automatically.",
+        "es": "Esta instalación tiene commits propios que no están en GitHub. No es posible automáticamente.",
+        "fr": "Cette installation a ses propres commits absents de GitHub. Impossible automatiquement.",
+        "it": "Questa installazione ha commit propri che non sono su GitHub. Non è possibile automaticamente.",
+        "pt": "Esta instalação tem commits próprios que não estão no GitHub. Não é possível automaticamente.",
+        "tr": "Bu kurulumda GitHub'da olmayan kendi commit'leri var. Otomatik olarak mümkün değil.",
+        "pl": "Ta instalacja ma własne commity, których nie ma na GitHub. Automatycznie się nie da."},
+}
+
+
+def tr(lang: str, key: str, **fmt) -> str:
+    lang = (lang or "en").lower()[:2]
+    text = MSG[key].get(lang) or MSG[key]["en"]
+    return text.format(**fmt) if fmt else text

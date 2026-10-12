@@ -201,13 +201,13 @@ def song_out(r: dict, letter: dict | None = None) -> dict:
 # ---------------------------------------------------------------- API
 
 @app.post("/api/generate")
-async def generate(req: GenerateRequest):
+async def generate(req: GenerateRequest, x_lang: str = Header("de")):
     group = req.group_id or uuid.uuid4().hex[:12]
     lyrics = "[Instrumental]" if req.instrumental else req.lyrics.strip()
     parts = [p.strip().strip(",") for p in (req.style, req.prompt) if p.strip()]
     caption = ", ".join(parts) if parts else req.caption.strip()
     if not caption:
-        raise HTTPException(422, "Prompt oder Stil fehlt")
+        raise HTTPException(422, tr(x_lang, "no_prompt"))
     base = req.model_dump(exclude={"variants", "group_id", "folder_id", "instrumental", "title", "keep_caption"})
     base["caption"] = caption
     base["use_cot_caption"] = not req.keep_caption
@@ -319,20 +319,20 @@ def list_folders():
 
 
 @app.post("/api/folders")
-def create_folder(f: FolderIn):
+def create_folder(f: FolderIn, x_lang: str = Header("de")):
     name = f.name.strip()[:60]
     if not name:
-        raise HTTPException(422, "Name fehlt")
+        raise HTTPException(422, tr(x_lang, "no_name"))
     fid = uuid.uuid4().hex[:12]
     db.execute("INSERT INTO folders(id, name, created_at) VALUES(?,?,?)", (fid, name, now()))
     return {"id": fid, "name": name}
 
 
 @app.patch("/api/folders/{fid}")
-def rename_folder(fid: str, f: FolderIn):
+def rename_folder(fid: str, f: FolderIn, x_lang: str = Header("de")):
     name = f.name.strip()[:60]
     if not name:
-        raise HTTPException(422, "Name fehlt")
+        raise HTTPException(422, tr(x_lang, "no_name"))
     db.execute("UPDATE folders SET name=? WHERE id=?", (name, fid))
     return {"id": fid, "name": name}
 
@@ -346,13 +346,13 @@ def delete_folder(fid: str):
 
 
 @app.get("/api/download")
-def download_zip(folder: str = ""):
+def download_zip(folder: str = "", x_lang: str = Header("de")):
     """Alle fertigen Songs der Ansicht (alle / unsortiert / ein Ordner) als ZIP mit lesbaren Dateinamen."""
     fw, fa = folder_where(folder)
     rows = db.query("SELECT * FROM songs WHERE status='done' AND file IS NOT NULL" + fw + " ORDER BY created_at, rowid", tuple(fa))
     rows = [r for r in rows if (db.songs_dir() / r["file"]).is_file()]
     if not rows:
-        raise HTTPException(404, "Keine fertigen Songs in dieser Ansicht.")
+        raise HTTPException(404, tr(x_lang, "no_done_songs"))
     clean = lambda s: re.sub(r"[^\w\- ]+", "", s).strip()   # noqa: E731
     f = db.one("SELECT name FROM folders WHERE id=?", (folder,)) if folder not in ("", "none") else None
     zip_name = clean(f["name"] if f else "Music Generator") or "Music Generator"
@@ -394,42 +394,38 @@ def put_settings(values: dict, x_lang: str = Header("de")):
 
 def _move_songs(new: str, lang: str) -> str:
     """Song-Ordner wechseln: prüfen, anlegen, vorhandene Songs hinüber verschieben. Gibt den zu speichernden Wert zurück."""
-    de = lang != "en"
     old_dir = db.songs_dir()
     new_dir = Path(new).expanduser() if new else db.SONGS_DIR
     if new and not new_dir.is_absolute():
-        raise HTTPException(400, "Bitte einen vollständigen Pfad angeben (z. B. /Users/name/Musik oder C:\\Musik)." if de
-                            else "Please enter a full path (e.g. /Users/name/Music or C:\\Music).")
+        raise HTTPException(400, tr(lang, "path_abs"))
     try:
         new_dir.mkdir(parents=True, exist_ok=True)
         probe = new_dir / ".schreibtest"
         probe.write_text("ok"); probe.unlink()
     except OSError as e:
-        raise HTTPException(400, (f"Ordner nicht nutzbar: {e.strerror or e}" if de else f"Folder not usable: {e.strerror or e}")) from e
+        raise HTTPException(400, tr(lang, "folder_unusable", e=e.strerror or e)) from e
     if new_dir.resolve() != old_dir.resolve():
         busy = db.one("SELECT COUNT(*) AS n FROM songs WHERE status IN ('queued','running')")["n"]
         if busy:
-            raise HTTPException(409, "Es laufen noch Songs. Bitte erst fertig werden lassen oder abbrechen." if de
-                                else "Songs are still running. Please let them finish or cancel them first.")
+            raise HTTPException(409, tr(lang, "busy"))
         for r in db.query("SELECT file FROM songs WHERE file IS NOT NULL"):
             src = old_dir / r["file"]
             if src.is_file() and not (new_dir / r["file"]).exists():
                 try:
                     shutil.move(str(src), str(new_dir / r["file"]))
                 except OSError as e:
-                    raise HTTPException(400, (f"Verschieben von {r['file']} fehlgeschlagen: {e}" if de
-                                              else f"Moving {r['file']} failed: {e}")) from e
+                    raise HTTPException(400, tr(lang, "move_failed", f=r["file"], e=e)) from e
     return "" if new_dir.resolve() == db.SONGS_DIR.resolve() else str(new_dir)
 
 
 @app.post("/api/analyze")
-async def analyze(audio: UploadFile):
+async def analyze(audio: UploadFile, x_lang: str = Header("de")):
     """Song hochladen -> Modell liefert Stil, Tempo, Tonart, Lyrics als Vorschlag fürs Formular."""
     if not (audio.content_type or "").startswith("audio/") and not audio.filename.lower().endswith((".wav", ".mp3", ".flac", ".m4a", ".ogg")):
-        raise HTTPException(415, "Bitte eine Audiodatei hochladen (WAV, MP3, FLAC, M4A, OGG).")
+        raise HTTPException(415, tr(x_lang, "audio_only"))
     data = await audio.read()
     if len(data) > 60 * 1024 * 1024:
-        raise HTTPException(413, "Datei zu groß (max. 60 MB).")
+        raise HTTPException(413, tr(x_lang, "too_big"))
     engine = make_engine(db.get_settings())
     try:
         result = await engine.analyze(data, audio.filename or "upload")
@@ -452,7 +448,7 @@ async def shutdown(x_lang: str = Header()):   # Pflicht-Header: fremde Webseiten
     name = "Music Generator OFF." + ("ps1" if sys.platform == "win32" else "command")
     script = db.ROOT / name
     if not script.is_file():
-        raise HTTPException(404, f"{name} fehlt")
+        raise HTTPException(404, tr(x_lang, "script_missing", name=name))
     # abgekoppelt und leicht verzögert, damit diese Antwort noch ankommt, bevor die App beendet wird
     if sys.platform == "win32":
         cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",

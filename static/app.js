@@ -593,7 +593,7 @@ $("#stopBtn").onclick = async () => {
 dlg.addEventListener("close", async () => { if (dlg.returnValue === "save") { await saveSettings(); checkHealth(); } });
 
 // Sprachumschalter (DE | EN)
-document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+$("#uiLang").addEventListener("change", (e) => setLang(e.target.value));
 document.addEventListener("langchange", () => {
   showDur(); syncLyrics(); render(); renderFolders(); showLibStats(); checkHealth();
   updInfo.textContent = ""; updList.hidden = true; updApply.hidden = true;

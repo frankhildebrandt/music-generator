@@ -9,15 +9,12 @@ from pathlib import Path
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from . import db
+from .messages import tr
 
 ROOT = Path(__file__).resolve().parent.parent
 BRANCH = "main"
 REPO_URL = "https://github.com/rabbitfiremediacreation/music-generator.git"
 router = APIRouter(prefix="/api/update")
-
-
-def tr(lang: str, de: str, en: str) -> str:
-    return en if lang == "en" else de
 
 
 def git(*args: str, timeout: int = 60) -> str:
@@ -46,10 +43,9 @@ def _status(lang: str = "de") -> dict:
         # Ohne Git installiert (z. B. als ZIP geladen): Version unbekannt, das Update stellt auf Git um
         latest = git("ls-remote", REPO_URL, BRANCH, timeout=30).split()
         if not latest:
-            raise RuntimeError(tr(lang, "GitHub ist nicht erreichbar (Internetverbindung?).", "GitHub is not reachable (internet connection?)."))
+            raise RuntimeError(tr(lang, "gh_unreachable"))
         return {"current": "?", "latest": latest[0][:7], "behind": 1, "ahead": 0, "dirty": False, "needs_install": False, "nogit": True,
-                "changes": [tr(lang, "Neue Fassung von GitHub. Die Installation wird dabei auf Git-Updates umgestellt.",
-                               "Latest version from GitHub. The installation is switched to Git updates.")]}
+                "changes": [tr(lang, "nogit_change")]}
     git("fetch", "--quiet", "origin", BRANCH, timeout=30)
     remote = f"origin/{BRANCH}"
     behind = int(git("rev-list", "--count", f"HEAD..{remote}"))
@@ -76,20 +72,20 @@ async def check(x_lang: str = Header("de")):
 def _friendly(e: Exception, lang: str = "de") -> str:
     msg = str(e) or e.__class__.__name__
     if isinstance(e, subprocess.TimeoutExpired):
-        return tr(lang, "Keine Antwort von GitHub (Internetverbindung?).", "No response from GitHub (internet connection?).")
+        return tr(lang, "gh_timeout")
     if "Could not resolve" in msg or "unable to access" in msg:
-        return tr(lang, "GitHub ist nicht erreichbar (Internetverbindung?).", "GitHub is not reachable (internet connection?).")
+        return tr(lang, "gh_unreachable")
     return msg
 
 
 def _apply(lang: str = "de") -> dict:
     s = _status(lang)
     if not s["behind"]:
-        raise RuntimeError(tr(lang, "Du hast bereits die aktuelle Version.", "You already have the latest version."))
+        raise RuntimeError(tr(lang, "up_to_date"))
     if s["dirty"]:
-        raise RuntimeError(tr(lang, "Im Programmordner gibt es eigene Änderungen an Dateien. Das Update würde sie überschreiben.", "There are local changes to files in the program folder. The update would overwrite them."))
+        raise RuntimeError(tr(lang, "dirty"))
     if s["ahead"]:
-        raise RuntimeError(tr(lang, "Diese Installation hat eigene Commits, die nicht auf GitHub sind. Automatisch geht das nicht.", "This installation has its own commits that are not on GitHub. Not possible automatically."))
+        raise RuntimeError(tr(lang, "ahead"))
     if s.get("nogit"):
         return _apply_nogit(s)
     before = git("rev-parse", "HEAD")
@@ -123,7 +119,7 @@ def _apply_nogit(s: dict) -> dict:
 async def apply(request: Request, x_lang: str = Header()):   # Pflicht-Header wie bei /api/shutdown: ein Formular-POST fremder Webseiten kann ihn nicht setzen
     busy = db.one("SELECT COUNT(*) AS n FROM songs WHERE status IN ('queued','running')")["n"]
     if busy:
-        raise HTTPException(409, tr(x_lang, "Es laufen noch Songs. Bitte erst fertig werden lassen oder abbrechen.", "Songs are still running. Please let them finish or cancel them first."))
+        raise HTTPException(409, tr(x_lang, "busy"))
     try:
         res = await asyncio.to_thread(_apply, x_lang)
     except Exception as e:  # noqa: BLE001

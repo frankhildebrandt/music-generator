@@ -516,7 +516,7 @@ def page_app(c):
         ("Lyrics", "Eingeklappt = instrumental. Würfel: „Automatisch“, das Modell schreibt beim Generieren eigene Texte. Aufgeklappt: Sprache und eigene Lyrics."),
         ("Erweitert", "Iterationen (Qualität), Varianz (Abwechslung), Tonart, Takt, Seed."),
         ("Generieren", "Unten die Zahl der Versionen (1 bis 10) wählen und los. Mehrere heißen dann A, B, C … Die Leiste bleibt beim Scrollen sichtbar."),
-        ("Zahnrad", "Einstellungen: Song-Ordner, Anordnung (untereinander oder nebeneinander), „Nach Updates suchen“, Server stoppen. Darunter: Sprache DE | EN."),
+        ("Zahnrad", "Einstellungen: Song-Ordner, Anordnung (untereinander oder nebeneinander), „Nach Updates suchen“, Server stoppen. Darunter: Sprache der Oberfläche (Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Türkisch, Polnisch)."),
     ]
     lx = ix + iw_pt + 18
     lw = W - M - lx
