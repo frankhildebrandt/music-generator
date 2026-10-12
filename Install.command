@@ -23,13 +23,13 @@ done
 
 abbruch() {
   echo ""; echo "✗ $1"
-  [ "$AUTO" = 1 ] || read -n 1 -s -r -p "Beliebige Taste drücken zum Schließen..."
+  [ "$AUTO" = 1 ] || read -n 1 -s -r -p "Press any key to close..."
   exit 1
 }
 schritt() { echo ""; echo "▸ $1"; }
 ja() {   # Rückfrage mit Enter = ja
   [ "$AUTO" = 1 ] && return 0
-  local a; read -r -p "$1 [Enter = ja, n = nein] " a
+  local a; read -r -p "$1 [Enter = yes, n = no] " a
   [ -z "$a" ] || [[ "$a" =~ ^[jJyY] ]]
 }
 
@@ -39,20 +39,20 @@ echo "  MUSIC GENERATOR · Installation"
 echo "═══════════════════════════════════════════"
 
 # --- 1. Mac prüfen ------------------------------------------------------------
-schritt "Mac prüfen"
+schritt "Checking Mac"
 ARCH=$(uname -m)
 CHIP=$(sysctl -n machdep.cpu.brand_string 2>/dev/null)
 RAM_GB=$(( $(sysctl -n hw.memsize) / 1073741824 ))
 FREE_GB=$(df -g "$ROOT" | awk 'NR==2 {print $4}')
 echo "  Chip:        $CHIP ($ARCH)"
-echo "  Arbeitsspeicher: $RAM_GB GB"
+echo "  Memory:      $RAM_GB GB"
 echo "  macOS:       $(sw_vers -productVersion)"
-echo "  Frei auf der Festplatte: $FREE_GB GB"
+echo "  Free disk space: $FREE_GB GB"
 
 if [ "$ARCH" != "arm64" ]; then
   echo ""
-  echo "  Hinweis: Intel-Mac. Getestet ist nur Apple Silicon (M1 oder neuer); es kann sehr langsam sein."
-  ja "  Trotzdem fortfahren?" || abbruch "Abgebrochen."
+  echo "  Note: Intel Mac. Only Apple Silicon (M1 or newer) has been tested; it may be very slow."
+  ja "  Continue anyway?" || abbruch "Cancelled."
 fi
 
 # --- 2. Modellgröße wählen ------------------------------------------------------
@@ -64,31 +64,31 @@ if [ -z "$LM_SIZE" ]; then
   LM_SIZE="$EMPF"
   if [ "$AUTO" != 1 ]; then
     echo ""
-    echo "  Sprachmodell (plant Aufbau, Tempo, Tonart; größer = bessere Songs, mehr Speicher):"
-    echo "    1) 0.6B  – 0,7 GB, für 8 GB Arbeitsspeicher"
-    echo "    2) 1.7B  – 2,0 GB, für 16 GB"
-    echo "    3) 4B    – 4,5 GB, ab 24 GB"
-    read -r -p "  Auswahl [Enter = $EMPF empfohlen] " a
+    echo "  Language model (plans structure, tempo, key; bigger = better songs, more memory):"
+    echo "    1) 0.6B  – 0.7 GB, for 8 GB RAM"
+    echo "    2) 1.7B  – 2.0 GB, for 16 GB"
+    echo "    3) 4B    – 4.5 GB, from 24 GB"
+    read -r -p "  Choice [Enter = $EMPF recommended] " a
     case "$a" in 1) LM_SIZE="0.6B" ;; 2) LM_SIZE="1.7B" ;; 3) LM_SIZE="4B" ;; esac
   fi
 fi
-case "$LM_SIZE" in 0.6B|1.7B|4B) ;; *) abbruch "Unbekannte Modellgröße: $LM_SIZE (erlaubt: 0.6B, 1.7B, 4B)" ;; esac
+case "$LM_SIZE" in 0.6B|1.7B|4B) ;; *) abbruch "Unknown model size: $LM_SIZE (allowed: 0.6B, 1.7B, 4B)" ;; esac
 LM_FILE="acestep-5Hz-lm-${LM_SIZE}-Q8_0.gguf"
-echo "  → Sprachmodell $LM_SIZE, Klangmodell SFT (hohe Qualität)"
+echo "  → Language model $LM_SIZE, sound model SFT (high quality)"
 
 # Optional: XL-Klangmodell (4 statt 2 Mrd. Parameter). Ist es schon da, bleibt es; sonst nur auf Wunsch.
 XL_FILE=$(echo "$MODEL_FILES" | grep 'xl-sft' | cut -d: -f1)
 [ -f "$MODELS/$XL_FILE" ] && XL=1
 if [ "$XL" != 1 ] && [ "$AUTO" != 1 ]; then
   echo ""
-  echo "  Klangmodell XL (zusätzlich, 5,3 GB): laut den Entwicklern bessere Klangqualität,"
-  echo "  rechnet etwa doppelt so lange und braucht mehr Speicher. Standard bleibt das kleinere Modell;"
-  echo "  XL lässt sich danach in den Einstellungen der App auswählen."
-  [ "$RAM_GB" -lt 16 ] && echo "  Mit $RAM_GB GB Arbeitsspeicher nicht empfohlen."
-  read -r -p "  XL zusätzlich laden? [Enter = nein, j = ja] " a
-  [[ "$a" =~ ^[jJyY] ]] && XL=1
+  echo "  Sound model XL (optional extra, 5.3 GB): better sound quality according to the developers,"
+  echo "  but takes about twice as long and needs more memory. The smaller model stays the default;"
+  echo "  you can pick XL afterwards in the app settings."
+  [ "$RAM_GB" -lt 16 ] && echo "  Not recommended with $RAM_GB GB RAM."
+  read -r -p "  Download XL as well? [Enter = no, y = yes] " a
+  [[ "$a" =~ ^[yY] ]] && XL=1
 fi
-[ "$XL" = 1 ] && echo "  → zusätzlich XL-Klangmodell"
+[ "$XL" = 1 ] && echo "  → plus XL sound model"
 
 # Benötigte Dateien (Name:MB:SHA-256 aus common.sh): die drei festen, das gewählte Sprachmodell, auf Wunsch XL
 FILES=$(echo "$MODEL_FILES" | grep -v 'acestep-5Hz-lm-\|xl-sft' ; echo "$MODEL_FILES" | grep "^$LM_FILE:")
@@ -99,56 +99,56 @@ for e in $FILES; do
   [ -f "$MODELS/$f" ] || NEED_MB=$(( NEED_MB + mb ))
 done
 NEED_GB=$(( (NEED_MB + 1023) / 1024 + 3 ))   # + Build, Python und etwas Platz für Songs
-echo "  Download: $(( (NEED_MB + 1023) / 1024 )) GB · benötigt insgesamt etwa $NEED_GB GB frei"
-[ "$FREE_GB" -ge "$NEED_GB" ] || abbruch "Zu wenig Speicherplatz: $FREE_GB GB frei, etwa $NEED_GB GB nötig."
-ja "  Installation starten?" || abbruch "Abgebrochen."
+echo "  Download: $(( (NEED_MB + 1023) / 1024 )) GB · about $NEED_GB GB free space needed in total"
+[ "$FREE_GB" -ge "$NEED_GB" ] || abbruch "Not enough disk space: $FREE_GB GB free, about $NEED_GB GB needed."
+ja "  Start installation?" || abbruch "Cancelled."
 
 # --- 3. Werkzeuge -------------------------------------------------------------
-schritt "Apple-Entwicklerwerkzeuge (Compiler, git)"
+schritt "Apple developer tools (compiler, git)"
 if ! xcode-select -p >/dev/null 2>&1; then
   xcode-select --install >/dev/null 2>&1
-  abbruch "Es öffnet sich ein Apple-Fenster zur Installation der Entwicklerwerkzeuge. Bitte dort bestätigen und danach 'Install' erneut starten."
+  abbruch "An Apple window opens to install the developer tools. Please confirm there, then run 'Install' again."
 fi
-echo "  vorhanden"
+echo "  present"
 
-schritt "uv (Python-Umgebung)"
+schritt "uv (Python environment)"
 if ! command -v uv >/dev/null 2>&1; then
-  curl -LsSf https://astral.sh/uv/install.sh | sh || abbruch "uv konnte nicht installiert werden."
+  curl -LsSf https://astral.sh/uv/install.sh | sh || abbruch "uv could not be installed."
   export PATH="$HOME/.local/bin:$PATH"
 fi
 uv --version
 
-schritt "cmake (zum Bauen des Modellservers)"
+schritt "cmake (to build the model server)"
 if ! command -v cmake >/dev/null 2>&1; then
-  uv tool install cmake || abbruch "cmake konnte nicht installiert werden."
+  uv tool install cmake || abbruch "cmake could not be installed."
 fi
 cmake --version | head -1
 
-schritt "Python-Pakete der App"
-uv sync --quiet || abbruch "Python-Pakete konnten nicht installiert werden."
+schritt "Python packages of the app"
+uv sync --quiet || abbruch "Python packages could not be installed."
 echo "  ok"
 
 # --- 4. Modellserver (acestep.cpp) ---------------------------------------------
-schritt "Modellserver acestep.cpp ($ACESTEP_REV)"
+schritt "Model server acestep.cpp (${ACESTEP_REV:0:7})"
 if [ ! -d "$ENGINE/.git" ]; then
   mkdir -p "$ROOT/engine"
-  git clone --quiet "$ACESTEP_REPO" "$ENGINE" || abbruch "Download von acestep.cpp fehlgeschlagen."
+  git clone --quiet "$ACESTEP_REPO" "$ENGINE" || abbruch "Downloading acestep.cpp failed."
 fi
 ( cd "$ENGINE" \
   && { git cat-file -e "$ACESTEP_REV^{commit}" 2>/dev/null || git fetch --quiet origin; } \
   && git checkout --quiet "$ACESTEP_REV" \
-  && git submodule update --init --recursive --quiet ) || abbruch "acestep.cpp konnte nicht auf Version $ACESTEP_REV gebracht werden."
+  && git submodule update --init --recursive --quiet ) || abbruch "Could not switch acestep.cpp to version ${ACESTEP_REV:0:7}."
 
 if "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "${ACESTEP_REV:0:7}"; then   # --help zeigt den kurzen Hash
-  echo "  bereits gebaut"
+  echo "  already built"
 else
-  echo "  wird gebaut (dauert einige Minuten) …"
-  ( cd "$ENGINE" && ./buildcpu.sh ) > "$DATA/build.log" 2>&1 || abbruch "Bauen fehlgeschlagen, Details in data/build.log"
-  echo "  fertig"
+  echo "  building (takes a few minutes) …"
+  ( cd "$ENGINE" && ./buildcpu.sh ) > "$DATA/build.log" 2>&1 || abbruch "Build failed, details in data/build.log"
+  echo "  done"
 fi
 
 # --- 5. Modelle -----------------------------------------------------------------
-schritt "Modelle laden"
+schritt "Downloading models"
 mkdir -p "$MODELS"
 NEW_MODELS=0
 for e in $FILES; do
@@ -156,11 +156,11 @@ for e in $FILES; do
   if [ -f "$MODELS/$f" ]; then echo "  ✓ $f"; continue; fi
   echo "  ↓ $f"
   curl -L --fail -C - --progress-bar -o "$MODELS/$f.part" "$HF_BASE/$f" \
-    || abbruch "Download von $f fehlgeschlagen. Install erneut starten setzt den Download fort."
-  echo "    Prüfsumme …"
+    || abbruch "Downloading $f failed. Running Install again resumes the download."
+  echo "    verifying checksum …"
   if [ "$(shasum -a 256 "$MODELS/$f.part" | cut -d' ' -f1)" != "$sha" ]; then
     rm -f "$MODELS/$f.part"
-    abbruch "Prüfsumme von $f stimmt nicht. Die Datei wurde gelöscht; Install erneut starten lädt sie neu."
+    abbruch "Checksum of $f does not match. The file was deleted; running Install again downloads it anew."
   fi
   mv "$MODELS/$f.part" "$MODELS/$f"
   NEW_MODELS=1
@@ -174,23 +174,23 @@ fi
 # --- 6. Grafikchip testen ------------------------------------------------------
 # Auf manchen Chips (z. B. M4) rechnet das Sprachmodell unter Metal falsch.
 # Dann läuft es auf der CPU (Modus "split"), sonst reicht ein Server (Modus "single").
-schritt "Grafikchip testen"
+schritt "Testing graphics chip"
 OLD_MODE=""; OLD_LM=""; OLD_REV=""
 [ -f "$CONF" ] && { OLD_MODE=$(sed -n 's/^MODE=//p' "$CONF"); OLD_LM=$(sed -n 's/^LM_FILE=//p' "$CONF"); OLD_REV=$(sed -n 's/^TESTED_REV=//p' "$CONF"); }
 if [ -n "$OLD_MODE" ] && [ "$OLD_LM" = "$LM_FILE" ] && [ "${OLD_REV:0:7}" = "${ACESTEP_REV:0:7}" ]; then   # alte Installationen haben den kurzen Hash
   MODE="$OLD_MODE"
-  echo "  schon getestet: Modus $MODE"
+  echo "  already tested: mode $MODE"
 else
   TEST_PORT=8099
-  laeuft "$TEST_PORT" && abbruch "Port $TEST_PORT ist belegt, bitte später erneut versuchen."
+  laeuft "$TEST_PORT" && abbruch "Port $TEST_PORT is in use, please try again later."
   "$ENGINE/build/ace-server" --host 127.0.0.1 --port "$TEST_PORT" --models "$MODELS" --max-batch 1 \
     > "$DATA/selftest.log" 2>&1 &
   TEST_PID=$!
   for _ in $(seq 1 120); do curl -s "http://127.0.0.1:$TEST_PORT/health" >/dev/null && break; sleep 0.5; done
-  echo "  Sprachmodell probeweise auf Metal (kann 1–2 Minuten dauern) …"
+  echo "  Trial run of the language model on Metal (can take 1–2 minutes) …"
   if uv run python scripts/metal_selftest.py "$TEST_PORT" "$LM_FILE"; then MODE=single; else MODE=split; fi
   kill "$TEST_PID" 2>/dev/null; wait "$TEST_PID" 2>/dev/null
-  echo "  → Modus $MODE"
+  echo "  → mode $MODE"
 fi
 cat > "$CONF" <<EOF
 MODE=$MODE
@@ -199,15 +199,15 @@ TESTED_REV=$ACESTEP_REV
 EOF
 
 # --- 7. Start-/Stopp-Symbole ----------------------------------------------------
-schritt "Start- und Stopp-Symbole einrichten"
+schritt "Setting up start and stop icons"
 bash "$ROOT/scripts/symbole.sh"
 echo "  ok"
 
 # --- Fertig ---------------------------------------------------------------------
 echo ""
 echo "═══════════════════════════════════════════"
-echo "  Fertig. Starten mit 'Music Generator ON',"
-echo "  beenden mit 'Music Generator OFF'."
+echo "  Done. Start with 'Music Generator ON',"
+echo "  stop with 'Music Generator OFF'."
 echo "═══════════════════════════════════════════"
 if [ "$START" = 1 ]; then
   exec "$ROOT/Music Generator ON.command"

@@ -24,7 +24,7 @@ function Abbruch([string]$text) {
 function Schritt([string]$text) { Write-Host ""; Write-Host "> $text" }
 function Ja([string]$frage) {   # Rückfrage mit Enter = ja
     if ($Yes) { return $true }
-    $a = Read-Host "$frage [Enter = ja, n = nein]"
+    $a = Read-Host "$frage [Enter = yes, n = no]"
     return ($a -eq "" -or $a -match '^[jJyY]')
 }
 function Download([string]$url, [string]$ziel) {   # fortsetzbar, mit Fortschrittsbalken
@@ -40,7 +40,7 @@ Write-Host "  MUSIC GENERATOR · Installation (Windows)"
 Write-Host "==========================================="
 
 # --- 1. PC prüfen ---------------------------------------------------------------
-Schritt "PC prüfen"
+Schritt "Checking PC"
 $cs = Get-CimInstance Win32_ComputerSystem
 $os = Get-CimInstance Win32_OperatingSystem
 $RAM_GB = [int][math]::Floor($cs.TotalPhysicalMemory / 1GB)
@@ -60,15 +60,15 @@ if ($VRAM_GB) {
     elseif ($VRAM_GB -lt 12) { $VAE_CHUNK = "256" }
     elseif ($VRAM_GB -lt 16) { $VAE_CHUNK = "512" }
 }
-Write-Host "  Grafikkarte:     $($GPUS -join ', ')$(if ($VRAM_GB) { " ($VRAM_GB GB)" })"
-Write-Host "  Arbeitsspeicher: $RAM_GB GB"
+Write-Host "  Graphics card:   $($GPUS -join ', ')$(if ($VRAM_GB) { " ($VRAM_GB GB)" })"
+Write-Host "  Memory:          $RAM_GB GB"
 Write-Host "  Windows:         $($os.Caption) $($os.Version)"
-Write-Host "  Frei auf der Festplatte: $FREE_GB GB"
+Write-Host "  Free disk space: $FREE_GB GB"
 if (-not $NVIDIA) {
     Write-Host ""
-    Write-Host "  Hinweis: Keine NVIDIA-Grafikkarte gefunden. Getestet ist nur CUDA; mit AMD/Intel (Vulkan)"
-    Write-Host "  oder nur CPU kann es sehr langsam sein."
-    if (-not (Ja "  Trotzdem fortfahren?")) { Abbruch "Abgebrochen." }
+    Write-Host "  Note: No NVIDIA graphics card found. Only CUDA has been tested; with AMD/Intel (Vulkan)"
+    Write-Host "  or CPU only it may be very slow."
+    if (-not (Ja "  Continue anyway?")) { Abbruch "Cancelled." }
 }
 
 # --- 2. Modellgröße wählen ------------------------------------------------------
@@ -87,155 +87,155 @@ if (-not $LM_SIZE) {
     $LM_SIZE = $EMPF
     if (-not $Yes) {
         Write-Host ""
-        Write-Host "  Sprachmodell (plant Aufbau, Tempo, Tonart; größer = bessere Songs, mehr Speicher):"
-        Write-Host "    1) 0.6B  – 0,7 GB, für 8 GB Arbeitsspeicher, Grafikkarte unter 6 GB"
-        Write-Host "    2) 1.7B  – 2,0 GB, für 16 GB, Grafikkarte mit 6 GB"
-        Write-Host "    3) 4B    – 4,5 GB, ab 24 GB, Grafikkarte ab 8 GB"
-        $a = Read-Host "  Auswahl [Enter = $EMPF empfohlen]"
+        Write-Host "  Language model (plans structure, tempo, key; bigger = better songs, more memory):"
+        Write-Host "    1) 0.6B  – 0.7 GB, for 8 GB RAM, graphics card below 6 GB"
+        Write-Host "    2) 1.7B  – 2.0 GB, for 16 GB, graphics card with 6 GB"
+        Write-Host "    3) 4B    – 4.5 GB, from 24 GB, graphics card from 8 GB"
+        $a = Read-Host "  Choice [Enter = $EMPF recommended]"
         switch ($a) { "1" { $LM_SIZE = "0.6B" } "2" { $LM_SIZE = "1.7B" } "3" { $LM_SIZE = "4B" } }
     }
 }
-if ($LM_SIZE -notin @("0.6B", "1.7B", "4B")) { Abbruch "Unbekannte Modellgröße: $LM_SIZE (erlaubt: 0.6B, 1.7B, 4B)" }
+if ($LM_SIZE -notin @("0.6B", "1.7B", "4B")) { Abbruch "Unknown model size: $LM_SIZE (allowed: 0.6B, 1.7B, 4B)" }
 $LM_FILE = "acestep-5Hz-lm-$LM_SIZE-Q8_0.gguf"
-Write-Host "  -> Sprachmodell $LM_SIZE, Klangmodell SFT (hohe Qualität)"
+Write-Host "  -> Language model $LM_SIZE, sound model SFT (high quality)"
 
 # Optional: XL-Klangmodell (4 statt 2 Mrd. Parameter). Ist es schon da, bleibt es; sonst nur auf Wunsch.
 $XL_FILE = "acestep-v15-xl-sft-Q8_0.gguf"
 if (Test-Path (Join-Path $MODELS $XL_FILE)) { $XL = [switch]$true }
 if (-not $XL -and -not $Yes) {
     Write-Host ""
-    Write-Host "  Klangmodell XL (zusätzlich, 5,3 GB): laut den Entwicklern bessere Klangqualität,"
-    Write-Host "  rechnet etwa doppelt so lange und braucht mehr Speicher. Standard bleibt das kleinere Modell;"
-    Write-Host "  XL lässt sich danach in den Einstellungen der App auswählen."
-    if ($VRAM_GB -and $VRAM_GB -lt 12) { Write-Host "  Mit $VRAM_GB GB Grafikspeicher nicht empfohlen (ab 12 GB)." }
-    $a = Read-Host "  XL zusätzlich laden? [Enter = nein, j = ja]"
+    Write-Host "  Sound model XL (optional extra, 5.3 GB): better sound quality according to the developers,"
+    Write-Host "  but takes about twice as long and needs more memory. The smaller model stays the default;"
+    Write-Host "  you can pick XL afterwards in the app settings."
+    if ($VRAM_GB -and $VRAM_GB -lt 12) { Write-Host "  Not recommended with $VRAM_GB GB graphics memory (12 GB or more advised)." }
+    $a = Read-Host "  Download XL as well? [Enter = no, y = yes]"
     if ($a -match '^[jJyY]') { $XL = [switch]$true }
 }
-if ($XL) { Write-Host "  -> zusätzlich XL-Klangmodell" }
+if ($XL) { Write-Host "  -> plus XL sound model" }
 
 # Dateien + Größe in MB (für die Speicherplatz-Prüfung)
 $FILES = [ordered]@{}
 $WANT = @("vae-BF16.gguf", "Qwen3-Embedding-0.6B-Q8_0.gguf", "acestep-v15-sft-Q8_0.gguf", $LM_FILE)
 if ($XL) { $WANT += $XL_FILE }
 foreach ($f in $WANT) {
-    if (-not $MODEL_SHA[$f]) { Abbruch "Datei $f fehlt in der Modell-Tabelle (scripts\common.sh)." }
+    if (-not $MODEL_SHA[$f]) { Abbruch "File $f is missing in the model table (scripts\common.sh)." }
     $FILES[$f] = $MODEL_MB[$f]
 }
 $NEED_MB = 0
 foreach ($f in $FILES.Keys) { if (-not (Test-Path (Join-Path $MODELS $f))) { $NEED_MB += $FILES[$f] } }
 $NEED_GB = [int][math]::Ceiling($NEED_MB / 1024) + 3   # + Modellserver, Python und etwas Platz für Songs
-Write-Host "  Download: $([math]::Ceiling($NEED_MB / 1024)) GB · benötigt insgesamt etwa $NEED_GB GB frei"
-if ($FREE_GB -lt $NEED_GB) { Abbruch "Zu wenig Speicherplatz: $FREE_GB GB frei, etwa $NEED_GB GB nötig." }
-if (-not (Ja "  Installation starten?")) { Abbruch "Abgebrochen." }
+Write-Host "  Download: $([math]::Ceiling($NEED_MB / 1024)) GB · about $NEED_GB GB free space needed in total"
+if ($FREE_GB -lt $NEED_GB) { Abbruch "Not enough disk space: $FREE_GB GB free, about $NEED_GB GB needed." }
+if (-not (Ja "  Start installation?")) { Abbruch "Cancelled." }
 
 # --- 3. Werkzeuge ---------------------------------------------------------------
 Schritt "git"
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Host "  wird installiert (winget) ..."
+    Write-Host "  installing (winget) ..."
     & winget install --id Git.Git -e --silent --accept-package-agreements --accept-source-agreements
     $env:PATH = "$env:ProgramFiles\Git\cmd;$env:LOCALAPPDATA\Programs\Git\cmd;$env:PATH"
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Abbruch "git konnte nicht installiert werden. Bitte von https://git-scm.com laden und 'Install' erneut starten." }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Abbruch "git could not be installed. Please download it from https://git-scm.com and run 'Install' again." }
 }
 Write-Host "  $(& git --version)"
 
-Schritt "uv (Python-Umgebung)"
+Schritt "uv (Python environment)"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    try { Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression } catch { Abbruch "uv konnte nicht installiert werden: $_" }
+    try { Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression } catch { Abbruch "uv could not be installed: $_" }
     $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { Abbruch "uv konnte nicht installiert werden." }
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { Abbruch "uv could not be installed." }
 }
 Write-Host "  $(& uv --version)"
 
-Schritt "Python-Pakete der App"
+Schritt "Python packages of the app"
 # Python-Version festlegen: das neueste Python (3.15) hat noch keine fertigen Pakete (pydantic-core),
 # uv würde sonst versuchen, es aus dem Quellcode zu bauen, und daran scheitern.
 & uv sync --quiet --python 3.12
-if ($LASTEXITCODE -ne 0) { Abbruch "Python-Pakete konnten nicht installiert werden." }
+if ($LASTEXITCODE -ne 0) { Abbruch "Python packages could not be installed." }
 Write-Host "  ok"
 
 # --- 4. Modellserver (acestep.cpp) ----------------------------------------------
-Schritt "Modellserver acestep.cpp"
+Schritt "Model server acestep.cpp"
 $ACE = Ace-Server
 if ($ACE -and -not $Build) {
-    Write-Host "  vorhanden: $ACE"
+    Write-Host "  present: $ACE"
 } elseif (-not $Build) {
     # Fertige Binaries des acestep.cpp-Autors (CUDA + Vulkan + CPU, Backend wird zur Laufzeit gewählt)
-    Write-Host "  fertige Windows-Binaries werden geladen (ca. 180 MB) ..."
+    Write-Host "  downloading ready-made Windows binaries (about 180 MB) ..."
     $rel = Join-Path $ENGINE "build\Release"
     New-Item -ItemType Directory -Force -Path $rel | Out-Null
     $index = (Invoke-WebRequest -UseBasicParsing $PREBUILT_URL).Content
     $names = [regex]::Matches($index, 'href="([^"/?]+\.(exe|dll))"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-    if (-not $names) { Abbruch "Dateiliste der Binaries nicht lesbar ($PREBUILT_URL). Alternative: 'Install -Build' kompiliert selbst." }
+    if (-not $names) { Abbruch "Could not read the binaries file list ($PREBUILT_URL). Alternative: 'Install -Build' compiles it yourself." }
     foreach ($n in $names) {
         Write-Host "  v $n"
-        if (-not (Download "$PREBUILT_URL$n" (Join-Path $rel $n))) { Abbruch "Download von $n fehlgeschlagen. Install erneut starten setzt fort." }
+        if (-not (Download "$PREBUILT_URL$n" (Join-Path $rel $n))) { Abbruch "Downloading $n failed. Running Install again resumes." }
     }
     "PREBUILT=$(Get-Date -Format s)" | Set-Content (Join-Path $rel "VERSION.txt")
-    Write-Host "  fertig"
+    Write-Host "  done"
 } else {
     # Selbst kompilieren: Quellcode in der getesteten Version, CUDA wenn vorhanden
     if (-not (Test-Path (Join-Path $ENGINE ".git"))) {
         New-Item -ItemType Directory -Force -Path (Join-Path $ROOT "engine") | Out-Null
         & git clone --quiet $ACESTEP_REPO $ENGINE
-        if ($LASTEXITCODE -ne 0) { Abbruch "Download von acestep.cpp fehlgeschlagen." }
+        if ($LASTEXITCODE -ne 0) { Abbruch "Downloading acestep.cpp failed." }
     }
     Push-Location $ENGINE
     & git cat-file -e "$ACESTEP_REV^{commit}" 2>$null
     if ($LASTEXITCODE -ne 0) { & git fetch --quiet origin }
     & git checkout --quiet $ACESTEP_REV
-    if ($LASTEXITCODE -ne 0) { Pop-Location; Abbruch "acestep.cpp konnte nicht auf Version $ACESTEP_REV gebracht werden." }
+    if ($LASTEXITCODE -ne 0) { Pop-Location; Abbruch "Could not switch acestep.cpp to version $($ACESTEP_REV.Substring(0, 7))." }
     & git submodule update --init --recursive --quiet
     Pop-Location
 
     if ($ACE -and ((& $ACE --help 2>&1 | Select-Object -First 1) -match $ACESTEP_REV.Substring(0, 7))) {   # --help zeigt den kurzen Hash
-        Write-Host "  bereits gebaut ($ACESTEP_REV)"
+        Write-Host "  already built ($($ACESTEP_REV.Substring(0, 7)))"
     } else {
         if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { & uv tool install cmake | Out-Null }
         $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
         $vs = if (Test-Path $vswhere) { & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath } else { "" }
         if (-not $vs) {
-            Write-Host "  Visual Studio Build Tools fehlen. Installation (ca. 7 GB, Admin-Rechte):"
+            Write-Host "  Visual Studio Build Tools are missing. Installation (about 7 GB, admin rights):"
             Write-Host '    winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"'
-            Abbruch "Danach 'Install -Build' erneut starten."
+            Abbruch "Then run 'Install -Build' again."
         }
         $cuda = $env:CUDA_PATH
         if (-not $cuda) { $cuda = [Environment]::GetEnvironmentVariable("CUDA_PATH", "Machine") }
         if ($NVIDIA -and -not $cuda) {
-            Write-Host "  CUDA Toolkit fehlt. Installation (ca. 3 GB, Admin-Rechte):  winget install Nvidia.CUDA"
-            Abbruch "Danach 'Install -Build' erneut starten (ohne CUDA: 'Install -Build' trotzdem möglich, dann nur CPU/Vulkan)."
+            Write-Host "  CUDA Toolkit is missing. Installation (about 3 GB, admin rights):  winget install Nvidia.CUDA"
+            Abbruch "Then run 'Install -Build' again (without CUDA 'Install -Build' still works, but CPU/Vulkan only)."
         }
         $flags = @("-DGGML_CPU_ALL_VARIANTS=ON", "-DGGML_BACKEND_DL=ON")
         if ($cuda) { $flags += @("-DGGML_CUDA=ON", "-DCMAKE_CUDA_ARCHITECTURES=native") }
-        Write-Host "  wird gebaut (dauert 10-30 Minuten) ..."
+        Write-Host "  building (takes 10-30 minutes) ..."
         Push-Location $ENGINE
         $log = Join-Path $DATA "build.log"
         & cmake -S . -B build @flags *> $log
         if ($LASTEXITCODE -eq 0) { & cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS *>> $log }
         $rc = $LASTEXITCODE
         Pop-Location
-        if ($rc -ne 0) { Abbruch "Bauen fehlgeschlagen, Details in data\build.log" }
-        Write-Host "  fertig"
+        if ($rc -ne 0) { Abbruch "Build failed, details in data\build.log" }
+        Write-Host "  done"
     }
 }
 $ACE = Ace-Server
-if (-not $ACE) { Abbruch "ace-server.exe nicht gefunden." }
+if (-not $ACE) { Abbruch "ace-server.exe not found." }
 
 # --- 5. Modelle -----------------------------------------------------------------
-Schritt "Modelle laden"
+Schritt "Downloading models"
 New-Item -ItemType Directory -Force -Path $MODELS | Out-Null
 $NEW_MODELS = $false
 foreach ($f in $FILES.Keys) {
     $ziel = Join-Path $MODELS $f
     if (Test-Path $ziel) { Write-Host "  ok $f"; continue }
     Write-Host "  v $f"
-    if (-not (Download "$HF_BASE/$f" "$ziel.neu")) { Abbruch "Download von $f fehlgeschlagen. Install erneut starten setzt den Download fort." }
-    Write-Host "    Prüfsumme ..."
+    if (-not (Download "$HF_BASE/$f" "$ziel.neu")) { Abbruch "Downloading $f failed. Running Install again resumes the download." }
+    Write-Host "    verifying checksum ..."
     if ((Get-FileHash -Algorithm SHA256 "$ziel.neu").Hash.ToLower() -ne $MODEL_SHA[$f]) {
         Remove-Item -Force "$ziel.neu"
-        Abbruch "Prüfsumme von $f stimmt nicht. Die Datei wurde gelöscht; Install erneut starten lädt sie neu."
+        Abbruch "Checksum of $f does not match. The file was deleted; running Install again downloads it anew."
     }
     Move-Item -Force "$ziel.neu" $ziel
-    Write-Host "    Prüfsumme ok"
+    Write-Host "    checksum ok"
     $NEW_MODELS = $true
 }
 # Der Modellserver liest die Modellliste nur beim Start: nach neuen Modellen laufende Server beenden, ON startet sie neu.
@@ -250,16 +250,16 @@ if ($NEW_MODELS) {
 # --- 6. Grafikkarte testen ------------------------------------------------------
 # Prüft, ob das Sprachmodell auf der Grafikkarte brauchbar rechnet (auf dem Mac M4 tut es das nicht).
 # Sonst läuft es auf der CPU (Modus "split"), sonst reicht ein Server (Modus "single").
-Schritt "Grafikkarte testen"
+Schritt "Testing graphics card"
 $OLD = @{}
 if (Test-Path $CONF) { foreach ($l in Get-Content $CONF) { if ($l -match '^(\w+)=(.*)$') { $OLD[$Matches[1]] = $Matches[2] } } }
 $STAMP = if (Test-Path (Join-Path $ENGINE "build\Release\VERSION.txt")) { (Get-Content (Join-Path $ENGINE "build\Release\VERSION.txt") -First 1) } else { $ACESTEP_REV }
 if ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
     $MODE = $OLD.MODE
-    Write-Host "  schon getestet: Modus $MODE"
+    Write-Host "  already tested: mode $MODE"
 } else {
     $TEST_PORT = 8099
-    if (Port-Laeuft $TEST_PORT) { Abbruch "Port $TEST_PORT ist belegt, bitte später erneut versuchen." }
+    if (Port-Laeuft $TEST_PORT) { Abbruch "Port $TEST_PORT is in use, please try again later." }
     $args_ = @("--host", "127.0.0.1", "--port", $TEST_PORT, "--models", "`"$MODELS`"", "--max-batch", "1")
     if ($VAE_CHUNK) { $args_ += @("--vae-chunk", $VAE_CHUNK) }
     $proc = Start-Hintergrund $ACE $args_ (Join-Path $DATA "selftest.log")
@@ -268,22 +268,22 @@ if ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
     }
     if ($proc.HasExited) {
         Get-Content (Join-Path $DATA "selftest.err.log") -Tail 15 -ErrorAction SilentlyContinue
-        Abbruch "Der Modellserver startet nicht (siehe data\selftest.err.log). Fehlt eine DLL, hilft meist ein aktueller NVIDIA-Treiber."
+        Abbruch "The model server does not start (see data\selftest.err.log). If a DLL is missing, a current NVIDIA driver usually helps."
     }
-    Write-Host "  Sprachmodell probeweise auf der Grafikkarte (kann 1-2 Minuten dauern) ..."
+    Write-Host "  Trial run of the language model on the graphics card (can take 1-2 minutes) ..."
     & uv run python scripts\metal_selftest.py $TEST_PORT $LM_FILE
     $MODE = if ($LASTEXITCODE -eq 0) { "single" } else { "split" }
     if ($proc.HasExited) {   # abgestürzt (z. B. Grafikspeicher voll): Ursache zeigen statt nur "Verbindung verweigert"
-        Write-Host "  Der Modellserver ist beim Test abgestürzt (data\selftest.err.log):"
+        Write-Host "  The model server crashed during the test (data\selftest.err.log):"
         Get-Content (Join-Path $DATA "selftest.err.log") -Tail 4 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" }
     }
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-    Write-Host "  -> Modus $MODE"
+    Write-Host "  -> mode $MODE"
 }
 @("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP", "VAE_CHUNK=$VAE_CHUNK") | Set-Content $CONF
 
 # --- 7. Verknüpfungen -----------------------------------------------------------
-Schritt "Verknüpfungen (Programmordner und Desktop)"
+Schritt "Shortcuts (program folder and desktop)"
 $shell = New-Object -ComObject WScript.Shell
 foreach ($e in @(@("Music Generator ON", "icon-on.ico"), @("Music Generator OFF", "icon-off.ico"))) {
     foreach ($dir in @($ROOT, [Environment]::GetFolderPath("Desktop"))) {
@@ -300,8 +300,8 @@ Write-Host "  ok"
 # --- Fertig ---------------------------------------------------------------------
 Write-Host ""
 Write-Host "==========================================="
-Write-Host "  Fertig. Starten mit 'Music Generator ON',"
-Write-Host "  beenden mit 'Music Generator OFF'."
+Write-Host "  Done. Start with 'Music Generator ON',"
+Write-Host "  stop with 'Music Generator OFF'."
 Write-Host "==========================================="
 if (-not $NoStart) {
     & (Join-Path $ROOT "Music Generator ON.ps1")

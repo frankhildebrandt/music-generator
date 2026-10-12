@@ -5,12 +5,12 @@ source "$(dirname "$0")/scripts/common.sh"
 for P in "$PORT" "$SYNTH_PORT" "$LM_PORT"; do
   PIDS=$(lsof -i :"$P" -sTCP:LISTEN -t 2>/dev/null)
   if [ -n "$PIDS" ]; then
-    echo "Beende Server auf Port $P..."
+    echo "Stopping server on port $P..."
     kill $PIDS
   fi
 done
 sleep 1
-echo "Server gestoppt."
+echo "Servers stopped."
 
 osascript -e "
 if application \"Google Chrome\" is running then

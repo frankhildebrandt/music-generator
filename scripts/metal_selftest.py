@@ -36,15 +36,15 @@ try:
             if status == "done":
                 break
             if any(w in status for w in ("err", "fail", "cancel")):
-                print(f"Selbsttest: Job fehlgeschlagen ({status})")
+                print(f"Self-test: job failed ({status})")
                 sys.exit(1)
             time.sleep(1)
         else:
-            print("Selbsttest: Zeitüberschreitung")
+            print("Self-test: timeout")
             sys.exit(1)
         result = c.get(f"{base}/job", params={"id": job, "result": 1}).json()
 except Exception as e:  # noqa: BLE001
-    print(f"Selbsttest: {e}")
+    print(f"Self-test: {e}")
     sys.exit(1)
 
 data = result[0] if isinstance(result, list) else result
@@ -59,6 +59,6 @@ except (TypeError, ValueError):
 planned = bpm > 0 and bool(data.get("keyscale"))
 coded = 0.6 * expected <= len(codes) <= 1.4 * expected and unique_ratio > 0.3   # Phase 2
 ok = planned and coded
-print(f"Selbsttest: Planung {'ok' if planned else 'fehlerhaft'} (BPM {data.get('bpm')}, {data.get('keyscale') or 'keine Tonart'}), "
-      f"{len(codes)} Codes (erwartet ~{expected}), Vielfalt {unique_ratio:.2f} -> {'ok' if ok else 'unbrauchbar'}")
+print(f"Self-test: planning {'ok' if planned else 'faulty'} (BPM {data.get('bpm')}, {data.get('keyscale') or 'no key'}), "
+      f"{len(codes)} codes (expected ~{expected}), variety {unique_ratio:.2f} -> {'ok' if ok else 'unusable'}")
 sys.exit(0 if ok else 1)

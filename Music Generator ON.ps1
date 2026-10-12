@@ -20,13 +20,13 @@ if ($VAE_CHUNK) { $SERVER_ARGS += @("--vae-chunk", $VAE_CHUNK) }
 
 $ACE = Ace-Server
 if (-not $ACE) {
-    Write-Host "Noch nicht installiert. Bitte zuerst 'Install' starten."
+    Write-Host "Not installed yet. Please run 'Install' first."
     Taste-Zum-Schliessen
     exit 1
 }
 
 function Fehler([string]$text, [string]$log) {
-    Write-Host "$text Log-Datei ($log):"
+    Write-Host "$text Log file ($log):"
     if (Test-Path $log) { Get-Content $log -Tail 30 }
     $err = [System.IO.Path]::ChangeExtension($log, ".err.log")
     if (Test-Path $err) { Get-Content $err -Tail 30 }
@@ -44,9 +44,9 @@ function Neuste-Quelle {
 # --- Modellserver -----------------------------------------------------------
 if ($MODE -eq "split") {
     if (Port-Laeuft $LM_PORT) {
-        Write-Host "Sprachmodell-Server läuft bereits (Port $LM_PORT)."
+        Write-Host "Language model server is already running (port $LM_PORT)."
     } else {
-        Write-Host "Starte Sprachmodell-Server (CPU)..."
+        Write-Host "Starting language model server (CPU)..."
         $env:GGML_BACKEND = "CPU"
         Start-Hintergrund $ACE (@("--host", "127.0.0.1", "--port", $LM_PORT) + $SERVER_ARGS) (Join-Path $DATA "ace-lm.log") | Out-Null
         Remove-Item Env:\GGML_BACKEND
@@ -54,9 +54,9 @@ if ($MODE -eq "split") {
 }
 
 if (Port-Laeuft $SYNTH_PORT) {
-    Write-Host "Synthese-Server läuft bereits (Port $SYNTH_PORT)."
+    Write-Host "Synthesis server is already running (port $SYNTH_PORT)."
 } else {
-    Write-Host "Starte Synthese-Server (Grafikkarte)..."
+    Write-Host "Starting synthesis server (graphics card)..."
     Start-Hintergrund $ACE (@("--host", "127.0.0.1", "--port", $SYNTH_PORT) + $SERVER_ARGS) (Join-Path $DATA "ace-server.log") | Out-Null
 }
 
@@ -66,16 +66,16 @@ if ($pids.Count) {
     $proc = Get-Process -Id $pids[0] -ErrorAction SilentlyContinue
     $neuste = Neuste-Quelle
     if ($proc -and $neuste -and $neuste -gt $proc.StartTime) {
-        Write-Host "Der Code ist neuer als die laufende Web-App - Neustart."
+        Write-Host "The code is newer than the running web app, restarting."
         Stop-Process -Id $pids -Force -ErrorAction SilentlyContinue
         for ($i = 0; $i -lt 20 -and (Port-Laeuft $PORT); $i++) { Start-Sleep -Milliseconds 500 }
         $pids = @()
     } else {
-        Write-Host "Web-App läuft bereits auf Port $PORT."
+        Write-Host "Web app is already running on port $PORT."
     }
 }
 if (-not $pids.Count) {
-    Write-Host "Starte Web-App..."
+    Write-Host "Starting web app..."
     Start-Hintergrund "uv" @("run", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", $PORT) (Join-Path $DATA "server.log") | Out-Null
 }
 
@@ -84,14 +84,14 @@ for ($i = 0; $i -lt 60; $i++) {
     if ((Port-Laeuft $PORT) -and (Port-Laeuft $SYNTH_PORT) -and ($MODE -ne "split" -or (Port-Laeuft $LM_PORT))) { break }
     Start-Sleep -Milliseconds 500
 }
-if (-not (Port-Laeuft $PORT))       { Fehler "Web-App ist nicht rechtzeitig gestartet." (Join-Path $DATA "server.log") }
-if (-not (Port-Laeuft $SYNTH_PORT)) { Fehler "Synthese-Server ist nicht rechtzeitig gestartet." (Join-Path $DATA "ace-server.log") }
-if ($MODE -eq "split" -and -not (Port-Laeuft $LM_PORT)) { Fehler "Sprachmodell-Server ist nicht rechtzeitig gestartet." (Join-Path $DATA "ace-lm.log") }
-Write-Host "Alle Server laufen."
+if (-not (Port-Laeuft $PORT))       { Fehler "The web app did not start in time." (Join-Path $DATA "server.log") }
+if (-not (Port-Laeuft $SYNTH_PORT)) { Fehler "The synthesis server did not start in time." (Join-Path $DATA "ace-server.log") }
+if ($MODE -eq "split" -and -not (Port-Laeuft $LM_PORT)) { Fehler "The language model server did not start in time." (Join-Path $DATA "ace-lm.log") }
+Write-Host "All servers are running."
 
 Start-Process "http://localhost:$PORT"
 Write-Host ""
-Write-Host "Music Generator ist offen unter http://localhost:$PORT"
-Write-Host "Zum Beenden: 'Music Generator OFF' verwenden."
+Write-Host "Music Generator is open at http://localhost:$PORT"
+Write-Host "To stop: use 'Music Generator OFF'."
 Start-Sleep -Seconds 2
 exit 0

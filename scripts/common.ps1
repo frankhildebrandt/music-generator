@@ -51,6 +51,6 @@ function Start-Hintergrund([string]$exe, [string[]]$argumente, [string]$log) {
 
 function Taste-Zum-Schliessen {
     Write-Host ""
-    Write-Host "Beliebige Taste drücken zum Schließen..."
+    Write-Host "Press any key to close..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
