@@ -567,8 +567,12 @@ def page_help(c):
     y = para(c, T("p7_20"), M, y, W - 2 * M, small)
     y -= 16
 
+    y = h2(c, T("p7_xl_h"), y)
+    y = para(c, T("p7_xl"), M, y, W - 2 * M, small)
+    y -= 16
+
     y = h2(c, T("p7_21"), y)
-    y = para(c, T("p7_22"), M, y, W - 2 * M)
+    y = para(c, T("p7_22"), M, y, W - 2 * M, small)
     footer(c, 7)
 
 
