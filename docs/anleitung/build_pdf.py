@@ -1,7 +1,13 @@
-"""Erzeugt die Installationsanleitung für den Music Generator als PDF."""
+"""Erzeugt die Installationsanleitung für den Music Generator als PDF.
+
+Aufruf: build_pdf.py <ausgabe.pdf> [sprache]   (de = Standard; Texte in texts.py, Bilder von capture.py)
+"""
 import json
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from texts import TEXTS  # noqa: E402
 
 from reportlab.lib.colors import HexColor, white
 from reportlab.lib.enums import TA_LEFT
@@ -14,10 +20,22 @@ from reportlab.platypus import Paragraph, Table, TableStyle
 
 HERE = Path(__file__).parent
 OUT = Path(sys.argv[1])
+LANG = sys.argv[2] if len(sys.argv) > 2 else "de"
+SUF = "" if LANG == "de" else f"-{LANG}"      # Bilder und Markierungen je Sprache: form-en.png, marks-en.json …
+
+
+def T(key: str) -> str:
+    return TEXTS.get(LANG, {}).get(key) or TEXTS["de"][key]
+
 
 F = "/System/Library/Fonts/Supplemental/"
-pdfmetrics.registerFont(TTFont("Arial", F + "Arial.ttf"))
-pdfmetrics.registerFont(TTFont("Arial-Bold", F + "Arial Bold.ttf"))
+if LANG in ("zh", "ja", "ko"):
+    # CJK: Arial Unicode deckt die Schriftzeichen ab; es gibt keinen fetten Schnitt, Fettdruck nutzt dieselbe Datei
+    pdfmetrics.registerFont(TTFont("Arial", F + "Arial Unicode.ttf"))
+    pdfmetrics.registerFont(TTFont("Arial-Bold", F + "Arial Unicode.ttf"))
+else:
+    pdfmetrics.registerFont(TTFont("Arial", F + "Arial.ttf"))
+    pdfmetrics.registerFont(TTFont("Arial-Bold", F + "Arial Bold.ttf"))
 pdfmetrics.registerFont(TTFont("Mono", F + "Courier New Bold.ttf"))
 pdfmetrics.registerFontFamily("Arial", normal="Arial", bold="Arial-Bold", italic="Arial", boldItalic="Arial-Bold")
 
@@ -83,7 +101,7 @@ def header(c, title, kicker):
 def footer(c, n):
     c.setFont("Arial", 8)
     c.setFillColor(MUTED)
-    c.drawString(M, 28, "Music Generator · Installationsanleitung für Mac und Windows")
+    c.drawString(M, 28, T("footer"))
     c.drawRightString(W - M, 28, str(n))
 
 
@@ -110,9 +128,9 @@ def code(c, text, x, y, w):
     return y - h
 
 
-def note(c, text, y, color=GOLD, label="Hinweis"):
+def note(c, text, y, color=GOLD, label=None):
     """Hinweis-Kasten mit farbigem Balken links."""
-    p = Paragraph(f"<b>{label}:</b> {text}", body)
+    p = Paragraph(f"<b>{label or T('hinweis')}:</b> {text}", body)
     _, h = p.wrap(W - 2 * M - 26, 1000)
     c.setFillColor(white)
     c.setStrokeColor(LINE)
@@ -194,17 +212,17 @@ def page_cover(c):
     c.line(M, y - 228, M + 60, y - 228)
     c.setFillColor(white)
     c.setFont("Arial-Bold", 22)
-    c.drawString(M, y - 266, "Installationsanleitung für Mac und Windows")
+    c.drawString(M, y - 266, T("p1_01"))
     c.setFillColor(HexColor("#b8bcc8"))
     c.setFont("Arial", 12)
-    c.drawString(M, y - 290, "Eigene Songs lokal erzeugen – ohne Limits, ohne Abo, ohne Cloud.")
+    c.drawString(M, y - 290, T("p1_02"))
 
     # Die drei Schritte als Vorschau
     sy = 250
     bw = (W - 2 * M - 24) / 3
-    for i, (t, s) in enumerate([("Projekt holen", "per Git oder als Ordner"),
-                                ("Install starten", "Doppelklick, der Rest läuft allein"),
-                                ("Musik machen", "Music Generator ON")]):
+    for i, (t, s) in enumerate([(T("p1_03"), T("p1_04")),
+                                (T("p1_05"), T("p1_06")),
+                                (T("p1_07"), "Music Generator ON")]):
         x = M + i * (bw + 12)
         c.setFillColor(PANEL)
         c.setStrokeColor(BORDER)
@@ -219,34 +237,32 @@ def page_cover(c):
 
     c.setFillColor(HexColor("#6b7080"))
     c.setFont("Arial", 8.5)
-    c.drawString(M, 52, "Basis: ACE-Step 1.5 (MIT-Lizenz) über acestep.cpp · läuft komplett lokal, kein Konto nötig")
+    c.drawString(M, 52, T("p1_08"))
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 2: Überblick
 def page_overview(c):
-    y = header(c, "Auf einen Blick", "Bevor es losgeht")
-    y = para(c, "Der Music Generator erzeugt Songs direkt auf deinem Rechner. Du beschreibst Stil und Stimmung, "
-                "die App komponiert daraus Musik in Studioqualität (WAV, 48 kHz). Alles läuft lokal: "
-                "keine Cloud, keine Download-Grenzen, dein Material bleibt auf deinem Rechner.", M, y, W - 2 * M)
+    y = header(c, T("p2_01"), T("p2_02"))
+    y = para(c, T("p2_03"), M, y, W - 2 * M)
     y -= 22
-    y = h2(c, "Das brauchst du", y)
-    rows = [["", "Voraussetzung", "Warum"],
-            ["Mac", "Apple Silicon (M1 oder neuer)", "Die Klangerzeugung nutzt den Grafikchip. Intel-Macs sind nicht getestet. Seiten 3 und 4."],
-            ["Windows", "Windows 10/11, NVIDIA-Grafikkarte", "RTX 30xx oder neuer rechnet über CUDA, ältere Karten über Vulkan (langsamer). Seite 5."],
-            ["Speicher", "mindestens 8 GB Arbeitsspeicher, 16 GB empfohlen", "Bestimmt, welches Sprachmodell passt (siehe Seite 4). Unter Windows zählt auch der Grafikspeicher."],
-            ["Festplatte", "7 bis 11 GB frei", "Modelle, Modellserver und Platz für deine Songs."],
-            ["Internet", "für die Installation", "Die Modelle (4 bis 8 GB) werden einmalig geladen. Danach läuft alles offline."],
-            ["Zeit", "etwa 15 bis 30 Minuten", "Hängt vor allem von der Download-Geschwindigkeit ab."]]
+    y = h2(c, T("p2_04"), y)
+    rows = [["", T("p2_05"), T("p2_06")],
+            ["Mac", T("p2_07"), T("p2_08")],
+            ["Windows", T("p2_09"), T("p2_10")],
+            [T("p2_11"), T("p2_12"), T("p2_13")],
+            [T("p2_14"), T("p2_15"), T("p2_16")],
+            ["Internet", T("p2_17"), T("p2_18")],
+            [T("p2_19"), T("p2_20"), T("p2_21")]]
     y = table(c, rows, y, [70, 170, W - 2 * M - 240])
     y -= 26
-    y = h2(c, "So läuft die Installation", y)
+    y = h2(c, T("p2_22"), y)
 
     # Drei große Schritte mit Pfeilen dazwischen
     bw = (W - 2 * M - 40) / 3
     bh = 128
-    items = [("Projekt holen", "Den Projektordner per Git laden oder als Ordner bekommen."),
-             ("Install starten", "Doppelklick auf „Install“. Der Installer prüft den Rechner und richtet alles ein."),
-             ("Musik machen", "„Music Generator ON“ öffnet die App im Browser.")]
+    items = [(T("p2_23"), T("p2_24")),
+             (T("p2_25"), T("p2_26")),
+             (T("p2_27"), T("p2_28"))]
     for i, (t, s) in enumerate(items):
         x = M + i * (bw + 20)
         c.setFillColor(white)
@@ -267,51 +283,42 @@ def page_overview(c):
             p.close()
             c.drawPath(p, stroke=0, fill=1)
     y -= bh + 22
-    note(c, "Der Installer fragt kaum etwas. Du kannst ihn jederzeit erneut starten, "
-            "Erledigtes wird übersprungen und abgebrochene Downloads laufen weiter.", y, GOLD, "Gut zu wissen")
+    note(c, T("p2_29"), y, GOLD, T("p2_30"))
     footer(c, 2)
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 3: Schritt 1+2
 def page_steps(c):
-    y = header(c, "Schritt 1 und 2 auf dem Mac", "Projekt holen, Installer starten")
-    y = h2(c, "1  Projekt holen", y)
-    y = para(c, "Öffne das Programm <b>Terminal</b> (Spotlight: Cmd+Leertaste, „Terminal“ tippen) "
-                "und füge diesen Befehl ein. Er lädt das Projekt in den Ordner <b>MusicGenerator</b> "
-                "in deinem Benutzerordner:", M, y, W - 2 * M)
+    y = header(c, T("p3_01"), T("p3_02"))
+    y = h2(c, T("p3_03"), y)
+    y = para(c, T("p3_04"), M, y, W - 2 * M)
     y -= 10
-    y = code(c, "git clone https://github.com/rabbitfiremediacreation/music-generator.git \\\n    ~/MusicGenerator", M, y, W - 2 * M)
+    y = code(c, T("p3_05"), M, y, W - 2 * M)
     y -= 8
-    y = para(c, "Fehlen dem Mac die Apple-Entwicklerwerkzeuge, "
-                "fragt macOS jetzt automatisch, ob sie installiert werden sollen: mit <b>Installieren</b> bestätigen, "
-                "warten, dann den Befehl noch einmal ausführen.", M, y, W - 2 * M, small)
+    y = para(c, T("p3_06"), M, y, W - 2 * M, small)
     y -= 12
-    y = para(c, "<b>Ohne Git:</b> Hast du den Projektordner als ZIP oder per AirDrop bekommen, "
-                "entpacke ihn an einen festen Ort, zum Beispiel in deinen Benutzerordner. "
-                "Nicht im Download-Ordner lassen, dort wird gern aufgeräumt.", M, y, W - 2 * M)
+    y = para(c, T("p3_07"), M, y, W - 2 * M)
     y -= 26
 
-    y = h2(c, "2  Installer starten", y)
-    y = para(c, "Öffne den Ordner im Finder und mach einen <b>Doppelklick auf „Install“</b>. "
-                "Es öffnet sich ein Terminal-Fenster, in dem der Installer arbeitet. "
-                "Alternativ im Terminal:", M, y, W - 2 * M)
+    y = h2(c, T("p3_08"), y)
+    y = para(c, T("p3_09"), M, y, W - 2 * M)
     y -= 10
-    y = code(c, "open ~/MusicGenerator/Install.command", M, y, W - 2 * M)
+    y = code(c, T("p3_10"), M, y, W - 2 * M)
     y -= 16
 
     # Terminal-Mockup mit typischer Ausgabe
-    lines = ["  MUSIC GENERATOR · Installation",
+    lines = [T("p3_11"),
              "",
-             "▸ Mac prüfen",
-             "  Chip:        Apple M4 (arm64)",
-             "  Arbeitsspeicher: 16 GB",
-             "  Frei auf der Festplatte: 40 GB",
+             T("p3_12"),
+             T("p3_13"),
+             T("p3_14"),
+             T("p3_15"),
              "",
-             "  Sprachmodell (größer = bessere Songs, mehr Speicher):",
-             "    1) 0.6B  – 0,7 GB, für 8 GB Arbeitsspeicher",
-             "    2) 1.7B  – 2,0 GB, für 16 GB",
-             "    3) 4B    – 4,5 GB, ab 24 GB",
-             "  Auswahl [Enter = 1.7B empfohlen] _"]
+             T("p3_16"),
+             T("p3_17"),
+             T("p3_18"),
+             T("p3_19"),
+             T("p3_20")]
     th = 30 + 12.5 * len(lines)
     c.setFillColor(HexColor("#16181d"))
     c.setStrokeColor(BORDER)
@@ -321,32 +328,27 @@ def page_steps(c):
         c.circle(M + 14 + i * 13, y - 11, 4, stroke=0, fill=1)
     c.setFont("Mono", 8.8)
     for i, line in enumerate(lines):
-        c.setFillColor(GOLD if line.startswith("▸") or "Auswahl" in line else HexColor("#c9ccd4"))
+        c.setFillColor(GOLD if line.startswith("▸") or T("p3_21") in line else HexColor("#c9ccd4"))
         c.drawString(M + 14, y - 34 - 12.5 * i, line.replace("▸", ">"))
     y -= th + 14
-    y = para(c, "Der Installer zeigt, was er auf deinem Mac gefunden hat, und schlägt das passende Sprachmodell vor. "
-                "<b>Enter</b> übernimmt die Empfehlung, mit 1, 2 oder 3 wählst du selbst. "
-                "Danach noch einmal Enter zum Starten, der Rest läuft von allein.", M, y, W - 2 * M)
+    y = para(c, T("p3_22"), M, y, W - 2 * M)
     y -= 14
-    note(c, "Bietet macOS nur „In den Papierkorb legen“ oder „Abbrechen“ an: <b>Abbrechen</b> wählen, dann "
-            "<b>Systemeinstellungen › Datenschutz &amp; Sicherheit</b> öffnen und ganz unten bei „Install“ auf "
-            "<b>Dennoch öffnen</b> klicken (Passwort oder Touch ID). Danach Install nochmal doppelklicken. "
-            "Der Terminal-Weg steht auf Seite 4.", y, BLUE, "macOS-Warnung")
+    note(c, T("p3_23"), y, BLUE, T("p3_24"))
     footer(c, 3)
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 4: Was passiert
 def page_flow(c):
-    y = header(c, "Was der Installer macht", "Automatisch, Schritt für Schritt (Mac)")
+    y = header(c, T("p4_01"), T("p4_02"))
     steps = [
-        ("Mac prüfen", "Chip, Arbeitsspeicher, macOS-Version und freien Platz ermitteln."),
-        ("Modell wählen", "Passende Sprachmodell-Größe vorschlagen, Speicherplatz prüfen."),
-        ("Werkzeuge", "Apple-Entwicklerwerkzeuge, uv (Python) und cmake, ohne Passwort und ohne Homebrew."),
-        ("Modellserver bauen", "acestep.cpp in der getesteten Version herunterladen und für deinen Mac kompilieren."),
-        ("Modelle laden", "Nur die Dateien, die dein Mac braucht, mit Fortschrittsbalken, fortsetzbar."),
-        ("Grafikchip testen", "Probelauf: Rechnet das Sprachmodell auf dem Grafikchip richtig? Sonst nimmt es die CPU."),
-        ("Symbole einrichten", "Grünes Start- und rotes Stopp-Symbol für „Music Generator ON/OFF“."),
-        ("Loslegen", "Server starten und die App im Browser öffnen."),
+        (T("p4_03"), T("p4_04")),
+        (T("p4_05"), T("p4_06")),
+        (T("p4_07"), T("p4_08")),
+        (T("p4_09"), T("p4_10")),
+        (T("p4_11"), T("p4_12")),
+        (T("p4_13"), T("p4_14")),
+        (T("p4_15"), T("p4_16")),
+        (T("p4_17"), T("p4_18")),
     ]
     x0 = M
     bw = 300
@@ -374,7 +376,7 @@ def page_flow(c):
     ry = y
     c.setFillColor(INK)
     c.setFont("Arial-Bold", 12)
-    c.drawString(rx, ry - 12, "Welches Modell?")
+    c.drawString(rx, ry - 12, T("p4_19"))
     c.setStrokeColor(GOLD)
     c.line(rx, ry - 19, rx + 24, ry - 19)
     ry -= 30
@@ -389,27 +391,26 @@ def page_flow(c):
         c.drawString(rx + 12, ry - 26, lm)
         c.setFont("Arial", 8.5)
         c.setFillColor(MUTED)
-        c.drawString(rx + 12, ry - 42, f"ab {ram} Arbeitsspeicher")
-        c.drawString(rx + 12, ry - 52, f"Download gesamt {dl}")
+        c.drawString(rx + 12, ry - 42, T("p4_ram").format(ram=ram))
+        c.drawString(rx + 12, ry - 52, T("p4_dl").format(dl=dl))
         if rec:
             c.setFillColor(GOLD)
             c.roundRect(rx + rw - 66, ry - 20, 56, 13, 6, stroke=0, fill=1)
             c.setFillColor(BG)
             c.setFont("Arial-Bold", 7)
-            c.drawCentredString(rx + rw - 38, ry - 16, "HÄUFIGSTE")
+            c.drawCentredString(rx + rw - 38, ry - 16, T("p4_20"))
         ry -= h + 8
-    ry = para(c, "Größer heißt: Songaufbau, Tempo und Lyrics werden besser getroffen. "
-                 "Das Klangmodell (SFT, hohe Qualität) ist bei allen gleich.",
+    ry = para(c, T("p4_21"),
               rx, ry - 2, rw, ParagraphStyle("r", parent=small, fontSize=8.5, leading=11.5))
     ry -= 20
     c.setFillColor(INK)
     c.setFont("Arial-Bold", 12)
-    c.drawString(rx, ry - 12, "Wie lange?")
+    c.drawString(rx, ry - 12, T("p4_22"))
     c.setStrokeColor(GOLD)
     c.line(rx, ry - 19, rx + 24, ry - 19)
     ry -= 30
-    for k, v in [("Modellserver bauen", "2 bis 5 Min."), ("Modelle laden", "je nach Leitung"),
-                 ("Grafikchip-Test", "1 bis 2 Min."), ("Ein Song (1:30)", "etwa 2 bis 4 Min.")]:
+    for k, v in [(T("p4_23"), T("p4_24")), (T("p4_25"), T("p4_26")),
+                 (T("p4_27"), T("p4_28")), (T("p4_29"), T("p4_30"))]:
         c.setFont("Arial", 8.8)
         c.setFillColor(INK)
         c.drawString(rx, ry - 10, k)
@@ -421,67 +422,56 @@ def page_flow(c):
         ry -= 20
     # Unter beiden Spalten: wenn macOS die Datei blockiert
     yy = y - len(steps) * (bh + gap) + gap - 24
-    yy = h2(c, "Wenn macOS die Datei blockiert", yy)
-    yy = para(c, "Das passiert bei Dateien aus dem Internet, vor allem bei einem ZIP. Statt über die Systemeinstellungen "
-                 "(Seite 3) geht es auch im Terminal in einem Schritt für den ganzen Ordner. Danach lassen sich Install "
-                 "und Music Generator ON/OFF ohne Nachfrage öffnen:", M, yy, W - 2 * M)
+    yy = h2(c, T("p4_31"), yy)
+    yy = para(c, T("p4_32"), M, yy, W - 2 * M)
     yy -= 8
-    yy = code(c, "xattr -dr com.apple.quarantine ~/MusicGenerator", M, yy, W - 2 * M)
+    yy = code(c, T("p4_33"), M, yy, W - 2 * M)
     yy -= 8
-    para(c, "Mit <b>git clone</b> (Schritt 1) tritt die Warnung gar nicht erst auf.", M, yy, W - 2 * M, small)
+    para(c, T("p4_34"), M, yy, W - 2 * M, small)
     footer(c, 4)
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 5: Windows
 def page_windows(c):
-    y = header(c, "Installation unter Windows", "Schritt 1 und 2 auf dem PC")
-    y = h2(c, "1  Projekt holen", y)
-    y = para(c, "Öffne <b>PowerShell</b> (Startmenü, „PowerShell“ tippen) und füge diesen Befehl ein. "
-                "Er lädt das Projekt in den Ordner <b>MusicGenerator</b> in deinem Benutzerordner:", M, y, W - 2 * M)
+    y = header(c, T("p5_01"), T("p5_02"))
+    y = h2(c, T("p5_03"), y)
+    y = para(c, T("p5_04"), M, y, W - 2 * M)
     y -= 10
-    y = code(c, "git clone https://github.com/rabbitfiremediacreation/music-generator.git `\n    $HOME\\MusicGenerator", M, y, W - 2 * M)
+    y = code(c, T("p5_05"), M, y, W - 2 * M)
     y -= 8
-    y = para(c, "Kennt Windows den Befehl <b>git</b> nicht, vorher einmal <b>winget install Git.Git</b> ausführen "
-                "und die PowerShell neu öffnen. Ein ZIP geht auch: entpacken, Ordner an einen festen Ort legen.", M, y, W - 2 * M, small)
+    y = para(c, T("p5_06"), M, y, W - 2 * M, small)
     y -= 16
 
-    y = h2(c, "2  Installer starten", y)
-    y = para(c, "Im Ordner <b>MusicGenerator</b> einen <b>Doppelklick auf „Install“</b> (die Datei Install.bat). "
-                "Es öffnet sich ein PowerShell-Fenster, die Fragen sind dieselben wie auf dem Mac: "
-                "Sprachmodell wählen, mit Enter bestätigen, warten. Alternativ ohne Rückfragen:", M, y, W - 2 * M)
+    y = h2(c, T("p5_07"), y)
+    y = para(c, T("p5_08"), M, y, W - 2 * M)
     y -= 10
-    y = code(c, ".\\Install.ps1 -Yes", M, y, W - 2 * M)
+    y = code(c, T("p5_09"), M, y, W - 2 * M)
     y -= 10
-    y = para(c, "Der Installer braucht keine Admin-Rechte und keinen Compiler: Er lädt fertige Programmdateien des "
-                "Modellservers (etwa 180 MB) und die Modelle, prüft deren Prüfsummen, testet die Grafikkarte und legt "
-                "<b>Music Generator ON</b> und <b>OFF</b> als Verknüpfungen in den Ordner und auf den Desktop.", M, y, W - 2 * M)
+    y = para(c, T("p5_10"), M, y, W - 2 * M)
     y -= 12
-    y = note(c, "Meldet Windows „Der Computer wurde durch Windows geschützt“: auf <b>Weitere Informationen</b> "
-                "und dann <b>Trotzdem ausführen</b> klicken. Das passiert nur bei einem entpackten ZIP, nicht nach git clone.",
+    y = note(c, T("p5_11"),
              y, BLUE, "SmartScreen")
     y -= 16
 
-    y = h2(c, "Was unter Windows anders ist", y)
-    rows = [["Thema", "Windows"],
-            ["Grafikkarte", "RTX 30xx und neuer rechnet über CUDA. Ältere Karten (GTX 10xx/16xx, RTX 20xx) nehmen automatisch "
-                            "Vulkan: 30 Sekunden Song dauern auf einer GTX 1060 etwa 1 Minute, 90 Sekunden etwa 2,5 Minuten."],
-            ["Sprachmodell", "Der Grafikspeicher begrenzt die Wahl zusätzlich: unter 6 GB 0.6B, 6 bis 7 GB 1.7B, ab 8 GB 4B. "
-                             "Der Installer schlägt passend vor."],
-            ["Start und Stopp", "Verknüpfungen auf dem Desktop und im Ordner. OFF beendet die Server, lässt aber den Browser-Tab offen."],
-            ["Logdateien", "Im Ordner data: server.log, ace-server.log und jeweils eine .err.log mit Fehlermeldungen."]]
+    y = h2(c, T("p5_12"), y)
+    rows = [[T("p5_13"), "Windows"],
+            [T("p5_14"), T("p5_15")],
+            [T("p5_16"), T("p5_17")],
+            [T("p5_18"), T("p5_19")],
+            [T("p5_20"), T("p5_21")]]
     y = table(c, rows, y, [95, W - 2 * M - 95])
     y -= 12
-    para(c, "Weiter geht es wie auf dem Mac ab Seite 6. Hilfe bei Problemen unter Windows: Seite 8.", M, y, W - 2 * M, small)
+    para(c, T("p5_22"), M, y, W - 2 * M, small)
     footer(c, 5)
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 6: Starten + App
 def page_app(c):
-    y = header(c, "Starten, beenden, loslegen", "Die App benutzen")
+    y = header(c, T("p6_01"), T("p6_02"))
     # ON/OFF
     iw = 50
-    for i, (img, t, s) in enumerate([("icon-on.png", "Music Generator ON", "startet alles und öffnet die App im Browser"),
-                                     ("icon-off.png", "Music Generator OFF", "beendet alles und schließt die Browser-Tabs")]):
+    for i, (img, t, s) in enumerate([("icon-on.png", "Music Generator ON", T("p6_03")),
+                                     ("icon-off.png", "Music Generator OFF", T("p6_04"))]):
         x = M + i * ((W - 2 * M) / 2)
         c.drawImage(str(HERE / img), x, y - iw, iw, iw, mask="auto")
         c.setFillColor(INK)
@@ -489,34 +479,33 @@ def page_app(c):
         c.drawString(x + iw + 12, y - 20, t)
         para(c, s, x + iw + 12, y - 26, (W - 2 * M) / 2 - iw - 20, small)
     y -= iw + 12
-    y = para(c, "Beide liegen im Projektordner, unter Windows zusätzlich auf dem Desktop. Tipp auf dem Mac: ins Dock ziehen. "
-                "Die App läuft unter <b>http://localhost:8765</b>, die Fenster schließen sich nach dem Start selbst.", M, y, W - 2 * M, small)
+    y = para(c, T("p6_05"), M, y, W - 2 * M, small)
     y -= 16
-    y = h2(c, "Der Bildschirm", y)
+    y = h2(c, T("p6_06"), y)
 
     # Screenshot mit Markierungen (Positionen liefert capture.py in marks.json)
-    mk = json.loads((HERE / "marks.json").read_text())["form"]
+    mk = json.loads((HERE / f"marks{SUF}.json").read_text())["form"]
     iw_pt = 300
     ih_pt = iw_pt * mk["h"] / mk["w"]
     ix, iy = M, y - ih_pt
     c.setStrokeColor(BORDER)
     c.roundRect(ix - 1, iy - 1, iw_pt + 2, ih_pt + 2, 6, stroke=1, fill=0)
-    c.drawImage(str(HERE / "form.png"), ix, iy, iw_pt, ih_pt)
+    c.drawImage(str(HERE / f"form{SUF}.png"), ix, iy, iw_pt, ih_pt)
     sc = iw_pt / mk["w"]
     for n, (px, py) in enumerate(mk["marks"], 1):
         badge(c, n, ix + px * sc, iy + ih_pt - py * sc, 7)
 
     legend = [
-        ("Logo", "Geheimes Upload-Feld: Song darauf ziehen oder klicken. Die App analysiert ihn und füllt Prompt, Tempo und Länge aus."),
-        ("Titel", "Nur zum Wiederfinden. Der Würfel schlägt einen Namen vor."),
-        ("Prompt", "Deine Idee: Stimmung, Szene, Klang. Der Würfel würfelt eine Idee."),
-        ("Stil", "Genre und Instrumente. Würfel: Vorschlag. Unter „Stile“ hängen Karten Begriffe an."),
-        ("Länge", "10 Sekunden bis 5 Minuten, Standard 1:30."),
-        ("BPM", "Tempo. Ganz links = Auto, das Modell wählt."),
-        ("Lyrics", "Eingeklappt = instrumental. Würfel: „Automatisch“, das Modell schreibt beim Generieren eigene Texte. Aufgeklappt: Sprache und eigene Lyrics."),
-        ("Erweitert", "Iterationen (Qualität), Varianz (Abwechslung), Tonart, Takt, Seed."),
-        ("Generieren", "Unten die Zahl der Versionen (1 bis 10) wählen und los. Mehrere heißen dann A, B, C … Die Leiste bleibt beim Scrollen sichtbar."),
-        ("Zahnrad", "Einstellungen: Song-Ordner, Anordnung (untereinander oder nebeneinander), „Nach Updates suchen“, Server stoppen. Darunter: Sprache der Oberfläche (zwölf Sprachen, von Deutsch bis Chinesisch)."),
+        ("Logo", T("p6_07")),
+        (T("p6_08"), T("p6_09")),
+        ("Prompt", T("p6_10")),
+        (T("p6_11"), T("p6_12")),
+        (T("p6_13"), T("p6_14")),
+        ("BPM", T("p6_15")),
+        ("Lyrics", T("p6_16")),
+        (T("p6_17"), T("p6_18")),
+        (T("p6_19"), T("p6_20")),
+        (T("p6_21"), T("p6_22")),
     ]
     lx = ix + iw_pt + 18
     lw = W - M - lx
@@ -530,24 +519,24 @@ def page_app(c):
 
 # ═════════════════════════════════════════════════════════════════ Seite 7: Bibliothek + Hilfe
 def page_help(c):
-    y = header(c, "Bibliothek, Ordner, Updates", "Wenn der erste Song fertig ist")
-    y = h2(c, "Ein Song in der Bibliothek", y)
-    rk = json.loads((HERE / "marks.json").read_text())["row"]
+    y = header(c, T("p7_01"), T("p7_02"))
+    y = h2(c, T("p7_03"), y)
+    rk = json.loads((HERE / f"marks{SUF}.json").read_text())["row"]
     iw_pt = W - 2 * M
     ih_pt = iw_pt * rk["h"] / rk["w"]
     ix, iy = M, y - ih_pt - 10
     c.setFillColor(PANEL)
     c.roundRect(ix - 4, iy - 4, iw_pt + 8, ih_pt + 8, 6, stroke=0, fill=1)
-    c.drawImage(str(HERE / "row.png"), ix, iy, iw_pt, ih_pt)
+    c.drawImage(str(HERE / f"row{SUF}.png"), ix, iy, iw_pt, ih_pt)
     sc = iw_pt / rk["w"]
     # Play steht links, die fünf Knöpfe rechts; Nummern über die Zeile
     for n, px in enumerate(rk["xs"], 1):
         badge(c, n, ix + px * sc, iy + ih_pt + 8, 7.5)
     y = iy - 16
-    items = [("Play", "abspielen, mit Wellenform unten"), ("Stern", "als Favorit markieren"),
-             ("WAV", "herunterladen, 48 kHz, 16 Bit"), ("TXT", "Lyrics des Modells zeigen (nur bei Gesang)"),
-             ("Ordner", "in einen Ordner verschieben"), ("Plus", "weitere Version mit neuem Seed"),
-             ("Pfeil", "Einstellungen ins Formular übernehmen"), ("Kreuz", "löschen, bei laufendem Song abbrechen")]
+    items = [("Play", T("p7_04")), (T("p7_05"), T("p7_06")),
+             ("WAV", T("p7_07")), ("TXT", T("p7_08")),
+             (T("p7_09"), T("p7_10")), ("Plus", T("p7_11")),
+             (T("p7_12"), T("p7_13")), (T("p7_14"), T("p7_15"))]
     if not rk.get("txt"):
         items.pop(3)
     colw = (W - 2 * M) / 3
@@ -558,78 +547,60 @@ def page_help(c):
         badge(c, i + 1, cx + 8, cy - 7, 7.5)
         para(c, f"<b>{t}</b> · {s}", cx + 22, cy, colw - 28, st)
     y -= 26 * ((len(items) + 2) // 3) + 8
-    y = para(c, "Titel lassen sich per Klick umbenennen. Die Zeile darunter zeigt "
-                "<b>BPM · IT</b> (Iterationen) <b>· VAR</b> (Varianz) · Tonart · Länge. "
-                "„Erstellt in …“ verschwindet, sobald du den Song zum ersten Mal abspielst.", M, y, W - 2 * M, small)
+    y = para(c, T("p7_16"), M, y, W - 2 * M, small)
     y -= 16
 
-    y = h2(c, "Ordner", y)
-    bk = json.loads((HERE / "marks.json").read_text())["bar"]
+    y = h2(c, T("p7_17"), y)
+    bk = json.loads((HERE / f"marks{SUF}.json").read_text())["bar"]
     bh = iw_pt * bk["h"] / bk["w"]
     c.setFillColor(PANEL)
     c.roundRect(M - 4, y - bh - 12, iw_pt + 8, bh + 8, 6, stroke=0, fill=1)
-    c.drawImage(str(HERE / "folders.png"), M, y - bh - 8, iw_pt, bh)
+    c.drawImage(str(HERE / f"folders{SUF}.png"), M, y - bh - 8, iw_pt, bh)
     y -= bh + 22
-    y = para(c, "Mit <b>+</b> legst du einen Ordner an. Songs ziehst du auf einen Ordner oder verschiebst sie mit dem "
-                "Ordner-Knopf der Songzeile, jede Version einzeln. Ein Klick auf einen Ordner zeigt nur dessen Songs; "
-                "neue Songs landen im gerade offenen Ordner. <b>Alle laden</b> bzw. <b>Ordner laden</b> lädt die "
-                "fertigen Songs der Ansicht als ZIP. Ordner löschen entfernt nur den Ordner, nicht die Songs.",
+    y = para(c, T("p7_18"),
              M, y, W - 2 * M, small)
     y -= 16
 
-    y = h2(c, "Wo die Songs liegen", y)
-    y = para(c, "Fertige Songs liegen als WAV im Unterordner <b>data/songs</b> des Programmordners, also "
-                "<b>~/MusicGenerator/data/songs</b> auf dem Mac bzw. <b>C:\\Users\\&lt;Name&gt;\\MusicGenerator\\data\\songs</b> unter Windows. "
-                "Die Dateinamen sind Kennungen, die Titel stehen in der App. Ein anderer Ort: <b>Zahnrad › Song-Ordner</b>, "
-                "vollständigen Pfad eintragen und speichern. Die App legt den Ordner an und verschiebt die vorhandenen Songs dorthin; "
-                "leer lassen heißt wieder Standard.", M, y, W - 2 * M, small)
+    y = h2(c, T("p7_19"), y)
+    y = para(c, T("p7_20"), M, y, W - 2 * M, small)
     y -= 16
 
-    y = h2(c, "Aktualisieren", y)
-    y = para(c, "In der App: <b>Zahnrad › Nach Updates suchen › Jetzt aktualisieren</b>. Die App holt die neue Fassung "
-                "von GitHub und startet neu, deine Songs bleiben erhalten. Meldet sie eine neue Modellversion, "
-                "danach einmal <b>Install</b> starten.", M, y, W - 2 * M)
+    y = h2(c, T("p7_21"), y)
+    y = para(c, T("p7_22"), M, y, W - 2 * M)
     footer(c, 7)
 
 
 # ═════════════════════════════════════════════════════════════════ Seite 8: Hilfe
 def page_trouble(c):
-    y = header(c, "Hilfe", "Wenn etwas hakt")
-    y = h2(c, "Wenn etwas hakt", y)
-    rows = [["Problem", "Lösung"],
-            ["„Zu wenig Speicherplatz“", "Platz schaffen (Papierkorb leeren!), dann Install erneut starten. Die Meldung nennt, wie viel nötig ist."],
-            ["Download abgebrochen", "Install erneut starten, der Download läuft an der Stelle weiter."],
-            ["„OFFLINE“ oben in der App", "Music Generator OFF, dann ON. Hilft das nicht: Details im Ordner data (Logdateien). Windows-Fälle auf Seite 5."],
-            ["Song bricht mit Fehler ab", "Mauszeiger auf den Fehler halten zeigt den Grund. Mit dem Kreispfeil daneben neu versuchen."],
-            ["Generieren bleibt stehen", "Rechner war im Ruhezustand. Seit Oktober 2026 hält die App ihn wach; sonst Update einspielen."],
-            ["Sehr langsam", "Erweitert: Iterationen senken (z. B. 30) oder kürzere Länge wählen. Windows mit älterer Grafikkarte rechnet über Vulkan, das ist langsamer (Seite 5)."]]
+    y = header(c, T("p8_01"), T("p8_02"))
+    y = h2(c, T("p8_03"), y)
+    rows = [[T("p8_04"), T("p8_05")],
+            [T("p8_06"), T("p8_07")],
+            [T("p8_08"), T("p8_09")],
+            [T("p8_10"), T("p8_11")],
+            [T("p8_12"), T("p8_13")],
+            [T("p8_14"), T("p8_15")],
+            [T("p8_16"), T("p8_17")]]
     y = table(c, rows, y, [140, W - 2 * M - 140])
     y -= 20
-    y = h2(c, "Nur unter Windows", y)
-    rows = [["Problem", "Lösung"],
-            ["Modellserver startet nicht, Meldung über eine fehlende DLL", "NVIDIA-Treiber aktualisieren (GeForce Experience oder nvidia.de), dann OFF und ON."],
-            ["„ErrorOutOfDeviceMemory“ im Log, Song endet mit Fehler", "Grafikspeicher reicht nicht: Install erneut starten und ein kleineres Sprachmodell wählen, "
-                                                                        "oder in data\\engine.conf den Wert VAE_CHUNK halbieren (z. B. 64). Danach OFF und ON."],
-            ["Installer bricht bei „Python-Pakete“ ab", "In der PowerShell <b>uv python install 3.12</b> ausführen und Install erneut starten."]]
+    y = h2(c, T("p8_18"), y)
+    rows = [[T("p8_19"), T("p8_20")],
+            [T("p8_21"), T("p8_22")],
+            [T("p8_23"), T("p8_24")],
+            [T("p8_25"), T("p8_26")]]
     y = table(c, rows, y, [190, W - 2 * M - 190])
     y -= 20
-    y = h2(c, "Modell, Lizenz und Trainingsdaten", y)
-    y = para(c, "Die Musik erzeugt <b>ACE-Step 1.5</b>, ein offenes Modell unter MIT-Lizenz; die Ergebnisse dürfen laut den "
-                "Entwicklern auch kommerziell genutzt werden. Laut den Entwicklern wurde es auf lizenzierter, gemeinfreier "
-                "und synthetischer Musik trainiert. Der Datensatz selbst ist nicht veröffentlicht, die Angabe lässt sich also "
-                "nicht nachprüfen. Die Entwickler bitten, erzeugte Stücke auf stilistische Nähe zu bestehenden Werken zu prüfen "
-                "und den Einsatz von KI offenzulegen.", M, y, W - 2 * M, small)
+    y = h2(c, T("p8_27"), y)
+    y = para(c, T("p8_28"), M, y, W - 2 * M, small)
     y -= 14
 
-    y = h2(c, "Deinstallieren", y)
-    para(c, "Music Generator OFF, dann den Ordner <b>MusicGenerator</b> in den Papierkorb legen; vorher <b>data/songs</b> sichern, "
-            "falls du deine Songs behalten willst. Windows: zusätzlich die beiden Desktop-Verknüpfungen löschen. "
-            "Das Hilfsprogramm uv liegt im Benutzerordner unter .local/bin.", M, y, W - 2 * M, small)
+    y = h2(c, T("p8_29"), y)
+    para(c, T("p8_30"), M, y, W - 2 * M, small)
     footer(c, 8)
 
 
 c = canvas.Canvas(str(OUT), pagesize=A4)
-c.setTitle("Music Generator – Installationsanleitung")
+c.setTitle(T("p8_31"))
 c.setAuthor("Alphatester")
 for fn in (page_cover, page_overview, page_steps, page_flow, page_windows, page_app, page_help, page_trouble):
     fn(c)

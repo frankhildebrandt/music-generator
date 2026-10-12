@@ -8,7 +8,8 @@ macht zwei Aufnahmen und liest dabei die Positionen der Elemente aus:
     marks.json Positionen für die nummerierten Markierungen im PDF
 
 Aufruf (App muss laufen):
-    uv run --with websockets python docs/anleitung/capture.py [http://127.0.0.1:8765/]
+    uv run --with websockets python docs/anleitung/capture.py [http://127.0.0.1:8765/] [sprache]
+Sprache de (Standard) schreibt form.png usw., andere Sprachen form-en.png, marks-en.json usw.
 """
 import base64
 import json
@@ -25,13 +26,15 @@ from websockets.sync.client import connect
 
 HERE = Path(__file__).parent
 URL = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8765/"
+LANG = sys.argv[2] if len(sys.argv) > 2 else "de"
+SUF = "" if LANG == "de" else f"-{LANG}"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 WIDTH, HEIGHT, SCALE = 900, 1700, 2   # CSS-Pixel; Bilder entstehen in doppelter Auflösung
 
 # Wird auf der Seite ausgeführt: bereitet sie vor und liest Rechtecke (CSS-Pixel, Seitenkoordinaten) aus.
 PAGE_JS = r"""
 (() => {
-  setLang('de');   // die Anleitung ist deutsch, egal welche Sprache der Browser hat
+  setLang('__LANG__');   // Sprache der Anleitung, egal welche Sprache der Browser hat
   document.querySelector('#lyricsBox').open = false;
   document.querySelectorAll('details').forEach(d => d.open = false);
   document.activeElement && document.activeElement.blur();
@@ -137,16 +140,16 @@ def capture(cdp):
         else:
             sys.exit("Die App antwortet nicht oder hat noch keinen fertigen Song. Läuft sie unter " + URL + " ?")
         time.sleep(1.0)
-        d = json.loads(cdp.eval(PAGE_JS))
+        d = json.loads(cdp.eval(PAGE_JS.replace("__LANG__", LANG)))
         time.sleep(0.3)
 
         card = d["card"]
         fh = card["y"] + card["h"] + 8         # bis knapp unter das Formular
-        cdp.shot(HERE / "form.png", 0, 0, WIDTH, fh)
+        cdp.shot(HERE / f"form{SUF}.png", 0, 0, WIDTH, fh)
         row = d["row"]
-        cdp.shot(HERE / "row.png", row["x"], row["y"], row["w"], row["h"])
+        cdp.shot(HERE / f"row{SUF}.png", row["x"], row["y"], row["w"], row["h"])
         bar = d["bar"]
-        cdp.shot(HERE / "folders.png", bar["x"] - 6, bar["y"] - 6, bar["w"] + 12, bar["h"] + 12)
+        cdp.shot(HERE / f"folders{SUF}.png", bar["x"] - 6, bar["y"] - 6, bar["w"] + 12, bar["h"] + 12)
 
         mid = lambda r: (r["x"] + r["w"] / 2, r["y"] + r["h"] / 2)
         # Nummern neben die Elemente setzen, nicht darauf (CSS-Pixel im Bild)
@@ -168,7 +171,7 @@ def capture(cdp):
             "row": {"w": row["w"], "h": row["h"], "txt": d["hasTxt"],
                     "xs": [round(mid(p)[0] - row["x"], 1) for p in d["rowParts"]]},
         }
-        (HERE / "marks.json").write_text(json.dumps(out, indent=1))
+        (HERE / f"marks{SUF}.json").write_text(json.dumps(out, indent=1))
         print("ok:", out["form"]["w"], "x", round(out["form"]["h"]), "· Zeile", round(row["w"]), "x", round(row["h"]))
 
 
