@@ -1,6 +1,7 @@
 """FastAPI-Backend: Job-Queue, Bibliothek, Einstellungen."""
 import asyncio
 import json
+import logging
 import os
 import random
 import re
@@ -15,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field
@@ -24,6 +25,8 @@ from starlette.background import BackgroundTask
 from . import db, updater
 from .engines import DIT_MODELS, EngineError, make_engine
 from .messages import tr
+
+log = logging.getLogger("uvicorn.error")
 
 STATIC = db.ROOT / "static"
 _wakeup = asyncio.Event()
@@ -126,6 +129,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Music Generator", lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def unexpected_error(request, exc):
+    """Unerwartete Fehler: ins Log schreiben und eine verständliche Meldung in der Sprache der Oberfläche liefern."""
+    log.exception("Unerwarteter Fehler bei %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": tr(request.headers.get("x-lang", "en"), "unexpected", e=type(exc).__name__)})
+
 # Nur Aufrufe an localhost annehmen: schützt gegen DNS-Rebinding (fremde Domain, die auf 127.0.0.1 zeigt)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 app.include_router(updater.router)
