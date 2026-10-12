@@ -474,9 +474,9 @@ async def shutdown(x_lang: str = Header()):   # Pflicht-Header: fremde Webseiten
 async def health():
     s = db.get_settings()
     try:
-        return {"engine": s["engine"], **(await make_engine(s).health())}
+        return await make_engine(s).health()
     except Exception as e:  # noqa: BLE001
-        return {"engine": s["engine"], "ok": False, "error": str(e) or e.__class__.__name__}
+        return {"ok": False, "error": str(e) or e.__class__.__name__}
 
 
 @app.get("/")

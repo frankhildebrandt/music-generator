@@ -9,13 +9,8 @@ acestep.cpp (ace-server) arbeitet asynchron:
 import asyncio
 import email
 import email.policy
-import io
 import json
-import math
-import random
-import struct
 import time
-import wave
 from typing import Awaitable, Callable
 
 import httpx
@@ -187,54 +182,6 @@ def _ext_for(ctype: str) -> str:
     return "mp3" if "mpeg" in ctype or "mp3" in ctype else "wav"
 
 
-class MockEngine:
-    """Erzeugt ein kurzes Akkord-Arpeggio, um die App ohne Modell zu testen."""
-    name = "mock"
-
-    async def health(self) -> dict:
-        return {"ok": True, "health": {"status": "mock"}}
-
-    async def cancel(self) -> None:
-        pass
-
-    async def analyze(self, audio: bytes, filename: str) -> dict:
-        return {"caption": "warm analog synths, mock analysis", "lyrics": "[Instrumental]", "bpm": 92, "keyscale": "C major", "timesignature": "4", "vocal_language": "", "duration": 45}
-
-    async def generate(self, params: dict, progress: Progress) -> tuple[bytes, str, dict]:
-        rnd = random.Random(params["seed"])
-        seconds = min(float(params.get("duration") or 12), 20.0)
-        bpm = int(params.get("bpm") or rnd.choice([84, 96, 110, 124]))
-        for i in range(4):
-            await progress(_fmt_time(i))
-            await asyncio.sleep(0.4)
-        return _synth_wav(rnd, seconds, bpm), "wav", {"bpm": bpm, "duration": seconds, "keyscale": "C major"}
-
-
-def _synth_wav(rnd: random.Random, seconds: float, bpm: int, sr: int = 22050) -> bytes:
-    roots = rnd.sample([48, 50, 53, 55, 57, 60], 4)
-    step = 60 / bpm / 2
-    n = int(seconds * sr)
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(sr)
-        frames = bytearray()
-        for i in range(n):
-            t = i / sr
-            idx = int(t / step)
-            root = roots[(idx // 8) % 4]
-            note = root + [0, 4, 7, 12, 7, 4, 0, 7][idx % 8]
-            f = 440 * 2 ** ((note - 69) / 12)
-            env = math.exp(-6 * (t - idx * step))
-            s = 0.35 * env * math.sin(2 * math.pi * f * t) + 0.08 * math.sin(2 * math.pi * f / 2 * t)
-            frames += struct.pack("<h", int(max(-1, min(1, s)) * 32000))
-        w.writeframes(bytes(frames))
-    return buf.getvalue()
-
-
 def make_engine(settings: dict):
-    if settings.get("engine") == "mock":
-        return MockEngine()
     return AceStepCpp(settings["server_url"], settings.get("lm_url", ""), settings["poll_interval"],
                       settings["timeout_minutes"], settings.get("lm_model", ""), settings.get("dit", "standard"))

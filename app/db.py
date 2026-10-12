@@ -26,7 +26,6 @@ def _engine_conf() -> dict:
 _conf = _engine_conf()
 
 DEFAULT_SETTINGS = {
-    "engine": "acestep_cpp",           # "acestep_cpp" oder "mock"
     "server_url": "http://127.0.0.1:8085",   # Synthese (DiT + VAE, Metal)
     # Sprachmodell: eigener CPU-Server (Modus split) oder leer = gleicher Server wie Synthese (single)
     "lm_url": "" if _conf.get("MODE") == "single" else "http://127.0.0.1:8086",

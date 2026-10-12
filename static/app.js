@@ -522,7 +522,7 @@ async function checkHealth() {
   try {
     const h = await api("/api/health");
     el.className = "box small " + (h.ok ? "" : "err");
-    el.textContent = h.engine === "mock" ? "Mock" : h.ok ? "" : t("offline");   // bei "alles ok" nichts anzeigen
+    el.textContent = h.ok ? "" : t("offline");   // bei "alles ok" nichts anzeigen
     el.title = h.error || (h.props ? `${t("models")}: ${Object.values(h.props.models || {}).flat().join(", ")}` : t("model_server"));
     return h;
   } catch { el.className = "box small err"; el.textContent = t("backend_offline"); }
@@ -530,14 +530,14 @@ async function checkHealth() {
 const dlg = $("#settingsDlg"), sf = $("#settingsForm");
 $("#btnSettings").onclick = async () => {
   const s = await api("/api/settings");
-  for (const k of ["engine", "server_url", "lm_url", "timeout_minutes", "songs_dir", "dit"]) sf[k].value = s[k];
+  for (const k of ["server_url", "lm_url", "timeout_minutes", "songs_dir", "dit"]) sf[k].value = s[k];
   sf.dit.querySelector('option[value="xl"]').disabled = !s.dit_xl_available;   // XL nur wählbar, wenn die Datei da ist
   $("#ditHint").hidden = s.dit_xl_available;
   sf.songs_dir.placeholder = s.songs_dir_default;   // Standard als Platzhalter, leer lassen = Standard
   dlg.showModal();
 };
 const saveSettings = () => api("/api/settings", { method: "PUT", body: JSON.stringify({
-  engine: sf.engine.value, server_url: sf.server_url.value.trim(), lm_url: sf.lm_url.value.trim(), timeout_minutes: Number(sf.timeout_minutes.value) || 30,
+  server_url: sf.server_url.value.trim(), lm_url: sf.lm_url.value.trim(), timeout_minutes: Number(sf.timeout_minutes.value) || 30,
   songs_dir: sf.songs_dir.value.trim(), dit: sf.dit.value }) }).catch((err) => { alert(err.message); $("#btnSettings").click(); });
 // Anordnung: untereinander oder Generator links / Bibliothek rechts
 function setLayout(l) {
