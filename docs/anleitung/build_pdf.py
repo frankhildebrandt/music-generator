@@ -33,10 +33,12 @@ if LANG in ("zh", "ja", "ko"):
     # CJK: Arial Unicode deckt die Schriftzeichen ab; es gibt keinen fetten Schnitt, Fettdruck nutzt dieselbe Datei
     pdfmetrics.registerFont(TTFont("Arial", F + "Arial Unicode.ttf"))
     pdfmetrics.registerFont(TTFont("Arial-Bold", F + "Arial Unicode.ttf"))
+    pdfmetrics.registerFont(TTFont("Mono", F + "Arial Unicode.ttf"))     # Terminal-Beispiel enthält Schriftzeichen
 else:
     pdfmetrics.registerFont(TTFont("Arial", F + "Arial.ttf"))
     pdfmetrics.registerFont(TTFont("Arial-Bold", F + "Arial Bold.ttf"))
-pdfmetrics.registerFont(TTFont("Mono", F + "Courier New Bold.ttf"))
+    pdfmetrics.registerFont(TTFont("Mono", F + "Courier New Bold.ttf"))
+CJK = {"wordWrap": "CJK"} if LANG in ("zh", "ja") else {}   # Zeilenumbruch auch ohne Leerzeichen
 pdfmetrics.registerFontFamily("Arial", normal="Arial", bold="Arial-Bold", italic="Arial", boldItalic="Arial-Bold")
 
 # Farben aus der App
@@ -57,7 +59,7 @@ GREEN = HexColor("#2f9e5b")
 W, H = A4
 M = 50  # Rand
 
-body = ParagraphStyle("body", fontName="Arial", fontSize=10.5, leading=15.5, textColor=INK, alignment=TA_LEFT)
+body = ParagraphStyle("body", fontName="Arial", fontSize=10.5, leading=15.5, textColor=INK, alignment=TA_LEFT, **CJK)
 small = ParagraphStyle("small", parent=body, fontSize=9, leading=13, textColor=MUTED)
 bold = ParagraphStyle("bold", parent=body, fontName="Arial-Bold")
 cell = ParagraphStyle("cell", parent=body, fontSize=9.5, leading=13)
@@ -392,7 +394,7 @@ def page_flow(c):
         c.setFont("Arial", 8.5)
         c.setFillColor(MUTED)
         c.drawString(rx + 12, ry - 42, T("p4_ram").format(ram=ram))
-        c.drawString(rx + 12, ry - 52, T("p4_dl").format(dl=dl))
+        c.drawString(rx + 12, ry - 52, T("p4_dl").format(dl=dl if LANG == "de" else dl.replace(",", ".")))
         if rec:
             c.setFillColor(GOLD)
             c.roundRect(rx + rw - 66, ry - 20, 56, 13, 6, stroke=0, fill=1)

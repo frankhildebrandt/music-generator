@@ -54,8 +54,8 @@ PAGE_JS = r"""
   return JSON.stringify({
     card,
     logo: R(q('.logo-wrap')), titleDice: R(q('#titleDice')), promptDice: R(q('#diceBtn')),
-    stil: T(lbl('stil')), laenge: T(lbl('länge')), bpm: T(lbl('bpm')),
-    lyrics: T(q('#lyricsBox summary > span')), erweitert: T([...document.querySelectorAll('summary')].find(e => e.textContent.trim().toLowerCase().startsWith('erweitert'))),
+    stil: T(q('.lbl[data-i18n="style"]')), laenge: T(q('.lbl[data-i18n="length"]')), bpm: T(lbl('bpm')),
+    lyrics: T(q('#lyricsBox summary > span')), erweitert: T(q('summary[data-i18n="advanced"]')),
     gen: R(q('#genBtn')), gear: R(q('#btnSettings')),
     row: song ? R(song) : null,
     rowParts: song ? ['.round', '[data-a=fav]', '.download', '[data-a=lyrics]', '[data-a=move]', '[data-a=more]', '[data-a=reuse]', '[data-a=del]'].map(s => song.querySelector(s)).filter(Boolean).map(R) : null,

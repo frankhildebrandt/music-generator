@@ -6,6 +6,7 @@ Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) ü
 
 - **Mac** (Apple Silicon, Metal): diese Seite. Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
 - **Windows** (NVIDIA, CUDA/Vulkan): **[README-WINDOWS.md](README-WINDOWS.md)**
+- Anleitung in anderen Sprachen: **[Installation-Guide-EN.pdf](Installation-Guide-EN.pdf)** (English), **[Installation-Guide-ZH.pdf](Installation-Guide-ZH.pdf)** (中文)
 - **Linux** (NVIDIA/AMD, ohne Installer): Abschnitt [Linux](#linux) unten
 
 ## Installation
@@ -89,7 +90,7 @@ und funktionieren unter Linux nicht; Server im Terminal beenden und neu starten.
 | `scripts/metal_selftest.py` | Grafikchip-Test des Installers |
 | `app/` | FastAPI-Backend: Queue, Bibliothek, Anbindung an ace-server |
 | `static/` | Oberfläche |
-| `docs/anleitung/` | Quelle der Installationsanleitung. `capture.py` fotografiert die laufende App (`uv run --with websockets python docs/anleitung/capture.py`), `build_pdf.py` baut daraus das PDF (`uv run --with reportlab python docs/anleitung/build_pdf.py Installationsanleitung.pdf`) |
+| `docs/anleitung/` | Quelle der Installationsanleitung. `capture.py` fotografiert die laufende App (`uv run --with websockets python docs/anleitung/capture.py`), `build_pdf.py` baut daraus das PDF (`uv run --with reportlab python docs/anleitung/build_pdf.py Installationsanleitung.pdf`; andere Sprachen: `capture.py … en` und `build_pdf.py Installation-Guide-EN.pdf en`, Texte in `texts.py`) |
 | `engine/` | acestep.cpp und Modelle (vom Installer, nicht im Repo) |
 | `data/` | Songs, Datenbank, Logs, `engine.conf` (nicht im Repo) |
 
