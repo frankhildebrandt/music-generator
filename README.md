@@ -31,7 +31,7 @@ Der Installer
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
 Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--no-start`.
 
-**XL-Klangmodell (optional):** Der Installer fragt, ob zusätzlich das größere Klangmodell ACE-Step 1.5 XL (4 statt 2 Milliarden Parameter, 5,3 GB) geladen werden soll. Laut den Entwicklern klingt es besser, es rechnet etwa doppelt so lange und braucht mehr Speicher (ab 16 GB Arbeitsspeicher bzw. 12 GB Grafikspeicher). Standard bleibt das kleinere Modell; XL wählst du danach unter Zahnrad › Klangmodell. Noch wenig getestet, Rückmeldungen willkommen.
+**XL-Klangmodell (optional):** Der Installer fragt, ob zusätzlich das größere Klangmodell ACE-Step 1.5 XL (4 statt 2 Milliarden Parameter, 5,3 GB) geladen werden soll. Laut den Entwicklern klingt es besser, es rechnet etwa doppelt so lange und braucht mehr Speicher (ab 16 GB Arbeitsspeicher bzw. 12 GB Grafikspeicher). Standard bleibt das kleinere Modell; XL wählst du danach unter Zahnrad › Klangmodell. Gemessen auf einem M4 mit 16 GB: ein 30-Sekunden-Song brauchte mit Standard 49 s, mit XL 99 s. Noch wenig getestet, Rückmeldungen willkommen.
 
 ## Benutzen
 

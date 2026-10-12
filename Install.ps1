@@ -223,6 +223,7 @@ if (-not $ACE) { Abbruch "ace-server.exe nicht gefunden." }
 # --- 5. Modelle -----------------------------------------------------------------
 Schritt "Modelle laden"
 New-Item -ItemType Directory -Force -Path $MODELS | Out-Null
+$NEW_MODELS = $false
 foreach ($f in $FILES.Keys) {
     $ziel = Join-Path $MODELS $f
     if (Test-Path $ziel) { Write-Host "  ok $f"; continue }
@@ -235,6 +236,15 @@ foreach ($f in $FILES.Keys) {
     }
     Move-Item -Force "$ziel.neu" $ziel
     Write-Host "    Prüfsumme ok"
+    $NEW_MODELS = $true
+}
+# Der Modellserver liest die Modellliste nur beim Start: nach neuen Modellen laufende Server beenden, ON startet sie neu.
+if ($NEW_MODELS) {
+    foreach ($p in @($SYNTH_PORT, $LM_PORT)) {
+        $pids = Port-Pids $p
+        if ($pids.Count) { Stop-Process -Id $pids -Force -ErrorAction SilentlyContinue }
+    }
+    Start-Sleep -Seconds 1
 }
 
 # --- 6. Grafikkarte testen ------------------------------------------------------

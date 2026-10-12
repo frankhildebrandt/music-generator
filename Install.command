@@ -150,6 +150,7 @@ fi
 # --- 5. Modelle -----------------------------------------------------------------
 schritt "Modelle laden"
 mkdir -p "$MODELS"
+NEW_MODELS=0
 for e in $FILES; do
   IFS=: read -r f _ sha <<< "$e"
   if [ -f "$MODELS/$f" ]; then echo "  ✓ $f"; continue; fi
@@ -162,7 +163,13 @@ for e in $FILES; do
     abbruch "Prüfsumme von $f stimmt nicht. Die Datei wurde gelöscht; Install erneut starten lädt sie neu."
   fi
   mv "$MODELS/$f.part" "$MODELS/$f"
+  NEW_MODELS=1
 done
+# Der Modellserver liest die Modellliste nur beim Start: nach neuen Modellen laufende Server beenden, ON startet sie neu.
+if [ "$NEW_MODELS" = 1 ]; then
+  for p in "$SYNTH_PORT" "$LM_PORT"; do laeuft "$p" && kill $(lsof -i :"$p" -sTCP:LISTEN -t) 2>/dev/null; done
+  sleep 1
+fi
 
 # --- 6. Grafikchip testen ------------------------------------------------------
 # Auf manchen Chips (z. B. M4) rechnet das Sprachmodell unter Metal falsch.
