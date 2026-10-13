@@ -462,8 +462,14 @@ async def analyze(audio: UploadFile, x_lang: str = Header("de")):
 
 @app.post("/api/shutdown")
 async def shutdown(x_lang: str = Header()):   # Pflicht-Header: fremde Webseiten können ihn nicht mitschicken
-    """Führt „Music Generator OFF“ aus: beendet Web-App und Modellserver, schließt die Browser-Tabs."""
-    name = "Music Generator OFF." + ("ps1" if sys.platform == "win32" else "command")
+    if sys.platform == "win32":
+        name = "Music Generator OFF.ps1"
+    elif sys.platform == "darwin":
+        name = "Music Generator OFF.command"
+    elif (db.ROOT / "Music Generator OFF.sh").is_file():
+        name = "Music Generator OFF.sh"
+    else:
+        name = "Music Generator OFF.command"
     script = db.ROOT / name
     if not script.is_file():
         raise HTTPException(404, tr(x_lang, "script_missing", name=name))
