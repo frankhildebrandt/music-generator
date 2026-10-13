@@ -43,6 +43,21 @@ Optionen (in der PowerShell): `.\Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-XL` (z
 - **Music Generator ON** startet Modellserver und App und öffnet http://localhost:8765
 - **Music Generator OFF** beendet alles (Browser-Tabs bleiben offen)
 
+## Virenscanner schlägt Alarm
+
+Manche Virenscanner, zum Beispiel Norton mit der Meldung **„IDP.Generic"**, blocken `ace-server.exe` im Ordner `engine\acestep.cpp\build\Release`. Das ist eine Reputationserkennung und keine bekannte Schadsoftware: Die Datei ist neu, selten und nicht digital signiert. Es ist der Modellserver von acestep.cpp. Der Installer lädt ihn als fertige Programmdatei vom Autor dieses Projekts (Adresse in `scripts\common.ps1`), sie stammt also nicht von uns.
+
+Wenn du dem Projekt vertraust:
+1. Die Datei aus der Quarantäne wiederherstellen und den Programmordner von der Prüfung ausnehmen. Bei Norton: Einstellungen › Antivirus › Scans und Risiken › Von Scans ausschließen, außerdem bei Auto-Protect und SONAR.
+2. Optional bei Norton als Fehlalarm melden (submit.norton.com). Das hilft allen.
+3. Wer sichergehen will, berechnet die Prüfsumme und schlägt sie auf [virustotal.com](https://www.virustotal.com) nach, ohne die Datei hochzuladen:
+   ```powershell
+   Get-FileHash engine\acestep.cpp\build\Release\ace-server.exe -Algorithm SHA256
+   ```
+4. Alternativ selbst bauen: `.\Install.ps1 -Build` (braucht Visual Studio Build Tools und das CUDA-Toolkit). Auch eine selbst gebaute Datei ist unsigniert, kann aber gleich gemeldet werden.
+
+Offen gesagt: Für diese Programmdateien gibt es bei uns noch keine Prüfsumme wie bei den Modellen. Das steht auf der Liste. Der Quellcode von acestep.cpp liegt offen auf [GitHub](https://github.com/ServeurpersoCom/acestep.cpp).
+
 ## Deinstallieren
 
 `Uninstall.bat` doppelklicken. Es zeigt, was entfernt wird, und fragt, ob Songs und Bibliothek bleiben sollen (Vorgabe: behalten). Danach den Programmordner löschen. Git und `uv` bleiben installiert.

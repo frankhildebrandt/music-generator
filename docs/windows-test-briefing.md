@@ -172,3 +172,22 @@ Git und uv waren weiter installiert, wie angekündigt. Danach den Ordner von Han
 - Abbrechen mit Enter bei „Uninstall now?“ (sollte nichts ändern).
 - Songs behalten (Enter bzw. `-Yes`): dann müssten `data\songs` und `music.db*` bleiben, der Rest von `data\` weg sein.
 - Ein eigener Songordner außerhalb des Programmordners (laut Skript wird er nicht angefasst).
+
+## Aufgabe für die PC-Session: Prüfsummen der Programmdateien und VirusTotal
+
+Anlass: Ein Nutzer meldet, dass Norton `ace-server.exe` als `IDP.Generic` blockt (Reputationserkennung, wahrscheinlich Fehlalarm).
+Die fertigen Programmdateien kommen von `https://www.serveurperso.com/temp/acestep.cpp-win64/build/Release/` und werden bei uns noch nicht per Prüfsumme geprüft.
+Bitte auf dem PC (Terminal-Panel, im Programmordner) ausführen und das Ergebnis hier eintragen:
+
+```powershell
+Get-FileHash engine\acestep.cpp\build\Release\*.exe, engine\acestep.cpp\build\Release\*.dll -Algorithm SHA256 | Format-Table Hash, @{n='Datei';e={Split-Path $_.Path -Leaf}} -AutoSize
+Get-AuthenticodeSignature engine\acestep.cpp\build\Release\ace-server.exe | Format-List Status, SignerCertificate
+(Get-Item engine\acestep.cpp\build\Release\ace-server.exe).LastWriteTime
+```
+
+Dann für **`ace-server.exe`** und **`ggml-cuda.dll`** den Hash bei VirusTotal nachschlagen (nur nachschlagen, nichts hochladen):
+`https://www.virustotal.com/gui/file/<SHA256>`
+Eintragen: Anzahl der Treffer, ob Norton (NortonLifeLock/Symantec) dabei ist, welche Namen die Erkennungen tragen, Signaturstatus.
+
+Außerdem: Ist die Datei auf dem PC mit Microsoft Defender sauber? (`Get-MpThreatDetection`)
+Ergebnis bitte als Tabelle ins Briefing und im Anschluss prüfen, ob sich daraus feste Prüfsummen für den Installer ableiten lassen (der Server auf `/temp/` kann Dateien jederzeit austauschen, feste Hashes würden dann den Installer brechen; Alternative wäre eine eigene, versionierte Veröffentlichung im Projekt).
