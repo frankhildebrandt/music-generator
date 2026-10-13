@@ -170,8 +170,18 @@ if ($ACE -and -not $Build) {
         Write-Host "  v $n"
         if (-not (Download "$PREBUILT_URL$n" (Join-Path $rel $n))) { Abbruch "Downloading $n failed. Running Install again resumes." }
     }
-    "PREBUILT=$(Get-Date -Format s)" | Set-Content (Join-Path $rel "VERSION.txt")
-    Write-Host "  done"
+    # Version und Prüfsummen festhalten: wer ein Virenscanner-Problem hat, kann sie nachschlagen (README-WINDOWS.md).
+    # Die erste Zeile (PREBUILT=...) liest der Selbsttest als Kennung, sie bleibt vorn.
+    $server = Join-Path $rel "ace-server.exe"
+    $ver = (& $server --help 2>&1 | Select-Object -First 1)
+    $info = @("PREBUILT=$(Get-Date -Format s)", "SOURCE=$PREBUILT_URL", "SERVER=$ver")
+    foreach ($f in (Get-ChildItem $rel -File | Where-Object { $_.Extension -in ".exe", ".dll" } | Sort-Object Name)) {
+        $info += "SHA256 $($f.Name) $((Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower())"
+    }
+    $info | Set-Content (Join-Path $rel "VERSION.txt")
+    Write-Host "  done: $ver"
+    Write-Host "  ace-server.exe SHA-256: $((Get-FileHash $server -Algorithm SHA256).Hash.ToLower())"
+    Write-Host "  (all checksums: engine\acestep.cpp\build\Release\VERSION.txt; antivirus complaints: see README-WINDOWS.md)"
 } else {
     # Selbst kompilieren: Quellcode in der getesteten Version, CUDA wenn vorhanden
     if (-not (Test-Path (Join-Path $ENGINE ".git"))) {

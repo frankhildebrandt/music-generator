@@ -50,7 +50,7 @@ Manche Virenscanner, zum Beispiel Norton mit der Meldung **„IDP.Generic"**, bl
 Wenn du dem Projekt vertraust:
 1. Die Datei aus der Quarantäne wiederherstellen und den Programmordner von der Prüfung ausnehmen. Bei Norton: Einstellungen › Antivirus › Scans und Risiken › Von Scans ausschließen, außerdem bei Auto-Protect und SONAR.
 2. Optional bei Norton als Fehlalarm melden (submit.norton.com). Das hilft allen.
-3. Wer sichergehen will, berechnet die Prüfsumme und schlägt sie auf [virustotal.com](https://www.virustotal.com) nach, ohne die Datei hochzuladen:
+3. Wer sichergehen will, schlägt die Prüfsumme auf [virustotal.com](https://www.virustotal.com) nach, ohne die Datei hochzuladen. Der Installer gibt sie nach dem Download aus und schreibt alle Prüfsummen samt Version in `engine\acestep.cpp\build\Release\VERSION.txt`. Selbst berechnen geht so:
    ```powershell
    Get-FileHash engine\acestep.cpp\build\Release\ace-server.exe -Algorithm SHA256
    ```

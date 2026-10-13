@@ -259,3 +259,37 @@ Bis dahin könnte der Installer den Hash nach dem Download wenigstens ausgeben u
 - **Analyse per Drag and Drop:** Mit Stil „my own style“ einen Lo-Fi-Song abgelegt. Nach 18 s stand im Stil-Feld
   `my own style, lo-fi, hip hop, piano, drums, bass, vinyl crackle`: eigener Stil bleibt vorn, sechs Begriffe, Karten
   „hip hop“, „lo-fi“, „piano“ leuchten. Ok.
+
+## Auftrag an die PC-Session: eigene, versionierte Veröffentlichung der Windows-Programmdateien
+
+**Von Lee am 13. Okt 2026 beauftragt.** Hintergrund: Die Programmdateien kommen aus `/temp/` beim Autor von acestep.cpp, der Server tauscht sie
+ohne Ankündigung aus (10. Okt `d881ad2`, 13. Okt `6013134`), sie sind unsigniert und bei VirusTotal unbekannt (Norton meldet `IDP.Generic`).
+Ziel: ein einmal getesteter, fester Satz mit Prüfsumme, den der Installer von uns lädt.
+
+**Schon erledigt (Mac, Commit nach `08774ac`):** `Install.ps1` gibt nach dem Download die Version und die SHA-256 von `ace-server.exe` aus und
+schreibt Version plus alle Prüfsummen in `engine\acestep.cpp\build\Release\VERSION.txt` (erste Zeile `PREBUILT=...` bleibt, der Selbsttest liest sie).
+**Bitte zuerst testen:** frische Installation (oder nur der Binaries-Schritt in einer Kopie), prüfen dass die Ausgabe stimmt, `VERSION.txt` 24 `SHA256`-Zeilen
+plus `SOURCE=` und `SERVER=` hat und der Selbsttest weiter „already tested"/„trial run" wie gewohnt läuft.
+
+**Dann die Veröffentlichung:**
+1. Den **auf dem PC getesteten Satz** (die 24 Dateien aus `build\Release`, Stand `6013134`, Hashes siehe oben, unverändert) in eine ZIP packen:
+   `acestep-cpp-win64-6013134.zip`. Hineinlegen: die Dateien (flach oder als `build/Release/…`, so wie der Installer sie entpacken soll),
+   `SHA256SUMS.txt` (Hashes der Einzeldateien), `LICENSE-acestep.cpp.txt` und `LICENSE-ggml.txt` (beide MIT, aus `engine/acestep.cpp` bzw. `engine/acestep.cpp/ggml`)
+   und `README.txt` mit Herkunft: „Unveränderte fertige Programmdateien von https://www.serveurperso.com/temp/acestep.cpp-win64/ , Version 6013134 (2026-10-12),
+   Quellcode: https://github.com/ServeurpersoCom/acestep.cpp , weitergegeben unter MIT-Lizenz".
+2. SHA-256 der ZIP berechnen.
+3. GitHub-Release im öffentlichen Repo anlegen (`gh release create engine-win64-6013134 <zip> --title ... --notes ...`), Notes mit Herkunft, Version, ZIP-Hash und dem Hinweis,
+   dass die Dateien unsigniert sind (Norton kann `IDP.Generic` melden, siehe README-WINDOWS).
+   **Bevor du `gh release create` ausführst: kurz bei Lee bestätigen lassen** (öffentliche Veröffentlichung).
+4. In `scripts/common.sh` eintragen: `ENGINE_WIN_URL` (Download-Adresse des Release-Assets), `ENGINE_WIN_SHA256` (Hash der ZIP), `ENGINE_WIN_REV="6013134"`.
+   `scripts/common.ps1` liest die drei Werte mit (wie schon `HF_BASE` usw.).
+5. `Install.ps1`: Standardweg wird: ZIP von `ENGINE_WIN_URL` laden, SHA-256 prüfen (bei Abweichung löschen und abbrechen, wie bei den Modellen),
+   nach `engine\acestep.cpp\build\Release` entpacken, `VERSION.txt` wie oben schreiben. Der bisherige `/temp/`-Weg entfällt (oder nur mit eigener Option, die klar warnt).
+   Der Installer soll dabei auch merken, wenn bereits Dateien einer anderen Version liegen, und sie ersetzen (VERSION.txt vergleichen).
+6. Frisch klonen, `Install.bat -Yes`: Download der ZIP, Prüfsumme „ok", App startet, 30-Sekunden-Song. Auch den Abbruchfall testen: ZIP-Hash in `common.sh` absichtlich verfälschen, Installer muss
+   mit Prüfsummenfehler abbrechen und die Datei löschen. Danach zurückändern.
+7. README-WINDOWS (Abschnitt „Virenscanner schlägt Alarm") und Anleitungstexte anpassen: Herkunft jetzt „unveränderte Programmdateien des acestep.cpp-Autors in unserer Veröffentlichung, Prüfsumme geprüft"; Punkt „Für diese Dateien gibt es noch keine Prüfsumme" entfernen.
+8. Ergebnis ins Briefing, Commit mit Co-Authored-By, Push.
+
+**Nicht ohne Lee:** Einreichen der ZIP oder von `ace-server.exe` bei VirusTotal und bei Norton (öffentlich bzw. an Dritte). Das macht Lee selbst oder gibt es der Session ausdrücklich frei.
+Mac und Linux sind von all dem nicht betroffen.
