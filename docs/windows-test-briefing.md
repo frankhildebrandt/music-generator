@@ -191,3 +191,71 @@ Eintragen: Anzahl der Treffer, ob Norton (NortonLifeLock/Symantec) dabei ist, we
 
 Außerdem: Ist die Datei auf dem PC mit Microsoft Defender sauber? (`Get-MpThreatDetection`)
 Ergebnis bitte als Tabelle ins Briefing und im Anschluss prüfen, ob sich daraus feste Prüfsummen für den Installer ableiten lassen (der Server auf `/temp/` kann Dateien jederzeit austauschen, feste Hashes würden dann den Installer brechen; Alternative wäre eine eigene, versionierte Veröffentlichung im Projekt).
+
+### Ergebnis auf dem PC (13. Okt 2026, Stand 254679d)
+
+Geladen am 13. Okt 2026, 14:57 (Neuinstallation), `ace-server.exe --help` meldet **`acestep.cpp 6013134 (2026-10-12)`**.
+
+| Prüfung | `ace-server.exe` | `ggml-cuda.dll` |
+|---|---|---|
+| SHA-256 | `caed09ca26245dcad8f276d0f5b764f20edbe5d8391ab30d4af6be13301a8aab` | `2eeffd1561695d01a924782d89df7054ff6892b61a682456ab7e5a0664f0482c` |
+| Größe | 1,4 MB | 121,9 MB |
+| Signatur (`Get-AuthenticodeSignature`) | `NotSigned`, kein Zertifikat | `NotSigned`, kein Zertifikat |
+| VirusTotal (nur nachgeschlagen) | **„Item not found“**: Datei dort unbekannt, keine Treffer, keine Norton-Erkennung | **„Item not found“** |
+| Virenscanner auf dem PC | Avira Security aktiv, keine Blockade (Server läuft); Defender ist inaktiv, weil Avira übernimmt, `Get-MpThreatDetection` ohne Einträge | wie links |
+
+„Item not found“ heißt: Diese Dateien hat noch nie jemand bei VirusTotal eingereicht. Für Norton passt das zu `IDP.Generic`
+(neu, selten, unsigniert = keine Reputation). Hochgeladen wurde nichts. Ein Upload wäre öffentlich und ist eine Entscheidung für Lee.
+
+Alle Prüfsummen (SHA-256) dieses Downloads:
+
+| Datei | SHA-256 |
+|---|---|
+| ace-lm.exe | `2e3d5946bf933d48ad6adbbeb7a9cc253b6b3fca7fef8558864c29a9c77c3b6a` |
+| ace-server.exe | `caed09ca26245dcad8f276d0f5b764f20edbe5d8391ab30d4af6be13301a8aab` |
+| ace-synth.exe | `91ed3b4dd4eb08cbea8e6f6d178fdc4d8839a9e344bbba320e50ee534cf96158` |
+| ace-understand.exe | `7ef505ee0c29353f6fb09bbfde830d3a55fa5b162ca31b9ba429e4f9a49701b4` |
+| mp3-codec.exe | `f548b7dea8671d37cb626a2381aca331fc85c04ff55c905075f12bde12468fa4` |
+| neural-codec.exe | `562784908b94887a6de780e23513c431b939aca3bb2a97f17ab6420e830b569f` |
+| quantize.exe | `457caee99f55cfc703839b51b585d0d389946b5f91059cc7bf6795a3b348fde5` |
+| test-lm-prompt.exe | `22bc3b579aa86f626554902f530a8b057531002ef2812c8abd8dee0aeea4854b` |
+| test-model-store.exe | `47f0bf9374ff58f043896f237e840a3ed4d82d968bcbda385e3904a1a08c6f48` |
+| test-philox.exe | `98adf8a7ede133f7db6e0f5223a9773e1ec7522f01f1eae15d602110c0d5c19d` |
+| vulkan-shaders-gen.exe | `487731a5966a7c50fd33b9bbe4d40d269f819a6f95002edea6ead879ab810626` |
+| ggml.dll | `bd1339284fd2f00d2a6bf46c460c82a767c2e68e3b231de3e654554d9ee844ad` |
+| ggml-base.dll | `ae87be3ace6f19d9317fc9eeb49760f4a0970204e6444b438c87c54735372560` |
+| ggml-cpu-alderlake.dll | `c4870b4e067d55968274182619a7ddf3d9467e2381727e84408bd89c022572ce` |
+| ggml-cpu-cannonlake.dll | `b7ba23a603710db6eb3630bc21aa0d6efcce2c1bedc75e5d662dd50d0c2825cf` |
+| ggml-cpu-cascadelake.dll | `68003e14d7a32a84259c575642f4c31d7d498d35e518cff70941fe739c422789` |
+| ggml-cpu-haswell.dll | `b8425c82df457442425dc1e888272d8ae954f10a068a08ea4366a0b1f5673a29` |
+| ggml-cpu-icelake.dll | `6d6bcc4d2fe1234b20856a173925901a27552f8285c1b9f201e2a8c6afa5d00a` |
+| ggml-cpu-sandybridge.dll | `c155878713ef0b03620207d8ea8144c96620bd9c0587ca59097b5a3f78ea806c` |
+| ggml-cpu-skylakex.dll | `8f0e90d465d9bdf7fbeb87471de4ca4ebc397ece9204a2bc53c0f9b9853a9d1a` |
+| ggml-cpu-sse42.dll | `13cb0565b3465888e67a3bcb22691a834fa949d80b4d4bd85e8a9d7a9a7333d4` |
+| ggml-cpu-x64.dll | `9dc115cf281799778c7ffd0a5e641a5019542399a7f845511030334c28a2506f` |
+| ggml-cuda.dll | `2eeffd1561695d01a924782d89df7054ff6892b61a682456ab7e5a0664f0482c` |
+| ggml-vulkan.dll | `a01306174c500e3d6015332ebffe20c1549f35e4cf0a201b5844f8748018ccff` |
+
+**Feste Prüfsummen im Installer? Nein, nicht gegen die `/temp/`-Adresse.** Der Server hat die Dateien nachweislich schon
+ausgetauscht: Der Download vom 10. Okt meldete `d881ad2 (2026-10-07)`, der vom 13. Okt `6013134 (2026-10-12)`. Mit festen
+Hashes wäre jede Neuinstallation zwischen diesen Tagen mit „Prüfsumme stimmt nicht“ abgebrochen. Außerdem laufen die
+Binaries damit auf einer anderen acestep.cpp-Version als `ACESTEP_REV` (`b7ba6d9`), ohne dass wir es merken.
+
+Empfehlung: einen getesteten Satz Binaries als eigene, versionierte Veröffentlichung im Projekt ablegen (GitHub Release,
+eine ZIP-Datei) und deren SHA-256 wie bei den Modellen in `common.sh` eintragen. Dann sind Version und Prüfsumme fest,
+der Installer bricht nicht durch fremde Updates, und Nutzer können den Hash nachschlagen. Diesen Satz einmal selbst bei
+VirusTotal einreichen und bei Norton als Fehlalarm melden, dann bekommt genau diese Datei Reputation.
+Bis dahin könnte der Installer den Hash nach dem Download wenigstens ausgeben und in `VERSION.txt` schreiben.
+
+### Getestet nach dem Update auf 254679d (In-App-Update, kein Installer-Lauf nötig)
+
+- **Player (Issue 9):** Song A spielt, dann B, A, B innerhalb von 150 ms geklickt. Der alte Song war nach 50 ms stumm,
+  danach spielte nur B, ein einziges Audio-Element. Ok.
+- **Tastatur und Beschriftungen (Issue 8):** Titel, Prompt und Stil sind per `aria-labelledby` beschriftet. Alle 29 Stil-Karten
+  haben `role="button"` und `tabindex="0"`. Enter schaltet eine Karte an, die Leertaste wieder aus. Ok.
+- **Lyrics einklappen = Instrumental:** Haken aus, Lyrics offen, Klick auf die Kopfzeile: zugeklappt, Haken an. Ok.
+- **Zahlen in den Einstellungen:** `"abc"`, `0`, `-5` und `null` geben 422 mit verständlicher Meldung (DE und EN),
+  `"2.5"` und `"45"` werden als Zahl gespeichert (Timeout als Ganzzahl). Werte danach zurückgesetzt. Ok.
+- **Analyse per Drag and Drop:** Mit Stil „my own style“ einen Lo-Fi-Song abgelegt. Nach 18 s stand im Stil-Feld
+  `my own style, lo-fi, hip hop, piano, drums, bass, vinyl crackle`: eigener Stil bleibt vorn, sechs Begriffe, Karten
+  „hip hop“, „lo-fi“, „piano“ leuchten. Ok.
