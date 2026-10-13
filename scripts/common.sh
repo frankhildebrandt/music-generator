@@ -24,23 +24,48 @@ acestep-5Hz-lm-0.6B-Q8_0.gguf:710:bdaf9e292d4470f31c19cafeaca1b74936a114667e3a85
 acestep-5Hz-lm-1.7B-Q8_0.gguf:1980:726f99a82f050b32ebc5c5e36acaa9d7acd06bfe5e579a62b00e0d0d6d0b7ec6
 acestep-5Hz-lm-4B-Q8_0.gguf:4460:972f91147a167f0c041f1b158d67985a82c0f6a852e68cdf70e46030cf08b1bc"
 
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.local/bin:/opt/rocm/bin:/opt/cuda/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+[ -d "/opt/rocm/lib" ] && export LD_LIBRARY_PATH="/opt/rocm/lib:${LD_LIBRARY_PATH:-}"
 
-laeuft() { lsof -i :"$1" -sTCP:LISTEN -t >/dev/null 2>&1; }
+laeuft() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -i :"$1" -sTCP:LISTEN -t >/dev/null 2>&1
+  elif command -v ss >/dev/null 2>&1; then
+    ss -tlpn "sport = :$1" 2>/dev/null | grep -q LISTEN
+  elif command -v fuser >/dev/null 2>&1; then
+    fuser "$1"/tcp >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
 
-# MODE=split  -> Sprachmodell auf CPU (Port 8086), Synthese auf Metal (Port 8085)
-# MODE=single -> alles auf einem Metal-Server (Port 8085)
+port_pids() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -i :"$1" -sTCP:LISTEN -t 2>/dev/null || true
+  elif command -v fuser >/dev/null 2>&1; then
+    fuser "$1"/tcp 2>/dev/null || true
+  elif command -v ss >/dev/null 2>&1; then
+    (ss -tlpn "sport = :$1" 2>/dev/null | grep -oP 'pid=\K[0-9]+') || true
+  fi
+}
+
+# MODE=split  -> Sprachmodell auf CPU (Port 8086), Synthese auf Metal/Vulkan/CUDA (Port 8085)
+# MODE=single -> alles auf einem Server (Port 8085)
 lade_conf() {   # engine.conf als key=value lesen, nicht ausführen
   MODE=split
   LM_FILE=""
+  VAE_CHUNK=""
   [ -f "$CONF" ] || return 0
   MODE=$(sed -n 's/^MODE=//p' "$CONF" | tail -1)
   LM_FILE=$(sed -n 's/^LM_FILE=//p' "$CONF" | tail -1)
+  VAE_CHUNK=$(sed -n 's/^VAE_CHUNK=//p' "$CONF" | tail -1)
   [ -n "$MODE" ] || MODE=split
 }
 
-# Terminal-Fenster nach getaner Arbeit selbst schließen (wie die übrigen APPS-Skripte).
+# Terminal-Fenster nach getaner Arbeit selbst schließen (macOS).
 fenster_schliessen() {
+  [ "$(uname)" = "Darwin" ] || return 0
+  command -v osascript >/dev/null 2>&1 || return 0
   local tty_now
   tty_now=$(tty 2>/dev/null) || return 0
   (sleep 1; osascript -e "tell application \"Terminal\" to close (first window whose tty is \"$tty_now\")" >/dev/null 2>&1) &

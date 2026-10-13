@@ -138,7 +138,7 @@ def _restart(port: int) -> None:
         # CREATE_NO_WINDOW statt DETACHED_PROCESS: ohne Konsole führt PowerShell 5.1 den Befehl nicht aus
         flags = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP}
     else:
-        script = f'while lsof -i :{port} -sTCP:LISTEN -t >/dev/null 2>&1; do sleep 0.3; done; ' \
+        script = f'while (command -v lsof >/dev/null 2>&1 && lsof -i :{port} -sTCP:LISTEN -t >/dev/null 2>&1) || (command -v ss >/dev/null 2>&1 && ss -tlpn "sport = :{port}" 2>/dev/null | grep -q LISTEN); do sleep 0.3; done; ' \
                  f'exec "{sys.executable}" -m uvicorn app.main:app --host 127.0.0.1 --port {port}'
         cmd = ["/bin/sh", "-c", script]
         flags = {"start_new_session": True}

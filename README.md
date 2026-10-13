@@ -7,7 +7,7 @@ Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) ü
 - **Mac** (Apple Silicon, Metal): diese Seite. Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
 - **Windows** (NVIDIA, CUDA/Vulkan): **[README-WINDOWS.md](README-WINDOWS.md)**
 - Anleitung in anderen Sprachen: **[Installation-Guide-EN.pdf](Installation-Guide-EN.pdf)** (English), **[Installation-Guide-ZH.pdf](Installation-Guide-ZH.pdf)** (中文)
-- **Linux** (NVIDIA/AMD, ohne Installer): Abschnitt [Linux](#linux) unten
+- **Linux** (Arch Linux / Derivate mit Installer, andere Distributionen von Hand): Abschnitt [Linux](#linux-arch-linux--derivate) unten
 
 ## Installation
 
@@ -50,10 +50,39 @@ open Install.command
 
 Songs und Einstellungen in `data/` bleiben erhalten.
 
-## Linux
+## Linux (Arch Linux & Derivate)
 
-Die App selbst (Python, Oberfläche, Datenbank) ist plattformneutral und acestep.cpp baut auch unter Linux.
-Einen Installer gibt es dafür nicht, der Weg von Hand ist aber kurz. **Ungetestet**, Rückmeldungen willkommen.
+Unter Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
+
+```bash
+git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
+cd ~/MusicGenerator
+./arch_linux.sh
+```
+
+Das Skript:
+1. Prüft System, RAM, Festplatte und Grafikkarte:
+   - **AMD Radeon** (z. B. **RX 9070 XT** / Navi 48 / RDNA4): Native Beschleunigung über ROCm/HIP (`rocm-hip-sdk`) oder Vulkan (`vulkan-radeon` / RADV).
+   - **NVIDIA**: CUDA oder Vulkan.
+   - **Intel**: Vulkan (`vulkan-intel`).
+   - **CPU**: Automatischer Fallback, falls keine GPU vorhanden ist.
+2. Installiert fehlende Abhängigkeiten via `pacman` oder `yay` (`base-devel`, `cmake`, `git`, `curl`, `uv`, `xdg-utils`, sowie je nach Backend `rocm-hip-sdk` bzw. `vulkan-headers`, `spirv-headers`, `shaderc`, `vulkan-icd-loader`).
+3. Richtet die Python-Umgebung mit `uv` ein.
+4. Kompiliert `acestep.cpp` mit optimaler Hardwarebeschleunigung (ROCm/HIP für AMD, CUDA für NVIDIA, Vulkan oder CPU).
+5. Lädt die benötigten GGUF-Modelle mit SHA-256-Prüfung herunter.
+6. Führt den Grafik-Selbsttest durch, startet die Server und öffnet den Browser unter `http://localhost:8765`.
+
+**Benutzen unter Linux:**
+- Starten: `./arch_linux.sh` (oder `./Music\ Generator\ ON.sh`)
+- Beenden: `./arch_linux.sh --stop` (oder `./Music\ Generator\ OFF.sh` sowie über den Knopf „Server stoppen“ in der Web-Oberfläche)
+- Status: `./arch_linux.sh --status`
+- Optionen: `--yes` (keine Rückfragen), `--yay` (Pakete via AUR-Helper yay installieren), `--backend [auto|rocm|hip|vulkan|cuda|cpu]`, `--lm [0.6B|1.7B|4B]`, `--xl`, `--rebuild`, `--no-browser`
+
+**Mehrere Grafikkarten:** Das Skript nutzt standardmäßig die erste Karte und bevorzugt die dedizierte (`HIP_VISIBLE_DEVICES=0`, `DRI_PRIME=1`, `GGML_VK_VISIBLE_DEVICES=0`). Wer eine andere Karte braucht, setzt die Variable vor dem Start selbst, zum Beispiel `GGML_VK_VISIBLE_DEVICES=1 ./arch_linux.sh --start`. Die eigenen Werte werden nicht überschrieben.
+
+### Andere Linux-Distributionen (von Hand)
+
+Das Skript setzt `pacman` voraus. Auf Ubuntu, Debian, Fedora und anderen geht es von Hand. **Ungetestet**, Rückmeldungen willkommen.
 
 Voraussetzungen: git, cmake, ein C++-Compiler, [uv](https://docs.astral.sh/uv/), für NVIDIA das CUDA-Toolkit (AMD/Intel: Vulkan-SDK).
 
@@ -69,16 +98,14 @@ git clone --recurse-submodules https://github.com/ServeurpersoCom/acestep.cpp en
 mkdir -p data && printf 'MODE=single\nLM_FILE=acestep-5Hz-lm-1.7B-Q8_0.gguf\n' > data/engine.conf
 ```
 
-Starten (zwei Terminals oder mit `&` im Hintergrund), dann http://localhost:8765 öffnen:
+Starten und Stoppen funktionieren danach mit `./arch_linux.sh --start` und `--stop`, auch ohne `pacman` (nicht getestet). Alternativ die beiden Server von Hand starten:
 
 ```bash
 engine/acestep.cpp/build/ace-server --host 127.0.0.1 --port 8085 --models engine/acestep.cpp/models --max-batch 1
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8765
 ```
 
-Hinweise: `models.sh` lädt mehr Varianten als nötig, gebraucht werden `vae-BF16`, `Qwen3-Embedding-0.6B-Q8_0`, `acestep-v15-sft-Q8_0`
-und das gewählte `acestep-5Hz-lm-*-Q8_0`. Die Knöpfe „Server stoppen" und der Neustart nach einem Update rufen die Mac-Skripte auf
-und funktionieren unter Linux nicht; Server im Terminal beenden und neu starten. Songs liegen wie überall in `data/songs`.
+`models.sh` lädt mehr Varianten als nötig, gebraucht werden `vae-BF16`, `Qwen3-Embedding-0.6B-Q8_0`, `acestep-v15-sft-Q8_0` und das gewählte `acestep-5Hz-lm-*-Q8_0`. Songs liegen wie überall in `data/songs`.
 
 ## Aufbau
 
@@ -87,9 +114,10 @@ und funktionieren unter Linux nicht; Server im Terminal beenden und neu starten.
 | `Install.command` | Installer (Mac) |
 | `Music Generator ON/OFF.command` | Start und Stopp (Mac) |
 | `Install.ps1`, `Music Generator ON/OFF.ps1` + `.bat` | Installer, Start und Stopp (Windows) |
-| `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version, Modell-Prüfsummen (Mac und Windows) |
+| `arch_linux.sh`, `Install.sh`, `Music Generator ON/OFF.sh` | Installer, Start und Stopp (Arch Linux & Linux) |
+| `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version, Modell-Prüfsummen |
 | `scripts/common.ps1` | Windows-Gegenstück, liest die Werte aus `common.sh` |
-| `scripts/metal_selftest.py` | Grafikchip-Test des Installers |
+| `scripts/metal_selftest.py` | Sprachmodell-Test des Installers |
 | `app/` | FastAPI-Backend: Queue, Bibliothek, Anbindung an ace-server |
 | `static/` | Oberfläche |
 | `docs/anleitung/` | Quelle der Installationsanleitung. `capture.py` fotografiert die laufende App (`uv run --with websockets python docs/anleitung/capture.py`), `build_pdf.py` baut daraus das PDF (`uv run --with reportlab python docs/anleitung/build_pdf.py Installationsanleitung.pdf`; andere Sprachen: `capture.py … en` und `build_pdf.py Installation-Guide-EN.pdf en`, Texte in `texts.py`) |
