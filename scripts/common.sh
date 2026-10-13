@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Gemeinsame Einstellungen für Install, Start und Stopp. Wird per "source" eingebunden.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

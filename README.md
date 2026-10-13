@@ -127,6 +127,8 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8765
 | `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version, Modell-Prüfsummen |
 | `scripts/common.ps1` | Windows-Gegenstück, liest die Werte aus `common.sh` |
 | `scripts/metal_selftest.py` | Sprachmodell-Test des Installers |
+| `scripts/symbole.sh` | setzt die Symbole der `.command`-Dateien (Mac) |
+| `scripts/uninstall.sh` | Deinstallation, gemeinsam für Mac und Linux |
 | `app/` | FastAPI-Backend: Queue, Bibliothek, Anbindung an ace-server |
 | `static/` | Oberfläche |
 | `docs/anleitung/` | Quelle der Installationsanleitung. `capture.py` fotografiert die laufende App (`uv run --with websockets python docs/anleitung/capture.py`), `build_pdf.py` baut daraus das PDF (`uv run --with reportlab python docs/anleitung/build_pdf.py Installationsanleitung.pdf`; andere Sprachen: `capture.py … en` und `build_pdf.py Installation-Guide-EN.pdf en`, Texte in `texts.py`) |
