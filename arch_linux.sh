@@ -11,6 +11,7 @@
 #   --stop                 Laufende Server beenden
 #   --status               Status der Server anzeigen
 #   --install-only         Nur installieren/bauen/Modelle laden, nicht starten
+#   --uninstall            Modellserver, Modelle und Umgebung entfernen (Songs auf Wunsch behalten)
 #   --backend [auto|rocm|hip|vulkan|cuda|cpu]   Grafik-/Rechen-Backend wählen (Standard: auto)
 #                          (rocm/hip empfohlen für AMD Radeon wie RX 9070 XT)
 #   --lm [0.6B|1.7B|4B]    Sprachmodellgröße festlegen
@@ -25,7 +26,7 @@ source "$SOURCE_DIR/scripts/common.sh"
 cd "$ROOT" || exit 1
 
 AUTO=0
-ACTION="run"       # run, install_only, start, stop, status
+ACTION="run"       # run, install_only, start, stop, status, uninstall
 LM_SIZE=""
 XL=0
 REBUILD=0
@@ -40,6 +41,7 @@ while [ $# -gt 0 ]; do
     --start) ACTION="start" ;;
     --stop) ACTION="stop" ;;
     --status) ACTION="status" ;;
+    --uninstall) ACTION="uninstall" ;;
     --install-only|--no-start) ACTION="install_only" ;;
     --rebuild) REBUILD=1 ;;
     --backend) BACKEND="$2"; shift ;;
@@ -58,6 +60,7 @@ while [ $# -gt 0 ]; do
       echo "  --start                Only start the servers and open the browser"
       echo "  --stop                 Stop running servers"
       echo "  --status               Show server status"
+      echo "  --uninstall            Remove model server, models and environment (songs can be kept)"
       echo "  --install-only         Only install and set up, do not start"
       echo "  --rebuild              Recompile acestep.cpp"
       echo "  --backend [auto|rocm|hip|vulkan|cuda|cpu]   Choose backend (default: auto)"
@@ -711,6 +714,9 @@ case "$ACTION" in
     ;;
   status)
     zeige_status
+    ;;
+  uninstall)
+    if [ "$AUTO" = 1 ]; then exec bash "$ROOT/scripts/uninstall.sh" --yes; else exec bash "$ROOT/scripts/uninstall.sh"; fi
     ;;
   install_only)
     installiere

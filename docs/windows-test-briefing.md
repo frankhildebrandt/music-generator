@@ -129,3 +129,10 @@ Nebenbefund behoben: `updater.py` dekodierte Git-Ausgabe mit cp1252, Commit-Text
 - Beim `-Build`-Pfad wird `--help` gegen die ersten 7 Zeichen des Hashes verglichen.
 - Schnelltest ohne Neuinstallation: eine Modelldatei umbenennen, `.\Install.ps1 -Yes -NoStart` laufen lassen,
   Prüfsumme muss „ok" melden; danach die umbenannte Datei löschen.
+
+## Nachtrag: Deinstallation (ungetestet auf Windows)
+
+`Uninstall.bat` / `Uninstall.ps1` sind neu und wurden ohne PowerShell geschrieben. Bitte auf dem PC prüfen:
+`.\Uninstall.ps1` (nur anschauen und mit Enter abbrechen), dann in einer Kopie des Ordners `.\Uninstall.ps1 -Yes`.
+Erwartet: Server werden beendet, `engine`, `.venv` und `data` (außer `songs` und `music.db*`) verschwinden, die vier Verknüpfungen (Ordner und Desktop) auch.
+Mac und Linux nutzen `scripts/uninstall.sh` und sind getestet.

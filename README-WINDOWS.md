@@ -43,6 +43,10 @@ Optionen (in der PowerShell): `.\Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-XL` (z
 - **Music Generator ON** startet Modellserver und App und öffnet http://localhost:8765
 - **Music Generator OFF** beendet alles (Browser-Tabs bleiben offen)
 
+## Deinstallieren
+
+`Uninstall.bat` doppelklicken. Es zeigt, was entfernt wird, und fragt, ob Songs und Bibliothek bleiben sollen (Vorgabe: behalten). Danach den Programmordner löschen. Git und `uv` bleiben installiert.
+
 ## Unterschiede zum Mac
 
 | | Mac | Windows |
