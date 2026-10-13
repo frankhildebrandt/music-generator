@@ -145,7 +145,9 @@ Nach einem Update von acestep.cpp (`ACESTEP_REV` in `scripts/common.sh`) testet 
 
 ## Lizenz der Modelle
 
-ACE-Step 1.5 steht unter Apache 2.0. Die Modelle werden beim Installieren von
+ACE-Step 1.5 steht nach den Angaben der Entwickler unter der **MIT-Lizenz** (GitHub-Projekt und Modellkarten auf Hugging Face, Stand Oktober 2026).
+Der Vorgänger ACE-Step v1 stand noch unter Apache 2.0. Bei zwei Einzelmodellen (Turbo und Sprachmodell 1.7B) fehlt die Lizenzangabe auf Hugging Face,
+sie gehören zur selben MIT-Familie. Die Modelle werden beim Installieren von
 [Hugging Face](https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF) geladen und sind nicht Teil dieses Repositorys.
 Vor kommerzieller Nutzung die Lizenz- und Trainingsdaten-Lage selbst prüfen.
 
