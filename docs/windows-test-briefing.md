@@ -104,7 +104,7 @@ Installation, ON, OFF, Song-Erzeugung (30 s und 90 s), „Server stoppen“ und 
 ## Konventionen
 
 - Antworten und Kommentare auf Deutsch, Lee duzen, kurz.
-- Commits mit `Co-Authored-By: Claude …`-Zeile, pushen nach `origin main` des privaten Repos.
+- Commits mit `Co-Authored-By: Claude …`-Zeile, pushen nach `origin main` des öffentlichen Repos.
 - Mac-Dateien (`*.command`, `scripts/symbole.sh`, `Install.command`) nicht anfassen; sie werden später zurückgemerged.
 - Werte, die Mac und Windows teilen (Ports, acestep-Version, HF-Adresse), nur in `scripts/common.sh` ändern.
 - Songs/Einstellungen liegen in `data/` und sind in `.gitignore`.
@@ -130,9 +130,45 @@ Nebenbefund behoben: `updater.py` dekodierte Git-Ausgabe mit cp1252, Commit-Text
 - Schnelltest ohne Neuinstallation: eine Modelldatei umbenennen, `.\Install.ps1 -Yes -NoStart` laufen lassen,
   Prüfsumme muss „ok" melden; danach die umbenannte Datei löschen.
 
-## Nachtrag: Deinstallation (ungetestet auf Windows)
+## Nachtrag: Deinstallation
 
 `Uninstall.bat` / `Uninstall.ps1` sind neu und wurden ohne PowerShell geschrieben. Bitte auf dem PC prüfen:
 `.\Uninstall.ps1` (nur anschauen und mit Enter abbrechen), dann in einer Kopie des Ordners `.\Uninstall.ps1 -Yes`.
 Erwartet: Server werden beendet, `engine`, `.venv` und `data` (außer `songs` und `music.db*`) verschwinden, die vier Verknüpfungen (Ordner und Desktop) auch.
 Mac und Linux nutzen `scripts/uninstall.sh` und sind getestet.
+
+### Ergebnis auf dem PC (13. Okt 2026, Stand 560338a, gleicher PC wie oben)
+
+**Funktioniert.** Getestet wurde der Weg, den ein normaler Nutzer geht: alles entfernen, Songs mitlöschen,
+Ordner löschen, frisch klonen, neu installieren. Kein Fehler, keine Änderung am Skript nötig.
+
+Ausgangslage: laufende App (Web-App und Synthese-Server), 7 Songs (82 MB), Modelle inklusive XL-Klangmodell.
+
+**1. Deinstallation** per `Uninstall.bat`, Antworten wie getippt: „Uninstall now?“ → `y`, „Keep songs and library?“ → `n`.
+(Für den Test wurden die beiden Antworten per Pipe übergeben; `Read-Host` liest sie dann aus der Eingabe.)
+
+| Schritt | Ergebnis |
+|---|---|
+| Übersicht vorab | zeigt `engine\` 14,5 GB, `.venv\` 16 MB, `data\` 85 MB, die Verknüpfungen und was bleibt (Ordner, Git, uv, eigener Songordner) |
+| Server beenden | „Stopping server on port 8765 / 8085“, danach kein Port mehr offen, kein `ace-server` mehr |
+| Songs-Frage | erscheint mit Größe (82 MB), Vorgabe „behalten“, mit `n` beantwortet |
+| Entfernen | `engine\`, `.venv\`, `data\` komplett weg (inkl. `songs` und `music.db`) |
+| Verknüpfungen | alle vier entfernt, auch die auf dem umgeleiteten Desktop (`OneDrive\Desktop`) |
+| Ende | „Done. To finish, delete this folder: …“, dann „Press any key to close…“ (hält das Fenster beim Doppelklick offen, richtig so) |
+
+Nachkontrolle: Im Programmordner blieben nur die Repo-Dateien (7,6 MB), rund 14,6 GB waren frei.
+Git und uv waren weiter installiert, wie angekündigt. Danach den Ordner von Hand gelöscht, wie das Skript es sagt.
+
+**2. Neuinstallation** nach `README-WINDOWS.md`: `git clone` aus dem öffentlichen Repo (ohne Anmeldung), dann `Install.bat -Yes -XL`.
+
+- Binaries neu geladen, alle fünf Modelle geladen, jede Prüfsumme „ok“.
+- Selbsttest lief neu (nach frischer Installation nicht mehr „already tested“): Planung ok, 50 Codes → Modus `single`.
+- `data\engine.conf` neu geschrieben, `VAE_CHUNK=128`, ace-server startet mit `--vae-chunk 128`.
+- Verknüpfungen in Programmordner und auf dem Desktop wieder da, App startete am Ende selbst.
+- App: leere Bibliothek, beide Klangmodelle verfügbar, Update-Check ok.
+- 30-Sekunden-Song nach der Neuinstallation in etwa 60 s fertig, Audio nicht stumm.
+
+**Nicht getestet:**
+- Abbrechen mit Enter bei „Uninstall now?“ (sollte nichts ändern).
+- Songs behalten (Enter bzw. `-Yes`): dann müssten `data\songs` und `music.db*` bleiben, der Rest von `data\` weg sein.
+- Ein eigener Songordner außerhalb des Programmordners (laut Skript wird er nicht angefasst).
