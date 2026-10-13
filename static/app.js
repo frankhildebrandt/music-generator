@@ -55,9 +55,15 @@ const randomPrompt = () => `${pick(R.mood)}, ${pick(R.scene)}, ${pick(R.detail)}
 // ---------------------------------------------------------------- Formular
 const form = $("#genForm");
 function addChips(el, items, onClick) {
-  el.innerHTML = items.map((t) => `<span class="chip">${esc(t)}</span>`).join("");
+  el.innerHTML = items.map((t) => `<span class="chip" role="button" tabindex="0">${esc(t)}</span>`).join("");
   el.querySelectorAll(".chip").forEach((c, i) => c.addEventListener("click", () => onClick(items[i])));
 }
+// Karten sind Schaltflächen: mit Tab erreichbar, Enter und Leertaste lösen einen Klick aus
+document.addEventListener("keydown", (e) => {
+  const c = e.target.closest?.('[role="button"]');
+  if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); c.click(); }
+});
+
 // Stil-Karten sind Schalter: an = steht im Stil-Feld (gold umrandet), aus = wird dort wieder entfernt
 const styleParts = () => form.style.value.split(",").map((x) => x.trim()).filter(Boolean);
 function syncStyleChips() {
@@ -363,8 +369,9 @@ function setFolder(id, reload = true) {
   if (reload) refresh();
 }
 function renderFolders() {
-  const chip = (id, name, n) => `<span class="chip fold${id === curFolder ? " on" : ""}" data-f="${id}" title="${esc(name)}">${esc(name)} <b>${n}</b></span>`;
+  const chip = (id, name, n) => `<span class="chip fold${id === curFolder ? " on" : ""}" role="button" tabindex="0" aria-pressed="${id === curFolder}" data-f="${id}" title="${esc(name)}">${esc(name)} <b>${n}</b></span>`;
   const cur = folders.folders.find((f) => f.id === curFolder);
+  const hadFocus = document.activeElement?.closest?.("#folderBar") ? document.activeElement.dataset.f : undefined;   // Tastaturfokus nach dem Neuzeichnen behalten
   $("#folderBar").innerHTML =
     chip("", t("f_all"), folders.all) +
     (folders.folders.length ? chip("none", t("f_none"), folders.none) : "") +
@@ -373,6 +380,7 @@ function renderFolders() {
     `<span class="fold-actions">` +
     (cur ? `<button type="button" class="sek mini" data-fa="rename">${t("f_rename")}</button><button type="button" class="sek mini" data-fa="delete">${t("f_delete")}</button>` : "") +
     `<a class="download mini" data-fa="zip" href="/api/download?folder=${encodeURIComponent(curFolder)}" title="${t("f_zip_tip")}">${cur ? t("f_zip") : t("f_zip_all")}</a></span>`;
+  if (hadFocus !== undefined) $("#folderBar").querySelector(`[data-f="${CSS.escape(hadFocus)}"]`)?.focus();
 }
 async function moveSong(id, folderId) {
   await api(`/api/songs/${id}`, { method: "PATCH", body: JSON.stringify({ folder_id: folderId === "none" ? null : folderId }) }).catch((e) => alert(e.message));
@@ -474,7 +482,7 @@ function initPlayer() {
   $("#playBtn").onclick = () => ws.playPause();
   initVolume();
   document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && !["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(e.target.tagName) && currentId) { e.preventDefault(); ws.playPause(); }
+    if (e.code === "Space" && !e.target.closest?.('input, textarea, select, button, [role="button"]') && currentId) { e.preventDefault(); ws.playPause(); }
   });
 }
 // Lautstärke: Regler klappt beim Zeigen auf den Lautsprecher aus; Klick auf den Lautsprecher = stumm
@@ -499,9 +507,12 @@ function initVolume() {
   applyVolume();
 }
 
+let playSeq = 0;   // jede Wiedergabe-Anfrage bekommt eine Nummer: nach dem Laden zählt nur die neueste
 async function play(s) {
   if (!ws) initPlayer();
   if (currentId === s.id) return ws.playPause();
+  const seq = ++playSeq;
+  if (ws.isPlaying()) ws.pause();   // der bisherige Song verstummt sofort, nicht erst nach dem Laden des neuen
   if (!played.has(s.id)) { markPlayed(s.id); render(); }
   currentId = s.id;
   $("#player").hidden = false;
@@ -511,7 +522,8 @@ async function play(s) {
   }
   $("#pTitle").textContent = s.title || s.caption;
   $("#pTitle").title = `Seed ${s.seed}` + (s.result_meta?.keyscale ? ` · ${s.result_meta.keyscale}` : "");
-  await ws.load(s.url);
+  try { await ws.load(s.url); } catch (err) { if (seq === playSeq) throw err; return; }   // abgebrochen, weil inzwischen ein anderer Song gewählt wurde
+  if (seq !== playSeq) return;
   ws.play();
   render();
 }
