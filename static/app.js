@@ -144,6 +144,10 @@ lyricsDice.addEventListener("click", (e) => {
   syncLyrics();
   rollAnim(e.currentTarget);
 });
+// Einklappen der Lyrics (Klick auf die Kopfzeile) heißt: Instrumental. Der Würfel in der Kopfzeile ist ausgenommen (stoppt oben).
+$("#lyricsBox > summary").addEventListener("click", () => {
+  if ($("#lyricsBox").open && !form.instrumental.checked) { form.instrumental.checked = true; syncLyrics(); }
+});
 form.instrumental.addEventListener("change", () => { syncLyrics(); if (!form.instrumental.checked) $("#lyricsBox").open = true; });
 form.lyrics.addEventListener("focus", () => { if (form.instrumental.checked) { form.instrumental.checked = false; syncLyrics(); } });
 form.lyrics.addEventListener("input", syncLyrics);

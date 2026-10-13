@@ -400,6 +400,16 @@ def get_settings():
 
 @app.put("/api/settings")
 def put_settings(values: dict, x_lang: str = Header("de")):
+    for k in ("timeout_minutes", "poll_interval"):   # Zahlen prüfen: ein Textwert würde später jede Erzeugung abbrechen
+        if k in values:
+            try:
+                values[k] = float(values[k])
+                if not values[k] > 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                raise HTTPException(422, tr(x_lang, "bad_number", field=k))
+            if k == "timeout_minutes" and values[k].is_integer():
+                values[k] = int(values[k])
     if "dit" in values:
         if values["dit"] not in DIT_MODELS:
             values["dit"] = "standard"
