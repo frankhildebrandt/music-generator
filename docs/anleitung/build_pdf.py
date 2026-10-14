@@ -130,9 +130,9 @@ def code(c, text, x, y, w):
     return y - h
 
 
-def note(c, text, y, color=GOLD, label=None):
+def note(c, text, y, color=GOLD, label=None, style=None):
     """Hinweis-Kasten mit farbigem Balken links."""
-    p = Paragraph(f"<b>{label or T('hinweis')}:</b> {text}", body)
+    p = Paragraph(f"<b>{label or T('hinweis')}:</b> {text}", style or body)
     _, h = p.wrap(W - 2 * M - 26, 1000)
     c.setFillColor(white)
     c.setStrokeColor(LINE)
@@ -519,7 +519,36 @@ def page_app(c):
     footer(c, 6)
 
 
-# ═════════════════════════════════════════════════════════════════ Seite 7: Bibliothek + Hilfe
+# ═════════════════════════════════════════════════════════════════ Seite 7: Prompts und Lyrics
+def page_prompts(c):
+    y = header(c, T("pp_01"), T("pp_02"))
+    y = h2(c, T("pp_03"), y)
+    y = para(c, T("pp_04"), M, y, W - 2 * M, small)
+    y -= 10
+    y = h2(c, T("pp_05"), y)
+    rows = [[T("pp_06"), T("pp_07")],
+            [T("pp_08"), T("pp_09")],
+            [T("pp_10"), T("pp_11")],
+            [T("pp_12"), T("pp_13")],
+            [T("pp_14"), T("pp_15")],
+            [T("pp_16"), T("pp_17")],
+            [T("pp_18"), T("pp_19")]]
+    y = table(c, rows, y, [130, W - 2 * M - 130])
+    y -= 10
+    y = h2(c, T("pp_20"), y)
+    y = para(c, T("pp_21"), M, y, W - 2 * M, small)
+    y -= 10
+    y = h2(c, T("pp_22"), y)
+    y = para(c, T("pp_23"), M, y, W - 2 * M, small)
+    y -= 10
+    y = h2(c, T("pp_24"), y)
+    y = code(c, T("pp_25"), M, y, W - 2 * M)
+    y -= 8
+    note(c, T("pp_26"), y, GOLD, T("pp_27"), ParagraphStyle("nt", parent=small, textColor=INK))
+    footer(c, 7)
+
+
+# ═════════════════════════════════════════════════════════════════ Seite 8: Bibliothek + Hilfe
 def page_help(c):
     y = header(c, T("p7_01"), T("p7_02"))
     y = h2(c, T("p7_03"), y)
@@ -573,10 +602,10 @@ def page_help(c):
 
     y = h2(c, T("p7_21"), y)
     y = para(c, T("p7_22"), M, y, W - 2 * M, small)
-    footer(c, 7)
+    footer(c, 8)
 
 
-# ═════════════════════════════════════════════════════════════════ Seite 8: Hilfe
+# ═════════════════════════════════════════════════════════════════ Seite 9: Hilfe
 def page_trouble(c):
     y = header(c, T("p8_01"), T("p8_02"))
     y = h2(c, T("p8_03"), y)
@@ -603,13 +632,13 @@ def page_trouble(c):
 
     y = h2(c, T("p8_29"), y)
     para(c, T("p8_30"), M, y, W - 2 * M, small)
-    footer(c, 8)
+    footer(c, 9)
 
 
 c = canvas.Canvas(str(OUT), pagesize=A4)
 c.setTitle(T("p8_31"))
 c.setAuthor("Alphatester")
-for fn in (page_cover, page_overview, page_steps, page_flow, page_windows, page_app, page_help, page_trouble):
+for fn in (page_cover, page_overview, page_steps, page_flow, page_windows, page_app, page_prompts, page_help, page_trouble):
     fn(c)
     c.showPage()
 c.save()
