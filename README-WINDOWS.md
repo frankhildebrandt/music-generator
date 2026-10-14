@@ -1,7 +1,7 @@
 # Music Generator für Windows
 
 Gleiche App wie auf dem Mac, Modellserver läuft über CUDA auf der NVIDIA-Grafikkarte.
-Der Installer lädt die fertigen Windows-Binaries von acestep.cpp (kein Compiler nötig).
+Der Installer lädt die fertigen Windows-Programmdateien von acestep.cpp in einer festen, geprüften Version (kein Compiler nötig).
 
 Ausführliche Anleitung mit Bildern (Windows ab Seite 5): **[Installationsanleitung.pdf](Installationsanleitung.pdf)**, English: **[Installation-Guide-EN.pdf](Installation-Guide-EN.pdf)**, 中文: **[Installation-Guide-ZH.pdf](Installation-Guide-ZH.pdf)**
 
@@ -29,7 +29,7 @@ Der Installer
 2. schlägt das passende Sprachmodell vor (nach Arbeitsspeicher: 0.6B unter 12 GB, 1.7B bis 24 GB, 4B darüber;
    der Grafikspeicher begrenzt zusätzlich: unter 6 GB 0.6B, 6–7 GB 1.7B, ab 8 GB 4B),
 3. installiert was fehlt: `git`, `uv` (ohne Admin-Rechte),
-4. lädt die fertigen acestep.cpp-Binaries (ca. 180 MB),
+4. lädt die fertigen acestep.cpp-Programmdateien (ZIP, ca. 130 MB) aus der Veröffentlichung dieses Projekts und prüft die Prüfsumme,
 5. lädt nur die benötigten Modelle (fortsetzbar),
 6. testet, ob das Sprachmodell auf der Grafikkarte richtig rechnet (sonst CPU),
 7. legt die Verknüpfungen **Music Generator ON / OFF** im Programmordner und auf dem Desktop an und startet die App.
@@ -45,7 +45,7 @@ Optionen (in der PowerShell): `.\Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-XL` (z
 
 ## Virenscanner schlägt Alarm
 
-Manche Virenscanner, zum Beispiel Norton mit der Meldung **„IDP.Generic"**, blocken `ace-server.exe` im Ordner `engine\acestep.cpp\build\Release`. Das ist eine Reputationserkennung und keine bekannte Schadsoftware: Die Datei ist neu, selten und nicht digital signiert. Es ist der Modellserver von acestep.cpp. Der Installer lädt ihn als fertige Programmdatei vom Autor dieses Projekts (Adresse in `scripts\common.ps1`), sie stammt also nicht von uns.
+Manche Virenscanner, zum Beispiel Norton mit der Meldung **„IDP.Generic"**, blocken `ace-server.exe` im Ordner `engine\acestep.cpp\build\Release`. Das ist eine Reputationserkennung und keine bekannte Schadsoftware: Die Datei ist neu, selten und nicht digital signiert. Es ist der Modellserver von acestep.cpp. Die Programmdateien stammen unverändert vom Autor von acestep.cpp. Wir haben einen auf Windows getesteten Satz als eigene Veröffentlichung abgelegt ([Releases](https://github.com/rabbitfiremediacreation/music-generator/releases), Version und Prüfsumme in `scripts\common.sh`). Der Installer lädt genau diesen Satz und bricht ab, wenn die Prüfsumme nicht stimmt.
 
 Wenn du dem Projekt vertraust:
 1. Die Datei aus der Quarantäne wiederherstellen und den Programmordner von der Prüfung ausnehmen. Bei Norton: Einstellungen › Antivirus › Scans und Risiken › Von Scans ausschließen, außerdem bei Auto-Protect und SONAR.
@@ -56,7 +56,7 @@ Wenn du dem Projekt vertraust:
    ```
 4. Alternativ selbst bauen: `.\Install.ps1 -Build` (braucht Visual Studio Build Tools und das CUDA-Toolkit). Auch eine selbst gebaute Datei ist unsigniert, kann aber gleich gemeldet werden.
 
-Offen gesagt: Für diese Programmdateien gibt es bei uns noch keine Prüfsumme wie bei den Modellen. Das steht auf der Liste. Der Quellcode von acestep.cpp liegt offen auf [GitHub](https://github.com/ServeurpersoCom/acestep.cpp).
+Der Quellcode von acestep.cpp liegt offen auf [GitHub](https://github.com/ServeurpersoCom/acestep.cpp). Herkunft, Lizenzen (MIT) und die Prüfsummen der Einzeldateien liegen nach der Installation neben den Programmdateien (`README.txt`, `LICENSE-*.txt`, `SHA256SUMS.txt`).
 
 ## Deinstallieren
 
@@ -67,7 +67,7 @@ Offen gesagt: Für diese Programmdateien gibt es bei uns noch keine Prüfsumme w
 | | Mac | Windows |
 |---|---|---|
 | Start/Stopp | `.command`-Dateien | `.bat` / `.ps1` plus Verknüpfungen mit Symbol |
-| Modellserver | wird kompiliert (Metal) | fertige Binaries (CUDA, Vulkan, CPU; Backend wird zur Laufzeit gewählt) |
+| Modellserver | wird kompiliert (Metal) | fertige Programmdateien in fester Version mit Prüfsumme (CUDA, Vulkan, CPU; Backend wird zur Laufzeit gewählt) |
 | Gemeinsame Werte | `scripts/common.sh` | `scripts/common.ps1` liest Ports und Adressen aus `common.sh` |
 | Logs | `data/*.log` | `data/*.log` und `data/*.err.log` |
 

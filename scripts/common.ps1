@@ -7,20 +7,18 @@ $MODELS = Join-Path $ENGINE "models"
 $DATA   = Join-Path $ROOT "data"
 $CONF   = Join-Path $DATA "engine.conf"      # vom Installer geschrieben: MODE, LM_FILE
 
-# KEY=value-Zeilen aus common.sh übernehmen (PORT, SYNTH_PORT, LM_PORT, ACESTEP_REPO, ACESTEP_REV, HF_BASE)
+# KEY=value-Zeilen aus common.sh übernehmen (PORT, SYNTH_PORT, LM_PORT, ACESTEP_REPO, ACESTEP_REV, HF_BASE,
+# ENGINE_WIN_REV/URL/SHA256 = Windows-Programmdateien als eigene Veröffentlichung)
 # sowie die Modell-Tabelle MODEL_FILES (Name:MB:SHA-256, eine Datei je Zeile)
 $MODEL_SHA = @{}; $MODEL_MB = @{}
 foreach ($line in Get-Content (Join-Path $PSScriptRoot "common.sh")) {
-    if ($line -match '^(PORT|SYNTH_PORT|LM_PORT|ACESTEP_REPO|ACESTEP_REV|HF_BASE)="?([^"#]+?)"?\s*(#.*)?$') {
+    if ($line -match '^(PORT|SYNTH_PORT|LM_PORT|ACESTEP_REPO|ACESTEP_REV|HF_BASE|ENGINE_WIN_REV|ENGINE_WIN_URL|ENGINE_WIN_SHA256)="?([^"#]+?)"?\s*(#.*)?$') {
         Set-Variable -Name $Matches[1] -Value $Matches[2].Trim()
     }
     if ($line -match '^(?:MODEL_FILES=")?([\w.-]+\.gguf):(\d+):([0-9a-f]{64})"?$') {
         $MODEL_MB[$Matches[1]] = [int]$Matches[2]; $MODEL_SHA[$Matches[1]] = $Matches[3]
     }
 }
-
-# Fertige Windows-Binaries des acestep.cpp-Autors (siehe README von acestep.cpp, Abschnitt Windows)
-$PREBUILT_URL = "https://www.serveurperso.com/temp/acestep.cpp-win64/build/Release/"
 
 # Werkzeuge, die der Installer in den Benutzerordner legt (uv, cmake)
 $env:PATH = "$env:USERPROFILE\.local\bin;$env:LOCALAPPDATA\Programs\Git\cmd;$env:ProgramFiles\Git\cmd;$env:PATH"

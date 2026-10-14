@@ -293,3 +293,49 @@ plus `SOURCE=` und `SERVER=` hat und der Selbsttest weiter „already tested"/�
 
 **Nicht ohne Lee:** Einreichen der ZIP oder von `ace-server.exe` bei VirusTotal und bei Norton (öffentlich bzw. an Dritte). Das macht Lee selbst oder gibt es der Session ausdrücklich frei.
 Mac und Linux sind von all dem nicht betroffen.
+
+### Stand auf dem PC (14. Okt 2026)
+
+**Vorab-Test (Commit c18ea0e, `/temp/`-Weg):** Binaries-Ordner beiseitegelegt, `Install.bat -Yes -NoStart`. Ausgabe
+`done: acestep.cpp 6013134 (2026-10-12)` und der erwartete Hash von `ace-server.exe`. `VERSION.txt`: erste Zeile `PREBUILT=…`,
+dann `SOURCE=`, `SERVER=` und 24 `SHA256`-Zeilen, alle gleich mit den Dateien und dem Stand vom 13. Okt. Selbsttest lief wegen
+der neuen Kennung frisch („trial run“, Modus `single`), ein zweiter Lauf meldete „already tested“. Ok.
+Abhängigkeiten nach dem In-App-Update: FastAPI 0.143, Starlette 1.8, Pydantic 2.14 auf Python 3.12. Host-Schutz (400),
+Pflicht-Header (422), Zahlenprüfung, Startseite und ein neuer Song liefen fehlerfrei.
+
+**Schritte 1 und 2 erledigt:** `acestep-cpp-win64-6013134.zip`, 126,4 MB, 28 Dateien flach (24 unveränderte Programmdateien
+aus dem getesteten Satz, `SHA256SUMS.txt`, `LICENSE-acestep.cpp.txt`, `LICENSE-ggml.txt`, `README.txt` mit Herkunft).
+Lizenzen aus genau den Commits geholt: acestep.cpp `6013134c136d9fb4e970cf690e76925be9553da0`, ggml (Submodul, Fork
+`ServeurpersoCom/ggml`) `2eddaf94a8cdbbf1c30017d28313cd661a9da543`, beide MIT.
+ZIP-SHA-256: `647f4ffd1cb2f2e20ac3d54e92a45ed83d3cf9278e55e8b4da1c788fbfb74ac2`.
+Gegenprobe: entpackt, alle 24 Hashes stimmen, `ace-server.exe --help` meldet `6013134`.
+
+**Schritt 3 (GitHub-Release) wartet auf Lees Freigabe.** Tag `engine-win64-6013134`, Asset `acestep-cpp-win64-6013134.zip`.
+`gh` ist auf dem PC nicht installiert; entweder `winget install GitHub.cli` plus `gh auth login` (Lee meldet sich an),
+oder Lee legt das Release auf github.com an und lädt die ZIP hoch (sie liegt auf dem PC bereit).
+
+**Schritte 4, 5 und 7 umgesetzt (lokal, noch nicht gepusht):**
+- `common.sh`: `ENGINE_WIN_REV`, `ENGINE_WIN_URL` (Release-Asset), `ENGINE_WIN_SHA256`. `common.ps1` liest sie, `PREBUILT_URL` entfällt.
+- `Install.ps1`: ZIP laden, SHA-256 prüfen (Abweichung: löschen, abbrechen), neben `build\Release` in `Release.neu` entpacken und
+  prüfen, laufende Modellserver beenden, alte `.exe`/`.dll`/`VERSION.txt` entfernen, neue Dateien hinüberschieben. Die alte
+  Installation bleibt also bis zuletzt intakt. `VERSION.txt` bekommt zusätzlich `ENGINE_REV=` und `ZIP_SHA256=`.
+  „present“ nur, wenn `ENGINE_REV` passt (oder bei `-Build`-Installationen ohne `VERSION.txt` mit `.git`); sonst wird ersetzt.
+  Der `/temp/`-Weg ist entfernt.
+- README-WINDOWS (Herkunft, Release-Link, 130 MB, Hinweis „noch keine Prüfsumme“ entfernt), `docs/anleitung/texts.py` 180 → 130 MB
+  in allen drei Sprachen. **Die PDFs sind noch nicht neu gebaut** (auf dem Mac `build_pdf.py`).
+
+**Getestet gegen die lokale ZIP** (URL vorübergehend auf `file:///…` gestellt, danach zurück):
+
+| Test | Ergebnis |
+|---|---|
+| Upgrade einer Installation vom `/temp/`-Weg (ohne `ENGINE_REV`), Synthese-Server läuft | „replacing installed version (unknown) with 6013134“, Prüfsumme ok, Server beendet, Dateien ersetzt, `VERSION.txt` vollständig, keine Reste, Selbsttest neu → `single` |
+| Zweiter Lauf | „present … (version 6013134)“, kein Download, „already tested“ |
+| Falscher ZIP-Hash in `common.sh`, installierte Version als `alt` markiert | Abbruch „Checksum … does not match“, ZIP gelöscht, kein `Release.neu`, installierte Programmdateien unverändert |
+| Song mit den Dateien aus der ZIP | 30 s in ca. 60 s, Audio ok, Backend `Vulkan0` |
+
+Zwei Fehler im ersten Entwurf beim Testen gefunden und behoben: `Expand-Archive` (PowerShell 5.1) nimmt nur Dateien mit
+Endung `.zip` (war `.zip.neu`, und die alten Dateien waren da schon gelöscht → jetzt erst entpacken, dann tauschen);
+`@(Get-Content)` nötig, sonst liefert `-match` bei einzeiliger `VERSION.txt` „False“ statt der Zeile.
+
+**Offen nach der Freigabe:** Release anlegen, dann Schritt 6 echt (frisch klonen, `Install.bat -Yes` gegen die Release-URL,
+Song), danach pushen. PDFs auf dem Mac neu bauen. VirusTotal/Norton weiter nur durch Lee.

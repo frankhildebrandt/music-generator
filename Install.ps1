@@ -156,29 +156,60 @@ Write-Host "  ok"
 # --- 4. Modellserver (acestep.cpp) ----------------------------------------------
 Schritt "Model server acestep.cpp"
 $ACE = Ace-Server
-if ($ACE -and -not $Build) {
-    Write-Host "  present: $ACE"
+$rel = Join-Path $ENGINE "build\Release"
+$verFile = Join-Path $rel "VERSION.txt"
+# Liegt schon unsere Veröffentlichung in genau dieser Version? (Ältere Installationen haben Dateien von /temp/ ohne ENGINE_REV.)
+$haveRev = ""
+if (Test-Path $verFile) {   # @(...): bei einer einzeiligen Datei liefert -match sonst True/False statt der Zeile
+    $l = @(Get-Content $verFile) -match '^ENGINE_REV=' | Select-Object -First 1
+    if ($l) { $haveRev = $l -replace '^ENGINE_REV=', '' }
+}
+# Selbst gebaut (-Build): Quellcode-Ordner mit .git, keine VERSION.txt. Den lassen wir in Ruhe.
+$selfBuilt = (-not (Test-Path $verFile)) -and (Test-Path (Join-Path $ENGINE ".git"))
+if ($ACE -and (-not $Build) -and (($haveRev -eq $ENGINE_WIN_REV) -or $selfBuilt)) {
+    Write-Host "  present: $ACE$(if ($haveRev) { " (version $haveRev)" })"
 } elseif (-not $Build) {
-    # Fertige Binaries des acestep.cpp-Autors (CUDA + Vulkan + CPU, Backend wird zur Laufzeit gewählt)
-    Write-Host "  downloading ready-made Windows binaries (about 180 MB) ..."
-    $rel = Join-Path $ENGINE "build\Release"
-    New-Item -ItemType Directory -Force -Path $rel | Out-Null
-    $index = (Invoke-WebRequest -UseBasicParsing $PREBUILT_URL).Content
-    $names = [regex]::Matches($index, 'href="([^"/?]+\.(exe|dll))"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-    if (-not $names) { Abbruch "Could not read the binaries file list ($PREBUILT_URL). Alternative: 'Install -Build' compiles it yourself." }
-    foreach ($n in $names) {
-        Write-Host "  v $n"
-        if (-not (Download "$PREBUILT_URL$n" (Join-Path $rel $n))) { Abbruch "Downloading $n failed. Running Install again resumes." }
+    # Fertige Programmdateien des acestep.cpp-Autors (CUDA + Vulkan + CPU, Backend wird zur Laufzeit gewählt),
+    # unverändert als ZIP in unserer eigenen Veröffentlichung, feste Version, Prüfsumme in common.sh.
+    if ($ACE) { Write-Host "  replacing installed version $(if ($haveRev) { $haveRev } else { '(unknown)' }) with $ENGINE_WIN_REV" }
+    Write-Host "  downloading program files $ENGINE_WIN_REV (about 130 MB) ..."
+    New-Item -ItemType Directory -Force -Path $DATA | Out-Null
+    $zip = Join-Path $DATA "acestep-cpp-win64-$ENGINE_WIN_REV.zip"
+    if (-not (Download $ENGINE_WIN_URL "$zip.neu")) { Abbruch "Downloading the program files failed. Running Install again resumes." }
+    Write-Host "    verifying checksum ..."
+    if ((Get-FileHash -Algorithm SHA256 "$zip.neu").Hash.ToLower() -ne $ENGINE_WIN_SHA256) {
+        Remove-Item -Force "$zip.neu"
+        Abbruch "Checksum of the program files does not match. The file was deleted; running Install again downloads it anew."
     }
+    Write-Host "    checksum ok"
+    Move-Item -Force "$zip.neu" $zip   # Expand-Archive (PowerShell 5.1) nimmt nur Dateien mit der Endung .zip
+    # Erst daneben entpacken und prüfen; die installierte Version bleibt bis dahin unangetastet
+    $neu = "$rel.neu"
+    if (Test-Path $neu) { Remove-Item -LiteralPath $neu -Recurse -Force }
+    try { Expand-Archive -LiteralPath $zip -DestinationPath $neu -Force -ErrorAction Stop } catch { Abbruch "Unpacking the program files failed: $_" }
+    if (-not (Test-Path (Join-Path $neu "ace-server.exe"))) { Abbruch "ace-server.exe is missing in the downloaded program files." }
+    # Laufende Modellserver halten die Dateien offen: beenden, ON startet sie neu
+    foreach ($p in @($SYNTH_PORT, $LM_PORT)) {
+        $pids = Port-Pids $p
+        if ($pids.Count) { Stop-Process -Id $pids -Force -ErrorAction SilentlyContinue }
+    }
+    Start-Sleep -Seconds 1
+    # Nur die Programmdateien der alten Version entfernen, dann die neuen hinüberschieben
+    New-Item -ItemType Directory -Force -Path $rel | Out-Null
+    Get-ChildItem $rel -File | Where-Object { $_.Extension -in ".exe", ".dll" -or $_.Name -eq "VERSION.txt" } | Remove-Item -Force
+    Get-ChildItem $neu -File | Move-Item -Destination $rel -Force
+    Remove-Item -LiteralPath $neu -Recurse -Force
+    Remove-Item -Force $zip
     # Version und Prüfsummen festhalten: wer ein Virenscanner-Problem hat, kann sie nachschlagen (README-WINDOWS.md).
     # Die erste Zeile (PREBUILT=...) liest der Selbsttest als Kennung, sie bleibt vorn.
     $server = Join-Path $rel "ace-server.exe"
+    if (-not (Test-Path $server)) { Abbruch "ace-server.exe is missing after unpacking." }
     $ver = (& $server --help 2>&1 | Select-Object -First 1)
-    $info = @("PREBUILT=$(Get-Date -Format s)", "SOURCE=$PREBUILT_URL", "SERVER=$ver")
+    $info = @("PREBUILT=$(Get-Date -Format s)", "ENGINE_REV=$ENGINE_WIN_REV", "SOURCE=$ENGINE_WIN_URL", "ZIP_SHA256=$ENGINE_WIN_SHA256", "SERVER=$ver")
     foreach ($f in (Get-ChildItem $rel -File | Where-Object { $_.Extension -in ".exe", ".dll" } | Sort-Object Name)) {
         $info += "SHA256 $($f.Name) $((Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower())"
     }
-    $info | Set-Content (Join-Path $rel "VERSION.txt")
+    $info | Set-Content $verFile
     Write-Host "  done: $ver"
     Write-Host "  ace-server.exe SHA-256: $((Get-FileHash $server -Algorithm SHA256).Hash.ToLower())"
     Write-Host "  (all checksums: engine\acestep.cpp\build\Release\VERSION.txt; antivirus complaints: see README-WINDOWS.md)"
