@@ -310,11 +310,12 @@ Lizenzen aus genau den Commits geholt: acestep.cpp `6013134c136d9fb4e970cf690e76
 ZIP-SHA-256: `647f4ffd1cb2f2e20ac3d54e92a45ed83d3cf9278e55e8b4da1c788fbfb74ac2`.
 Gegenprobe: entpackt, alle 24 Hashes stimmen, `ace-server.exe --help` meldet `6013134`.
 
-**Schritt 3 (GitHub-Release) wartet auf Lees Freigabe.** Tag `engine-win64-6013134`, Asset `acestep-cpp-win64-6013134.zip`.
-`gh` ist auf dem PC nicht installiert; entweder `winget install GitHub.cli` plus `gh auth login` (Lee meldet sich an),
-oder Lee legt das Release auf github.com an und lädt die ZIP hoch (sie liegt auf dem PC bereit).
+**Schritt 3 erledigt (von Lee am 14. Okt freigegeben):** `gh` per winget installiert, Lee hat sich angemeldet. Release
+[`engine-win64-6013134`](https://github.com/rabbitfiremediacreation/music-generator/releases/tag/engine-win64-6013134)
+„acestep.cpp program files for Windows (6013134)“, nicht als „Latest“ markiert, Asset `acestep-cpp-win64-6013134.zip`.
+GitHub meldet für das Asset `sha256:647f4ffd…74ac2`; ein Download über `ENGINE_WIN_URL` ergibt dieselbe Prüfsumme.
 
-**Schritte 4, 5 und 7 umgesetzt (lokal, noch nicht gepusht):**
+**Schritte 4, 5 und 7 umgesetzt:**
 - `common.sh`: `ENGINE_WIN_REV`, `ENGINE_WIN_URL` (Release-Asset), `ENGINE_WIN_SHA256`. `common.ps1` liest sie, `PREBUILT_URL` entfällt.
 - `Install.ps1`: ZIP laden, SHA-256 prüfen (Abweichung: löschen, abbrechen), neben `build\Release` in `Release.neu` entpacken und
   prüfen, laufende Modellserver beenden, alte `.exe`/`.dll`/`VERSION.txt` entfernen, neue Dateien hinüberschieben. Die alte
@@ -337,5 +338,15 @@ Zwei Fehler im ersten Entwurf beim Testen gefunden und behoben: `Expand-Archive`
 Endung `.zip` (war `.zip.neu`, und die alten Dateien waren da schon gelöscht → jetzt erst entpacken, dann tauschen);
 `@(Get-Content)` nötig, sonst liefert `-match` bei einzeiliger `VERSION.txt` „False“ statt der Zeile.
 
-**Offen nach der Freigabe:** Release anlegen, dann Schritt 6 echt (frisch klonen, `Install.bat -Yes` gegen die Release-URL,
-Song), danach pushen. PDFs auf dem Mac neu bauen. VirusTotal/Norton weiter nur durch Lee.
+**Schritt 6 erledigt (gegen das echte Release):** Den lokalen Stand frisch in einen Testordner geklont, nur die Modelle
+hineinkopiert (die Programmdateien nicht), `Install.bat -Yes`: Download vom Release, „checksum ok“, entpackt, `VERSION.txt` mit
+`ENGINE_REV=6013134`, `SOURCE=` auf das Release, 24 `SHA256`-Zeilen, keine Reste, Selbsttest → `single`, App startete selbst,
+30-Sekunden-Song in ca. 60 s mit Audio. Danach die Hauptinstallation per `ENGINE_REV=alt` gezwungen, vom Release zu ersetzen:
+ok. Testordner gelöscht, Desktop-Verknüpfungen zeigen wieder auf die Hauptinstallation.
+Nachbesserung dabei: `Expand-Archive` blendet in PowerShell 5.1 einen eigenen Fortschrittsbalken ein, der die Ausgabe
+überdeckt und das Entpacken bremst. Jetzt `$ProgressPreference = "SilentlyContinue"` nur ums Entpacken, Ausgabe „unpacking ...“.
+
+**Noch offen:** PDFs auf dem Mac neu bauen (`texts.py` sagt jetzt 130 MB). VirusTotal und Norton weiter nur durch Lee;
+Kandidat zum Einreichen ist genau diese ZIP bzw. `ace-server.exe` (`caed09ca…c8aab`).
+Versionswechsel später: neue ZIP bauen, neues Release `engine-win64-<rev>`, dann die drei `ENGINE_WIN_*` in `common.sh`
+ändern. Bestehende Installationen ersetzen die Programmdateien beim nächsten Installer-Lauf automatisch.

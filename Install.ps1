@@ -186,7 +186,10 @@ if ($ACE -and (-not $Build) -and (($haveRev -eq $ENGINE_WIN_REV) -or $selfBuilt)
     # Erst daneben entpacken und prüfen; die installierte Version bleibt bis dahin unangetastet
     $neu = "$rel.neu"
     if (Test-Path $neu) { Remove-Item -LiteralPath $neu -Recurse -Force }
-    try { Expand-Archive -LiteralPath $zip -DestinationPath $neu -Force -ErrorAction Stop } catch { Abbruch "Unpacking the program files failed: $_" }
+    Write-Host "    unpacking ..."
+    $pp = $ProgressPreference; $ProgressPreference = "SilentlyContinue"   # Fortschrittsbalken von Expand-Archive überdeckt die Ausgabe und bremst stark
+    try { Expand-Archive -LiteralPath $zip -DestinationPath $neu -Force -ErrorAction Stop } catch { $ProgressPreference = $pp; Abbruch "Unpacking the program files failed: $_" }
+    $ProgressPreference = $pp
     if (-not (Test-Path (Join-Path $neu "ace-server.exe"))) { Abbruch "ace-server.exe is missing in the downloaded program files." }
     # Laufende Modellserver halten die Dateien offen: beenden, ON startet sie neu
     foreach ($p in @($SYNTH_PORT, $LM_PORT)) {
