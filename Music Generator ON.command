@@ -26,9 +26,28 @@ neuste_quelle() {
 }
 
 # --- Modellserver -----------------------------------------------------------
-# Gemeinsame Server-Optionen; VAE_CHUNK (vom Installer nach Arbeitsspeicher gesetzt) kachelt den VAE-Decoder
+# Kachelgröße des VAE-Decoders: schreibt der Installer nach Arbeitsspeicher in engine.conf. Ältere Installationen,
+# die nur aktualisiert wurden, haben die Zeile nicht; dann hier nach derselben Regel ableiten (8 GB: Rauschen ab 30 s).
+if ! grep -q '^VAE_CHUNK=' "$CONF" 2>/dev/null; then
+  RAM_GB=$(( $(sysctl -n hw.memsize) / 1073741824 ))
+  if   [ "$RAM_GB" -lt 12 ]; then VAE_CHUNK="256"
+  elif [ "$RAM_GB" -lt 16 ]; then VAE_CHUNK="512"
+  fi
+  [ -n "$VAE_CHUNK" ] && echo "VAE_CHUNK=$VAE_CHUNK" >> "$CONF"
+fi
 SERVER_ARGS=(--models "$MODELS" --max-batch 1)
 [ -n "$VAE_CHUNK" ] && SERVER_ARGS+=(--vae-chunk "$VAE_CHUNK")
+
+# Läuft der Synthese-Server noch mit einer anderen Kachelgröße (z. B. nach einem Update), neu starten
+if [ -n "$VAE_CHUNK" ] && laeuft "$SYNTH_PORT"; then
+  for pid in $(port_pids "$SYNTH_PORT"); do
+    if ! ps -o args= -p "$pid" 2>/dev/null | grep -q -- "--vae-chunk $VAE_CHUNK"; then
+      echo "Synthesis server runs with the old tile size, restarting."
+      kill "$pid" 2>/dev/null
+    fi
+  done
+  for _ in $(seq 1 20); do laeuft "$SYNTH_PORT" || break; sleep 0.5; done
+fi
 
 if [ "$MODE" = "split" ]; then
   if laeuft "$LM_PORT"; then

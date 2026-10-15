@@ -147,7 +147,8 @@ Nach einem Update von acestep.cpp (`ACESTEP_REV` in `scripts/common.sh`) testet 
 
 Auf Macs mit weniger als 16 GB setzt der Installer zusätzlich `VAE_CHUNK` (256 bei 8 GB, 512 bei 12 GB): Der Klang-Decoder
 rechnet dann in kleineren Kacheln. Ohne diese Einstellung reicht der Speicher bei Songs über etwa 30 Sekunden nicht,
-und statt Musik kommt Rauschen. Wer schon installiert hat, startet Install einmal neu, dann steht der Wert in `data/engine.conf`.
+und statt Musik kommt Rauschen. Fehlt die Zeile in `data/engine.conf` (ältere Installation, nur aktualisiert), trägt „Music Generator ON“ sie
+selbst nach und startet einen Server mit alter Kachelgröße neu.
 
 ## Lizenz der Modelle
 
