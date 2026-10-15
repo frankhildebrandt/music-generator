@@ -146,6 +146,7 @@ else
   ( cd "$ENGINE" && ./buildcpu.sh ) > "$DATA/build.log" 2>&1 || abbruch "Build failed, details in data/build.log"
   echo "  done"
 fi
+pfade_reparieren   # Bibliothekspfade relativ machen, damit der Projektordner verschoben werden darf
 
 # --- 5. Modelle -----------------------------------------------------------------
 schritt "Downloading models"

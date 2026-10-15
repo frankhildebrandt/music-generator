@@ -135,6 +135,11 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8765
 | `engine/` | acestep.cpp und Modelle (vom Installer, nicht im Repo) |
 | `data/` | Songs, Datenbank, Logs, `engine.conf` (nicht im Repo) |
 
+## Projektordner verschieben
+
+Der Ordner darf nach der Installation verschoben oder umbenannt werden. Beim nächsten Start stellt „Music Generator ON“
+die Bibliothekspfade der Engine auf den neuen Ort um und prüft die Python-Umgebung; sonst ist nichts zu tun.
+
 ## Grafikchip und die zwei Modi
 
 Auf dem Apple M4 liefert das Sprachmodell unter Metal in acestep.cpp `b7ba6d9` fehlerhafte Ergebnisse

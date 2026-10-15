@@ -25,6 +25,13 @@ neuste_quelle() {
     -exec stat -f '%m' {} \; 2>/dev/null | sort -rn | head -1
 }
 
+# Wurde der Projektordner verschoben? Bibliothekspfade der Engine relativ machen (nur solange kein Server läuft,
+# eine laufende Datei darf nicht umgeschrieben werden) und die Python-Umgebung prüfen.
+if ! laeuft "$SYNTH_PORT" && ! laeuft "$LM_PORT"; then
+  pfade_reparieren
+fi
+"$ROOT/.venv/bin/python" -c "import uvicorn" 2>/dev/null || { echo "Repairing the Python environment..."; uv sync --quiet; }
+
 # --- Modellserver -----------------------------------------------------------
 # Kachelgröße des VAE-Decoders: schreibt der Installer nach Arbeitsspeicher in engine.conf. Ältere Installationen,
 # die nur aktualisiert wurden, haben die Zeile nicht; dann hier nach derselben Regel ableiten (8 GB: Rauschen ab 30 s).

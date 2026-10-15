@@ -71,6 +71,26 @@ lade_conf() {   # engine.conf als key=value lesen, nicht ausführen
   [ -n "$MODE" ] || MODE=split
 }
 
+# Mac: Die gebaute Engine trägt den absoluten Bauordner als Suchpfad (rpath) für ihre Bibliotheken. Wird der
+# Projektordner verschoben, findet ace-server sie nicht mehr. Hier auf "@loader_path" (der Ordner der Datei selbst)
+# umstellen und ad hoc neu signieren. Läuft nach dem Bauen und bei jedem Start; ohne absolute Pfade passiert nichts.
+pfade_reparieren() {
+  [ "$(uname)" = "Darwin" ] || return 0
+  local f rp changed
+  for f in "$ENGINE"/build/*; do
+    [ -f "$f" ] && [ -x "$f" ] || continue
+    case "$f" in *.dylib|*/ace-*|*/quantize|*/mp3-codec|*/neural-codec|*/test-*) ;; *) continue;; esac
+    changed=""
+    while IFS= read -r rp; do
+      [ -n "$rp" ] || continue
+      install_name_tool -rpath "$rp" "@loader_path" "$f" 2>/dev/null || install_name_tool -delete_rpath "$rp" "$f" 2>/dev/null
+      changed=1
+    done < <(otool -l "$f" 2>/dev/null | sed -n '/LC_RPATH/{n;n;s/^ *path \(\/.*\) (offset.*$/\1/p;}')
+    [ -n "$changed" ] && codesign -s - -f "$f" >/dev/null 2>&1
+  done
+  return 0
+}
+
 # Terminal-Fenster nach getaner Arbeit selbst schließen (macOS).
 fenster_schliessen() {
   [ "$(uname)" = "Darwin" ] || return 0
