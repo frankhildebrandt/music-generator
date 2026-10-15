@@ -16,9 +16,10 @@ const fmt = (sec) => (isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.flo
 // Stil-Karten, nach Art gruppiert; der Würfel mischt daraus einen Stil
 const STYLE_GROUPS = {
   genre: ["trip hop", "downtempo", "dub", "deep house", "techno", "drum and bass", "post-rock", "neo-soul", "dark ambient", "boom bap", "orchestral",
-    "pop", "rock", "hip hop", "electronic", "lo-fi", "jazz", "ambient", "synthwave", "acoustic", "cinematic"],
+    "pop", "rock", "hip hop", "electronic", "lo-fi", "jazz", "ambient", "synthwave", "acoustic", "cinematic",
+    "country", "80s pop", "eurotrash", "90s dance", "chillout"],
   vocals: ["female vocals", "male vocals"],
-  instr: ["piano", "guitar", "808 bass"],
+  instr: ["piano", "guitar"],
   mood: ["upbeat", "melancholic", "dreamy"],
 };
 const STYLE_TAGS = [...STYLE_GROUPS.genre, ...STYLE_GROUPS.vocals, ...STYLE_GROUPS.instr, ...STYLE_GROUPS.mood];
@@ -235,9 +236,10 @@ const STYLE_VOCAB = [
   ["gospel", "gospel"], ["jazz", "\\bjazz(?:y)?\\b"], ["blues", "\\bblues\\b"], ["rock", "\\brock\\b"], ["post-rock", "post ?rock"], ["hard rock", "hard rock"],
   ["punk", "\\bpunk\\b"], ["metal", "heavy metal|\\bmetal (?:music|track|riffs?|guitars?|band)\\b"], ["grunge", "grunge"], ["indie", "\\bindie\\b"],
   ["shoegaze", "shoegaze"], ["pop", "\\bpop\\b"], ["folk", "\\bfolk\\b"], ["country", "country (?:music|ballad|song|track|guitar)"],
+  ["80s pop", "(?:80s|eighties|1980s) pop"], ["eurotrash", "euro ?trash|euro ?dance"], ["90s dance", "(?:90s|nineties|1990s) dance"], ["chillout", "chill ?out"],
   ["reggae", "reggae"], ["ska", "\\bska\\b"], ["reggaeton", "reggaeton"], ["afrobeat", "afro ?beats?"], ["latin", "\\blatin\\b|salsa|bossa ?nova|samba|cumbia"],
   ["orchestral", "orchestra"], ["cinematic", "cinematic|film score|soundtrack"], ["classical", "classical"],
-  ["ambient", "\\bambient\\b"], ["dark ambient", "dark ambient"], ["acoustic", "acoustic"], ["chill", "chill ?out|chillhop|\\bchill\\b"],
+  ["ambient", "\\bambient\\b"], ["dark ambient", "dark ambient"], ["acoustic", "acoustic"], ["chill", "chillhop|\\bchill\\b(?! ?out)"],
   ["piano", "\\bpiano\\b"], ["electric piano", "electric piano|rhodes|wurlitzer"], ["organ", "\\borgan\\b|hammond"], ["synth", "\\bsynth(?:esizers?|s)?\\b"],
   ["guitar", "guitar"], ["funk guitar", "funk(?:y)? guitar|wah ?wah|chicken scratch"], ["slap bass", "slap bass"], ["808 bass", "\\b808\\b"], ["bass", "\\bbass(?:line)?\\b"],
   ["drums", "\\bdrums?\\b|drum (?:break|machine|beat)"], ["strings", "\\bstrings?\\b|violin|cello"], ["brass", "\\bbrass\\b|\\bhorns?\\b|trumpet|trombone"],
