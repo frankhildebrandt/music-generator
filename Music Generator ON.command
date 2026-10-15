@@ -26,13 +26,17 @@ neuste_quelle() {
 }
 
 # --- Modellserver -----------------------------------------------------------
+# Gemeinsame Server-Optionen; VAE_CHUNK (vom Installer nach Arbeitsspeicher gesetzt) kachelt den VAE-Decoder
+SERVER_ARGS=(--models "$MODELS" --max-batch 1)
+[ -n "$VAE_CHUNK" ] && SERVER_ARGS+=(--vae-chunk "$VAE_CHUNK")
+
 if [ "$MODE" = "split" ]; then
   if laeuft "$LM_PORT"; then
     echo "Language model server is already running (port $LM_PORT)."
   else
     echo "Starting language model server (CPU)..."
     GGML_BACKEND=CPU nohup "$ENGINE/build/ace-server" --host 127.0.0.1 --port "$LM_PORT" \
-      --models "$MODELS" --max-batch 1 > "$DATA/ace-lm.log" 2>&1 &
+      "${SERVER_ARGS[@]}" > "$DATA/ace-lm.log" 2>&1 &
     disown
   fi
 fi
@@ -42,7 +46,7 @@ if laeuft "$SYNTH_PORT"; then
 else
   echo "Starting synthesis server (Metal)..."
   nohup "$ENGINE/build/ace-server" --host 127.0.0.1 --port "$SYNTH_PORT" \
-    --models "$MODELS" --max-batch 1 > "$DATA/ace-server.log" 2>&1 &
+    "${SERVER_ARGS[@]}" > "$DATA/ace-server.log" 2>&1 &
   disown
 fi
 

@@ -192,10 +192,19 @@ else
   kill "$TEST_PID" 2>/dev/null; wait "$TEST_PID" 2>/dev/null
   echo "  → mode $MODE"
 fi
+# Kachelgröße des VAE-Decoders (--vae-chunk, Latent-Frames je Kachel, Standard 1024 = etwa 41 s am Stück).
+# Metal teilt sich den Arbeitsspeicher mit allem anderen: bei 8 GB reicht die volle Kachel für Songs über
+# 30 s nicht mehr, der Decoder liefert dann Rauschen statt Musik. Kleinere Kacheln brauchen weniger Speicher.
+VAE_CHUNK=""
+if   [ "$RAM_GB" -lt 12 ]; then VAE_CHUNK="256"
+elif [ "$RAM_GB" -lt 16 ]; then VAE_CHUNK="512"
+fi
+[ -n "$VAE_CHUNK" ] && echo "  VAE tile size: $VAE_CHUNK (RAM $RAM_GB GB)"
 cat > "$CONF" <<EOF
 MODE=$MODE
 LM_FILE=$LM_FILE
 TESTED_REV=$ACESTEP_REV
+VAE_CHUNK=$VAE_CHUNK
 EOF
 
 # --- 7. Start-/Stopp-Symbole ----------------------------------------------------
