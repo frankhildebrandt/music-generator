@@ -25,7 +25,7 @@ Der Installer
 3. installiert was fehlt: Apple-Entwicklerwerkzeuge, `uv`, `cmake` (ohne Homebrew, ohne Passwort),
 4. baut acestep.cpp in der getesteten Version (`b7ba6d9`),
 5. lädt nur die benötigten Modelle (fortsetzbar),
-6. testet, ob das Sprachmodell auf dem Grafikchip richtig rechnet (sonst CPU, siehe unten),
+6. testet, ob das Sprachmodell auf dem Grafikchip richtig rechnet (sonst CPU, siehe unten), und stellt bei weniger als 16 GB den Klang-Decoder auf kleinere Stücke ein,
 7. richtet die Symbole für **Music Generator ON / OFF** ein und startet die App.
 
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
@@ -48,7 +48,7 @@ cd ~/MusicGenerator && git pull
 open Install.command
 ```
 
-Songs und Einstellungen in `data/` bleiben erhalten.
+Songs und Einstellungen in `data/` bleiben erhalten. Das Update in der App startet nur die App neu; danach einmal **OFF** und **ON**, damit auch die Modellserver mit den neuen Einstellungen laufen.
 
 ## Deinstallieren
 
