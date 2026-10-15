@@ -117,16 +117,17 @@ const TITLE = {
   adj: ["Midnight", "Velvet", "Neon", "Silent", "Golden", "Hollow", "Electric", "Faded", "Distant", "Crimson", "Slow", "Lunar", "Paper", "Glass", "Amber"],
   noun: ["Static", "Horizon", "Rain", "Echoes", "Signal", "Drift", "Skyline", "Mirror", "Ember", "Tide", "Orbit", "Harbor", "Afterglow", "Motel", "Garden"],
 };
-// ein bis zwei Genres, ein Instrument, eine Stimmung; Gesang nur, wenn der Song nicht instrumental ist
+// Ein Genre, dazu null bis zwei weitere Begriffe (zweites Genre, Instrument, Stimmung, bei Gesang auch Stimme):
+// höchstens drei Begriffe, gern auch nur einer
 const randomStyle = () => {
-  const parts = [pick(STYLE_GROUPS.genre)];
-  if (Math.random() < 0.6) {
-    let second;
-    do second = pick(STYLE_GROUPS.genre); while (second === parts[0]);
-    parts.push(second);
-  }
-  parts.push(pick(STYLE_GROUPS.instr), pick(STYLE_GROUPS.mood));
-  if (!form.instrumental.checked) parts.push(pick(STYLE_GROUPS.vocals));
+  const genre = pick(STYLE_GROUPS.genre);
+  let second;
+  do second = pick(STYLE_GROUPS.genre); while (second === genre);
+  const pool = [second, pick(STYLE_GROUPS.instr), pick(STYLE_GROUPS.mood)];
+  if (!form.instrumental.checked) pool.push(pick(STYLE_GROUPS.vocals));
+  const extra = Math.floor(Math.random() * 3);   // 0, 1 oder 2
+  const parts = [genre];
+  for (let i = 0; i < extra; i++) parts.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   return parts.join(", ");
 };
 const randomTitle = () => `${pick(TITLE.adj)} ${pick(TITLE.noun)}`;
