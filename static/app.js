@@ -421,7 +421,9 @@ function render() {
       `<button class="sek icon" data-a="more" title="${t("more")}">＋</button>`,
       `<button class="sek icon" data-a="reuse" title="${t("reuse")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 3l7 7h-4v10h-6V10H5l7-7z"/></svg></button>`,
       ["error", "cancelled"].includes(s.status) && `<button class="sek icon" data-a="retry" title="${t("retry")}">↻</button>`,
-      `<button class="sek icon del" data-a="del" title="${["queued", "running"].includes(s.status) ? t("cancel") : t("del")}">✕</button>`,
+      s.id === delArmed
+        ? `<button class="sek icon del armed" data-a="del" title="${t("del_q")}">?</button>`
+        : `<button class="sek icon del" data-a="del" title="${["queued", "running"].includes(s.status) ? t("cancel") : t("del")}">✕</button>`,
     ].filter(Boolean).join("");
     return `<div class="song ${s.id === currentId ? "playing" : ""}${newGroup ? " new-group" : ""}" data-id="${s.id}" draggable="${folders.folders.length > 0 && s.id !== editingId}">
       ${left}
@@ -461,11 +463,31 @@ $("#library").addEventListener("click", async (e) => {
     await api("/api/generate", { method: "POST", body: JSON.stringify({ ...p, instrumental: false, keep_caption: p.use_cot_caption !== true, title: s.title || "", seed: -1, variants: 1, group_id: s.group_id, folder_id: s.folder_id }) });
   }
   if (a === "del") {
-    if (!["queued", "running"].includes(s.status) && !confirm(t("del_q"))) return;
+    // Löschen in zwei Klicks: erster Klick macht aus ✕ ein ?, zweiter Klick auf dieselbe Stelle löscht.
+    // Abbrechen laufender oder wartender Songs geht weiter mit einem Klick.
+    if (!["queued", "running"].includes(s.status) && delArmed !== id) { armDel(id); return; }
+    disarmDel(false);
     await api(`/api/songs/${id}`, { method: "DELETE" }).catch((err) => alert(err.message));
   }
   refresh();
 });
+// Scharf geschalteter Löschknopf (Song-ID); fällt nach 3 s oder bei einem Klick woandershin zurück auf ✕
+let delArmed = null, delTimer = 0;
+function armDel(id) {
+  delArmed = id;
+  clearTimeout(delTimer);
+  delTimer = setTimeout(() => disarmDel(), 3000);
+  render();
+  $(`#library .song[data-id="${id}"] [data-a="del"]`)?.focus();   // Tastatur: Enter ein zweites Mal löscht
+}
+function disarmDel(redraw = true) {
+  if (!delArmed) return;
+  delArmed = null;
+  clearTimeout(delTimer);
+  if (redraw) render();
+}
+document.addEventListener("click", (e) => { if (delArmed && !e.target.closest('[data-a="del"]')) disarmDel(); }, true);
+
 // ---------------------------------------------------------------- Ordner
 function setFolder(id, reload = true) {
   curFolder = id;
