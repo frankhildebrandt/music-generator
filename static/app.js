@@ -421,9 +421,9 @@ function render() {
       `<button class="sek icon" data-a="more" title="${t("more")}">＋</button>`,
       `<button class="sek icon" data-a="reuse" title="${t("reuse")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 3l7 7h-4v10h-6V10H5l7-7z"/></svg></button>`,
       ["error", "cancelled"].includes(s.status) && `<button class="sek icon" data-a="retry" title="${t("retry")}">↻</button>`,
-      s.id === delArmed
-        ? `<button class="sek icon del armed" data-a="del" title="${t("del_q")}">?</button>`
-        : `<button class="sek icon del" data-a="del" title="${["queued", "running"].includes(s.status) ? t("cancel") : t("del")}">✕</button>`,
+      armedKey === `song:${s.id}`
+        ? `<button class="sek icon del armed" data-a="del" data-arm="song:${s.id}" title="${t("del_q")}">?</button>`
+        : `<button class="sek icon del" data-a="del" data-arm="song:${s.id}" title="${["queued", "running"].includes(s.status) ? t("cancel") : t("del")}">✕</button>`,
     ].filter(Boolean).join("");
     return `<div class="song ${s.id === currentId ? "playing" : ""}${newGroup ? " new-group" : ""}" data-id="${s.id}" draggable="${folders.folders.length > 0 && s.id !== editingId}">
       ${left}
@@ -465,28 +465,31 @@ $("#library").addEventListener("click", async (e) => {
   if (a === "del") {
     // Löschen in zwei Klicks: erster Klick macht aus ✕ ein ?, zweiter Klick auf dieselbe Stelle löscht.
     // Abbrechen laufender oder wartender Songs geht weiter mit einem Klick.
-    if (!["queued", "running"].includes(s.status) && delArmed !== id) { armDel(id); return; }
-    disarmDel(false);
+    if (!["queued", "running"].includes(s.status) && armedKey !== `song:${id}`) { arm(`song:${id}`); return; }
+    disarm(false);
     await api(`/api/songs/${id}`, { method: "DELETE" }).catch((err) => alert(err.message));
   }
   refresh();
 });
-// Scharf geschalteter Löschknopf (Song-ID); fällt nach 3 s oder bei einem Klick woandershin zurück auf ✕
-let delArmed = null, delTimer = 0;
-function armDel(id) {
-  delArmed = id;
-  clearTimeout(delTimer);
-  delTimer = setTimeout(() => disarmDel(), 3000);
-  render();
-  $(`#library .song[data-id="${id}"] [data-a="del"]`)?.focus();   // Tastatur: Enter ein zweites Mal löscht
+// Zwei-Klick-Bestätigung statt Browser-Dialog (Song löschen, Ordner löschen, Server stoppen): der erste Klick
+// schaltet den Knopf scharf (rot, Rückfrage im Knopf), der zweite an derselben Stelle führt aus. Nach 3 s oder bei
+// einem Klick woandershin fällt er zurück. armedKey sagt, welcher Knopf scharf ist: "song:<id>", "folder:<id>", "stop".
+let armedKey = null, armedTimer = 0;
+function arm(key) {
+  armedKey = key;
+  clearTimeout(armedTimer);
+  armedTimer = setTimeout(() => disarm(), 3000);
+  redrawArmed();
+  document.querySelector(`[data-arm="${CSS.escape(key)}"]`)?.focus();   // Tastatur: Enter ein zweites Mal führt aus
 }
-function disarmDel(redraw = true) {
-  if (!delArmed) return;
-  delArmed = null;
-  clearTimeout(delTimer);
-  if (redraw) render();
+function disarm(redraw = true) {
+  if (!armedKey) return;
+  armedKey = null;
+  clearTimeout(armedTimer);
+  if (redraw) redrawArmed();
 }
-document.addEventListener("click", (e) => { if (delArmed && !e.target.closest('[data-a="del"]')) disarmDel(); }, true);
+function redrawArmed() { render(); renderFolders(); syncStopBtn(); }
+document.addEventListener("click", (e) => { if (armedKey && !e.target.closest("[data-arm]")) disarm(); }, true);
 
 // ---------------------------------------------------------------- Ordner
 function setFolder(id, reload = true) {
@@ -504,7 +507,9 @@ function renderFolders() {
     folders.folders.map((f) => chip(f.id, f.name, f.count)).join("") +
     `<button type="button" class="chip add" data-fa="new" title="${t("f_new")}" aria-label="${t("f_new")}">＋</button>` +
     `<span class="fold-actions">` +
-    (cur ? `<button type="button" class="sek mini" data-fa="rename">${t("f_rename")}</button><button type="button" class="sek mini" data-fa="delete">${t("f_delete")}</button>` : "") +
+    (cur ? `<button type="button" class="sek mini" data-fa="rename">${t("f_rename")}</button>${armedKey === `folder:${cur.id}`
+      ? `<button type="button" class="sek mini armed" data-fa="delete" data-arm="folder:${cur.id}" title="${esc(t("f_delete_q", cur.name))}">${t("f_delete_sure")}</button>`
+      : `<button type="button" class="sek mini" data-fa="delete" data-arm="folder:${cur.id}">${t("f_delete")}</button>`}` : "") +
     `<a class="download mini" data-fa="zip" href="/api/download?folder=${encodeURIComponent(curFolder)}" title="${t("f_zip_tip")}">${cur ? t("f_zip") : t("f_zip_all")}</a></span>`;
   if (hadFocus !== undefined) $("#folderBar").querySelector(`[data-f="${CSS.escape(hadFocus)}"]`)?.focus();
 }
@@ -525,7 +530,9 @@ $("#folderBar").addEventListener("click", async (e) => {
       const name = prompt(t("f_name_q"), cur.name);
       if (name?.trim()) { await api(`/api/folders/${cur.id}`, { method: "PATCH", body: JSON.stringify({ name }) }); refresh(); }
     } else if (a === "delete" && cur) {
-      if (confirm(t("f_delete_q", cur.name))) { await api(`/api/folders/${cur.id}`, { method: "DELETE" }); setFolder(""); }
+      if (armedKey !== `folder:${cur.id}`) { arm(`folder:${cur.id}`); return; }
+      disarm(false);
+      await api(`/api/folders/${cur.id}`, { method: "DELETE" }); setFolder("");
     } else if (a === "zip" && !songs.some((s) => s.status === "done")) { e.preventDefault(); }
   } catch (err) { alert(t("error") + ": " + err.message); }
 });
@@ -718,10 +725,22 @@ updApply.onclick = async () => {
 $("#btnSettings").addEventListener("click", () => { updInfo.textContent = ""; updList.hidden = true; updApply.hidden = true; updApply.disabled = false; });
 
 // Server stoppen = „Music Generator OFF“ ausführen
+let stopTip = "";
+function syncStopBtn() {
+  const b = $("#stopBtn"), on = armedKey === "stop";
+  b.classList.toggle("armed", on);
+  b.textContent = t(on ? "stop_sure" : "stop");
+  b.title = on ? stopTip : "";
+}
+$("#stopBtn").dataset.arm = "stop";
 $("#stopBtn").onclick = async () => {
-  const qu = await api("/api/queue").catch(() => null);
-  const busy = qu && (qu.running.length || qu.queued);
-  if (!confirm(t(busy ? "stop_q_busy" : "stop_q"))) return;
+  if (armedKey !== "stop") {
+    const qu = await api("/api/queue").catch(() => null);
+    stopTip = t(qu && (qu.running.length || qu.queued) ? "stop_q_busy" : "stop_q");
+    arm("stop");
+    return;
+  }
+  disarm();
   clearTimeout(refresh.t);
   try {
     await api("/api/shutdown", { method: "POST" });
