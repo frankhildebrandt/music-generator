@@ -22,14 +22,16 @@ Der Installer
 
 1. prüft Chip, Arbeitsspeicher und freien Platz,
 2. schlägt das passende Sprachmodell vor (0.6B unter 12 GB, 1.7B bis 24 GB, 4B darüber),
-3. installiert was fehlt: Apple-Entwicklerwerkzeuge, `uv`, `cmake` (ohne Homebrew, ohne Passwort),
-4. baut acestep.cpp in der getesteten Version (`b7ba6d9`),
+3. installiert was fehlt: Apple-Entwicklerwerkzeuge (für `git`) und `uv` (ohne Homebrew, ohne Passwort),
+4. lädt acestep.cpp in der getesteten Version (`b7ba6d9`) als fertige Programmdateien aus den [Releases](https://github.com/rabbitfiremediacreation/music-generator/releases) dieses Projekts und prüft die Prüfsumme (ab macOS 26; ältere Versionen kompilieren selbst, dafür kommt `cmake` dazu),
 5. lädt nur die benötigten Modelle (fortsetzbar),
 6. testet, ob das Sprachmodell auf dem Grafikchip richtig rechnet (sonst CPU, siehe unten), und stellt bei weniger als 16 GB den Klang-Decoder auf kleinere Stücke ein,
 7. richtet die Symbole für **Music Generator ON / OFF** ein und startet die App.
 
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
-Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--no-start`.
+Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--no-start`, `--build` (Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden; braucht funktionierende Apple-Entwicklerwerkzeuge bzw. Xcode).
+
+Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acestep.cpp gebaut (Release `engine-macos-arm64-b7ba6d9`, Herkunft und Prüfsummen in `engine/acestep.cpp/build/README.txt` und `SHA256SUMS.txt`). Sie laufen auf M1 bis M4 und neuer, der passende CPU-Code wird beim Start gewählt.
 
 **XL-Klangmodell (optional):** Der Installer fragt, ob zusätzlich das größere Klangmodell ACE-Step 1.5 XL (4 statt 2 Milliarden Parameter, 5,3 GB) geladen werden soll. Laut den Entwicklern klingt es besser, es rechnet etwa doppelt so lange und braucht mehr Speicher (ab 16 GB Arbeitsspeicher bzw. 12 GB Grafikspeicher). Standard bleibt das kleinere Modell; XL wählst du danach unter Zahnrad › Klangmodell. Gemessen auf einem M4 mit 16 GB: ein 30-Sekunden-Song brauchte mit Standard 49 s, mit XL 99 s. Noch wenig getestet, Rückmeldungen willkommen.
 

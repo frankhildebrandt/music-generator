@@ -7,15 +7,17 @@
 #            --lm SIZE    Sprachmodell erzwingen: 0.6B, 1.7B oder 4B
 #            --xl         zusätzlich das XL-Klangmodell laden (5,3 GB, in den Einstellungen wählbar)
 #            --no-start   App am Ende nicht starten
+#            --build      Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden
 source "$(dirname "$0")/scripts/common.sh"
 cd "$ROOT" || exit 1
 
-AUTO=0; START=1; LM_SIZE=""; XL=0
+AUTO=0; START=1; LM_SIZE=""; XL=0; BUILD=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --yes) AUTO=1 ;;
     --no-start) START=0 ;;
     --xl) XL=1 ;;
+    --build) BUILD=1 ;;
     --lm) LM_SIZE="$2"; shift ;;
   esac
   shift
@@ -103,8 +105,14 @@ echo "  Download: $(( (NEED_MB + 1023) / 1024 )) GB · about $NEED_GB GB free sp
 [ "$FREE_GB" -ge "$NEED_GB" ] || abbruch "Not enough disk space: $FREE_GB GB free, about $NEED_GB GB needed."
 ja "  Start installation?" || abbruch "Cancelled."
 
+# Ab macOS ENGINE_MAC_MIN_OS gibt es fertige Programmdateien: dann braucht es keinen Compiler und kein cmake.
+# Selbst bauen nur auf älteren Systemen oder mit --build (Apple-Werkzeuge waren bei mehreren Nutzern defekt).
+OS_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
+PREBUILT=0
+[ "$BUILD" = 0 ] && [ "$OS_MAJOR" -ge "$ENGINE_MAC_MIN_OS" ] && PREBUILT=1
+
 # --- 3. Werkzeuge -------------------------------------------------------------
-schritt "Apple developer tools (compiler, git)"
+schritt "Apple developer tools (git$([ "$PREBUILT" = 0 ] && echo ", compiler"))"
 if ! xcode-select -p >/dev/null 2>&1; then
   xcode-select --install >/dev/null 2>&1
   abbruch "An Apple window opens to install the developer tools. Please confirm there, then run 'Install' again."
@@ -118,11 +126,13 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 uv --version
 
-schritt "cmake (to build the model server)"
-if ! command -v cmake >/dev/null 2>&1; then
-  uv tool install cmake || abbruch "cmake could not be installed."
+if [ "$PREBUILT" = 0 ]; then
+  schritt "cmake (to build the model server)"
+  if ! command -v cmake >/dev/null 2>&1; then
+    uv tool install cmake || abbruch "cmake could not be installed."
+  fi
+  cmake --version | head -1
 fi
-cmake --version | head -1
 
 schritt "Python packages of the app"
 uv sync --quiet || abbruch "Python packages could not be installed."
@@ -130,18 +140,42 @@ echo "  ok"
 
 # --- 4. Modellserver (acestep.cpp) ---------------------------------------------
 schritt "Model server acestep.cpp (${ACESTEP_REV:0:7})"
-if [ ! -d "$ENGINE/.git" ]; then
-  mkdir -p "$ROOT/engine"
-  git clone --quiet "$ACESTEP_REPO" "$ENGINE" || abbruch "Downloading acestep.cpp failed."
-fi
-( cd "$ENGINE" \
-  && { git cat-file -e "$ACESTEP_REV^{commit}" 2>/dev/null || git fetch --quiet origin; } \
-  && git checkout --quiet "$ACESTEP_REV" \
-  && git submodule update --init --recursive --quiet ) || abbruch "Could not switch acestep.cpp to version ${ACESTEP_REV:0:7}."
-
-if "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "${ACESTEP_REV:0:7}"; then   # --help zeigt den kurzen Hash
-  echo "  already built"
+mkdir -p "$ENGINE/build" "$MODELS"
+# Schon vorhanden (--help zeigt den kurzen Hash)? Mit --build werden fertige Programmdateien durch einen eigenen Build ersetzt.
+if "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "${ACESTEP_REV:0:7}" \
+   && { [ "$BUILD" = 0 ] || ! grep -q '^PREBUILT=' "$ENGINE/build/VERSION.txt" 2>/dev/null; }; then
+  echo "  already installed"
+elif [ "$PREBUILT" = 1 ]; then
+  # Fertige Programmdateien aus der Veröffentlichung des Projekts, per SHA-256 geprüft
+  echo "  downloading program files $ENGINE_MAC_REV (about 4 MB) …"
+  ZIP="$DATA/acestep-cpp-macos-arm64-$ENGINE_MAC_REV.zip"
+  curl -L --fail --progress-bar -o "$ZIP.part" "$ENGINE_MAC_URL" || abbruch "Downloading the program files failed. Running Install again retries."
+  if [ "$(shasum -a 256 "$ZIP.part" | cut -d' ' -f1)" != "$ENGINE_MAC_SHA256" ]; then
+    rm -f "$ZIP.part"
+    abbruch "Checksum of the program files does not match. The file was deleted; running Install again downloads it anew."
+  fi
+  echo "  checksum ok, unpacking …"
+  TMP_X="$DATA/engine-unpack"
+  rm -rf "$TMP_X" && mkdir -p "$TMP_X"
+  ditto -x -k "$ZIP.part" "$TMP_X" || abbruch "Unpacking the program files failed."
+  rm -rf "$ENGINE/build" && mkdir -p "$ENGINE/build"
+  cp -R "$TMP_X"/acestep-cpp-macos-arm64-*/. "$ENGINE/build/"
+  rm -rf "$TMP_X" "$ZIP.part"
+  xattr -dr com.apple.quarantine "$ENGINE/build" 2>/dev/null
+  { echo "PREBUILT=$(date +%Y-%m-%dT%H:%M:%S)"; echo "ENGINE_REV=$ENGINE_MAC_REV"; echo "SOURCE=$ENGINE_MAC_URL"; echo "ZIP_SHA256=$ENGINE_MAC_SHA256"; } > "$ENGINE/build/VERSION.txt"
+  "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "${ACESTEP_REV:0:7}" \
+    || abbruch "The model server does not start. Run Install again with --build to compile it yourself."
+  echo "  done ($(shasum -a 256 "$ENGINE/build/ace-server" | cut -c1-12)… ace-server)"
 else
+  if [ ! -d "$ENGINE/.git" ]; then
+    # Ordner gibt es schon (Modelle, fertige Programmdateien): Quelltext hineinholen, ohne etwas zu löschen
+    ( cd "$ENGINE" && git init --quiet && git remote add origin "$ACESTEP_REPO" && git fetch --quiet origin ) \
+      || abbruch "Downloading acestep.cpp failed."
+  fi
+  ( cd "$ENGINE" \
+    && { git cat-file -e "$ACESTEP_REV^{commit}" 2>/dev/null || git fetch --quiet origin; } \
+    && git checkout --quiet --force "$ACESTEP_REV" \
+    && git submodule update --init --recursive --quiet ) || abbruch "Could not switch acestep.cpp to version ${ACESTEP_REV:0:7}."
   echo "  building (takes a few minutes) …"
   ( cd "$ENGINE" && ./buildcpu.sh ) > "$DATA/build.log" 2>&1 || abbruch "Build failed, details in data/build.log"
   echo "  done"
