@@ -48,8 +48,11 @@ die Regler sagen ihren Wert im Klartext („1 Minute 30 Sekunden“, „Auto“)
 Überschrift, jeder Song ist eine Überschrift der Ebene 3, so springt man mit der Überschriften-Navigation von Song zu Song.
 Was im Hintergrund passiert, wird angesagt: Songs in der Warteschlange, „Fertig: <Titel>“, Fehler, die Analyse.
 
-- **Tastenkürzel** (Alt bzw. Option): **Alt+G** generieren, **Alt+N** zum Prompt, **Alt+B** zur Bibliothek.
-  **Leertaste** spielt den gewählten Song ab oder hält ihn an.
+- **Tastenkürzel** (Alt bzw. Option): **Alt+G** generieren, **Alt+R** Idee aufnehmen (einmal starten, einmal beenden),
+  **Alt+N** zum Prompt, **Alt+B** zur Bibliothek. **Leertaste** spielt den gewählten Song ab oder hält ihn an.
+- **Aufnahme mit Screenreader:** Den Mikrofon-Knopf normal aktivieren (z. B. VoiceOver: Ctrl+Option+Leertaste). Die App
+  sagt „Aufnahme beginnt gleich“ und öffnet das Mikrofon erst danach, damit die Ansage nicht mit aufgenommen wird.
+  Noch einmal aktivieren beendet die Aufnahme.
 - **Löschen und Stoppen** fragen ohne Dialog nach: Der erste Druck schaltet den Knopf scharf („Zum Bestätigen noch einmal
   drücken“), der zweite führt aus.
 

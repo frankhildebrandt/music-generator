@@ -64,6 +64,27 @@ body {
   color: var(--muted); font-weight: 600; line-height: 1; }
 .title span:first-child { font-size: calc(var(--h) * .524); letter-spacing: .123em; }
 .title span:last-child { font-size: calc(var(--h) * .298); letter-spacing: .065em; }
+/* Aufnahmeknopf (Mikrofon-Ring): gedrückt halten = aufnehmen. Dunkler Kreis mit Mikrofon in der Farbe der Wortmarke;
+   beim Aufnehmen wird er rot, außen füllt sich ein Ring bis 30 s, in der Mitte zählt die Sekunde. */
+.rec { --p: 0; flex: none; width: 52px; height: 52px; border-radius: 50%; padding: 0; cursor: pointer; position: relative;
+  background: var(--panel); border: 1px solid var(--border); color: var(--logo-text); display: grid; place-items: center;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: transform .1s, border-color .15s, color .15s, background .15s; }
+.rec:hover { border-color: var(--muted); color: #fff; }
+.rec:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.rec::before {   /* Fortschrittsring */
+  content: ""; position: absolute; inset: -6px; border-radius: 50%; opacity: 0; transition: opacity .2s;
+  background: conic-gradient(#ff5252 calc(var(--p) * 360deg), rgba(255, 82, 82, .2) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); }
+.rec-mic { width: 22px; height: 22px; }
+.rec-time { display: none; font-weight: 700; font-size: 15px; color: #ff6b6b; font-variant-numeric: tabular-nums; }
+.rec.on { transform: scale(.94); border-color: #ff5252; background: #2a1517; }
+.rec.on::before { opacity: 1; }
+.rec.on .rec-mic { display: none; }
+.rec.on .rec-time { display: block; }
+.rec.busy { cursor: progress; color: var(--muted); }
+@media (max-width: 700px) { .rec { width: 44px; height: 44px; } .rec-mic { width: 19px; height: 19px; } }
 .top-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .top-right .gear { order: 1; } .top-right .langsw { order: 2; } .top-right #status { order: 3; }
 @media (max-width: 900px) { .top { --h: 64px; gap: 12px; } }

@@ -330,13 +330,14 @@ function extractStyleTags(text, hasVocals, max = 6) {
   return keep.sort((a, b) => tagRank(a.tag) - tagRank(b.tag) || a.start - b.start).slice(0, max).map((h) => h.tag);
 }
 
-async function analyzeFile(file) {
+async function analyzeFile(file, fromMic = false) {
   if (!file) return;
   dzState("busy", t("analyzing", file.name));
   const body = new FormData(); body.append("audio", file);
   try {
     const r = await api("/api/analyze", { method: "POST", body });
-    form.prompt.value = r.caption || "";
+    // Bei einer Mikrofon-Aufnahme beschreibt die Analyse die Aufnahme selbst (Summen, Pfeifen, Stimme); das soll nicht in den Prompt
+    form.prompt.value = fromMic ? cleanIdeaCaption(r.caption || "") : r.caption || "";
     form.title.value = randomTitle();
    
     // Nur echter Text außerhalb von [Strukturmarkern] zählt als Gesang — sonst schreibt das
@@ -356,17 +357,113 @@ async function analyzeFile(file) {
     const add = extractStyleTags(r.caption, hasVocals).filter((x) => !low.has(x.toLowerCase()));
     form.style.value = [...have, ...add].join(", "); syncStyleChips();
     if (r.bpm) { form.bpm.value = r.bpm; }
-    if (r.duration) form.duration.value = Math.min(+form.duration.max, Math.max(+form.duration.min, Math.round(r.duration / 5) * 5));
+    if (r.duration && !fromMic) form.duration.value = Math.min(+form.duration.max, Math.max(+form.duration.min, Math.round(r.duration / 5) * 5));
     showDur();
     setSelect(form.keyscale, r.keyscale, true);
     setSelect(form.timesignature, String(r.timesignature || ""));
-    dzState("ok", t("analyzed", file.name));
+    dzState("ok", fromMic ? t("idea_ready") : t("analyzed", file.name));
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
     dzState("err", `${t("error")}: ${err.message}`);
   }
 }
 dz.addEventListener("click", () => fileInput.click());
+
+// ---------------------------------------------------------------- Ideengeber (Aufnahme vom Mikrofon)
+// Knopf im Kopf: gedrückt halten = aufnehmen (Maus, Finger oder Leertaste), 5 bis REC_MAX Sekunden.
+// Die Aufnahme geht als WAV durch dieselbe Analyse wie ein hochgeladener Song: Beschreibung, Stil, Tempo, Tonart, Takt
+// kommen ins Formular, die Länge bleibt. Die Melodie selbst wird nicht übernommen (ACE-Step kann keine Melodie als
+// Vorgabe verarbeiten, getestet im Oktober 2026). Bewusst nur Mikrofon, kein Datei-Upload.
+const REC_MAX = 30, REC_MIN = 5;
+// Sätze streichen, die die Aufnahme selbst beschreiben (Summen, Pfeifen, nackte Stimme, Aufnahmequalität)
+function cleanIdeaCaption(text) {
+  const bad = /\b(hum(?:s|med|ming)?|whistl(?:e|es|ed|ing)|a ?cap+ella|unaccompanied|solo voice|single voice|lone voice|voice memo|spoken|beatbox\w*|vocalis\w+|sung without|no instruments|without (?:any )?(?:instruments|accompaniment)|low[- ]fi(?:delity)? recording|phone recording|room noise|background noise)\b/i;
+  const kept = text.split(/(?<=[.!?])\s+/).filter((sent) => !bad.test(sent));
+  return kept.join(" ").trim();
+}
+
+const recBtn = $("#recBtn"), recTime = $("#recTime");
+let rec = null;   // laufende Aufnahme: { stream, mr, chunks, start, timer }
+let recToggle = false;   // Screenreader: einmal aktivieren = Start, noch einmal = Stopp (Gedrückthalten geht mit VoiceOver nicht)
+
+async function recStart() {
+  if (rec || recBtn.classList.contains("busy")) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { dzState("err", t("rec_unsupported")); return; }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false } });
+  } catch { dzState("err", t("rec_denied")); return; }
+  if (!recBtn.classList.contains("held") && !recToggle) { stream.getTracks().forEach((tr) => tr.stop()); return; }   // beim Nachfragen schon losgelassen
+  const mr = new MediaRecorder(stream);
+  rec = { stream, mr, chunks: [], start: performance.now(), timer: 0 };
+  mr.addEventListener("dataavailable", (e) => { if (e.data.size) rec.chunks.push(e.data); });
+  mr.addEventListener("stop", recFinish);
+  mr.start();
+  recBtn.classList.add("on");
+  recBtn.setAttribute("aria-pressed", "true");
+  rec.timer = setInterval(() => {
+    const sec = (performance.now() - rec.start) / 1000;
+    recBtn.style.setProperty("--p", Math.min(1, sec / REC_MAX));
+    recTime.textContent = String(Math.floor(sec));
+    if (sec >= REC_MAX) recStop();
+  }, 100);
+}
+function recStop() {
+  recBtn.classList.remove("held");
+  recToggle = false;
+  if (!rec) return;
+  clearInterval(rec.timer);
+  if (rec.mr.state === "recording") rec.mr.stop();
+}
+async function recFinish() {
+  const { stream, chunks, mr, start } = rec;
+  rec = null;
+  stream.getTracks().forEach((tr) => tr.stop());
+  recBtn.classList.remove("on"); recBtn.style.removeProperty("--p"); recTime.textContent = "";
+  recBtn.setAttribute("aria-pressed", "false");
+  if (performance.now() - start < REC_MIN * 1000) { dzState("err", t("rec_short")); return; }
+  recBtn.classList.add("busy");
+  try {
+    const wav = await toWav(new Blob(chunks, { type: mr.mimeType }));
+    await analyzeFile(new File([wav], t("rec_name"), { type: "audio/wav" }), true);   // Name ohne Endung: so steht er in der Meldung
+  } catch (err) { dzState("err", `${t("error")}: ${err.message}`); }
+  recBtn.classList.remove("busy");
+}
+// Browser-Aufnahme (webm/mp4) in Mono-WAV 16 Bit umwandeln; leise Mikrofone werden auf -1 dB angehoben
+async function toWav(blob) {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+  const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+  ctx.close?.();
+  const n = buf.length, ch = buf.numberOfChannels, mono = new Float32Array(n);
+  for (let c = 0; c < ch; c++) { const d = buf.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / ch; }
+  let peak = 0;
+  for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(mono[i]));
+  const gain = peak > 0 ? Math.min(0.89 / peak, 20) : 1;
+  const out = new DataView(new ArrayBuffer(44 + n * 2));
+  const str = (o, v) => { for (let i = 0; i < v.length; i++) out.setUint8(o + i, v.charCodeAt(i)); };
+  str(0, "RIFF"); out.setUint32(4, 36 + n * 2, true); str(8, "WAVE"); str(12, "fmt "); out.setUint32(16, 16, true);
+  out.setUint16(20, 1, true); out.setUint16(22, 1, true); out.setUint32(24, buf.sampleRate, true);
+  out.setUint32(28, buf.sampleRate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+  str(36, "data"); out.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) { const v = Math.max(-1, Math.min(1, mono[i] * gain)); out.setInt16(44 + i * 2, v < 0 ? v * 32768 : v * 32767, true); }
+  return out.buffer;
+}
+// Gedrückt halten: Zeigerereignisse decken Maus und Finger ab, Tastatur über Leertaste/Enter
+recBtn.addEventListener("pointerdown", (e) => { if (e.button === 0) { recBtn.classList.add("held"); recStart(); } });
+["pointerup", "pointercancel"].forEach((ev) => window.addEventListener(ev, () => { if (recBtn.classList.contains("held")) recStop(); }));
+recBtn.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); recBtn.classList.add("held"); recStart(); } });
+recBtn.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); recStop(); } });
+recBtn.addEventListener("contextmenu", (e) => e.preventDefault());
+// Klick ohne Maus (detail 0) kommt vom Screenreader: umschalten statt halten. Erst ansagen, dann das Mikrofon öffnen,
+// damit die Ansage nicht mit aufgenommen wird.
+recBtn.addEventListener("click", (e) => {
+  if (e.detail !== 0) return;
+  if (rec) { recStop(); return; }
+  recToggle = true;
+  announce(t("an_rec_start"));
+  setTimeout(() => { if (recToggle) recStart(); }, 1800);
+});
+window.addEventListener("blur", recStop);
 dz.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
 fileInput.addEventListener("change", () => analyzeFile(fileInput.files[0]));
 ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
@@ -408,10 +505,11 @@ function announceChanges(list) {
 }
 
 // Tastenkürzel (mit Alt bzw. Option, damit sie nicht mit dem Tippen oder dem Screenreader kollidieren):
-// Alt+G generieren, Alt+B zur Bibliothek, Alt+N zum Formular
+// Alt+G generieren, Alt+R Aufnahme starten/beenden, Alt+B zur Bibliothek, Alt+N zum Formular
 document.addEventListener("keydown", (e) => {
   if (!e.altKey || e.ctrlKey || e.metaKey) return;
-  const act = { KeyG: () => form.requestSubmit(), KeyB: () => $("#libHeading").focus(), KeyN: () => form.prompt.focus() }[e.code];
+  const act = { KeyG: () => form.requestSubmit(), KeyR: () => recBtn.dispatchEvent(new MouseEvent("click", { detail: 0 })),
+                KeyB: () => $("#libHeading").focus(), KeyN: () => form.prompt.focus() }[e.code];
   if (act) { e.preventDefault(); act(); }
 });
 
