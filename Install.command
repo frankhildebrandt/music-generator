@@ -109,7 +109,7 @@ ja "  Start installation?" || abbruch "Cancelled."
 # Selbst bauen nur auf älteren Systemen oder mit --build (Apple-Werkzeuge waren bei mehreren Nutzern defekt).
 OS_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
 PREBUILT=0
-[ "$BUILD" = 0 ] && [ "$OS_MAJOR" -ge "$ENGINE_MAC_MIN_OS" ] && PREBUILT=1
+[ "$BUILD" = 0 ] && [ "$ARCH" = "arm64" ] && [ "$OS_MAJOR" -ge "$ENGINE_MAC_MIN_OS" ] && PREBUILT=1   # Intel-Macs bauen selbst
 
 # --- 3. Werkzeuge -------------------------------------------------------------
 schritt "Apple developer tools (git$([ "$PREBUILT" = 0 ] && echo ", compiler"))"

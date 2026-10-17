@@ -23,7 +23,7 @@ Der Installer
 1. prüft Chip, Arbeitsspeicher und freien Platz,
 2. schlägt das passende Sprachmodell vor (0.6B unter 12 GB, 1.7B bis 24 GB, 4B darüber),
 3. installiert was fehlt: Apple-Entwicklerwerkzeuge (für `git`) und `uv` (ohne Homebrew, ohne Passwort),
-4. lädt acestep.cpp in der getesteten Version (`b7ba6d9`) als fertige Programmdateien aus den [Releases](https://github.com/rabbitfiremediacreation/music-generator/releases) dieses Projekts und prüft die Prüfsumme (ab macOS 26; ältere Versionen kompilieren selbst, dafür kommt `cmake` dazu),
+4. lädt acestep.cpp in der getesteten Version (`b7ba6d9`) als fertige Programmdateien aus den [Releases](https://github.com/rabbitfiremediacreation/music-generator/releases) dieses Projekts und prüft die Prüfsumme (Apple Silicon ab macOS 26; ältere Versionen und Intel-Macs kompilieren selbst, dafür kommt `cmake` dazu),
 5. lädt nur die benötigten Modelle (fortsetzbar),
 6. testet, ob das Sprachmodell auf dem Grafikchip richtig rechnet (sonst CPU, siehe unten), und stellt bei weniger als 16 GB den Klang-Decoder auf kleinere Stücke ein,
 7. richtet die Symbole für **Music Generator ON / OFF** ein und startet die App.
