@@ -12,6 +12,13 @@ const api = async (path, opts = {}) => {
 };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmt = (sec) => (isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}` : "");
+// Ansage für Screenreader (VoiceOver, NVDA …): unsichtbare Statuszeile; urgent = sofort, unterbricht (Fehler)
+function announce(text, urgent = false) {
+  const el = $(urgent ? "#srAlert" : "#srStatus");
+  el.textContent = "";
+  setTimeout(() => { el.textContent = text; }, 50);   // erst leeren, damit gleiche Texte erneut angesagt werden
+  clearTimeout(el._t); el._t = setTimeout(() => { el.textContent = ""; }, 8000);   // nicht beim späteren Durchblättern erneut vorlesen
+}
 
 // Stil-Karten, nach Art gruppiert; der Würfel mischt daraus einen Stil
 const STYLE_GROUPS = {
@@ -142,6 +149,8 @@ function updateSlider(box) {
   const out = SLIDER_FMT[box.dataset.fmt](v, min), span = box.querySelector(".knob span");
   span.textContent = Array.isArray(out) ? out[0] : out;
   span.classList.toggle("small", Array.isArray(out));
+  inp.setAttribute("aria-valuetext", box.dataset.fmt === "dur" ? t("vt_dur", Math.floor(v / 60), v % 60)
+    : box.dataset.fmt === "bpm" ? (v <= min ? t("vt_auto") : `${v} BPM`) : span.textContent);
   if (inp.name === "variants") $("#genBtn").textContent = v > 1 ? t("generate_n", v) : t("generate");
 }
 const showDur = () => document.querySelectorAll(".slider").forEach(updateSlider);
@@ -221,7 +230,8 @@ form.addEventListener("submit", async (e) => {
   if (btn.disabled) return;
   btn.disabled = true;
   try {
-    await api("/api/generate", { method: "POST", body: JSON.stringify(readForm()) });
+    const r = await api("/api/generate", { method: "POST", body: JSON.stringify(readForm()) });
+    announce(t("an_queued", r.ids.length));
     refresh();
   } catch (err) { alert(t("error") + ": " + err.message); }
   setTimeout(() => { btn.disabled = false; }, 600);
@@ -371,6 +381,7 @@ async function refresh() {
     if (!dragging) renderFolders();
     const q = new URLSearchParams({ q: $("#search").value, favorites: onlyFav, folder: curFolder });
     songs = await api("/api/songs?" + q);
+    announceChanges(songs);
     if (!editingId && !dragging) render();   // während des Umbenennens nicht neu zeichnen, sonst verliert das Feld den Fokus
     const qu = await api("/api/queue");
     busy = qu.running.length || qu.queued;
@@ -379,6 +390,29 @@ async function refresh() {
   clearTimeout(refresh.t);
   refresh.t = setTimeout(refresh, busy ? 1500 : 8000);
 }
+
+// Ansage, wenn ein Song fertig wird oder scheitert (beim ersten Laden nur merken, nichts sagen)
+const lastStatus = new Map();
+function announceChanges(list) {
+  const first = lastStatus.size === 0;
+  for (const s of list) {
+    const was = lastStatus.get(s.id);
+    if (!first && was && was !== s.status) {
+      const name = (s.title || s.caption.split(",").slice(0, 3).join(",")) + (s.letter ? ` ${s.letter}` : "");
+      if (s.status === "done") announce(t("an_done", name));
+      if (s.status === "error") announce(t("an_error", name), true);
+    }
+    lastStatus.set(s.id, s.status);
+  }
+}
+
+// Tastenkürzel (mit Alt bzw. Option, damit sie nicht mit dem Tippen oder dem Screenreader kollidieren):
+// Alt+G generieren, Alt+B zur Bibliothek, Alt+N zum Formular
+document.addEventListener("keydown", (e) => {
+  if (!e.altKey || e.ctrlKey || e.metaKey) return;
+  const act = { KeyG: () => form.requestSubmit(), KeyB: () => $("#libHeading").focus(), KeyN: () => form.prompt.focus() }[e.code];
+  if (act) { e.preventDefault(); act(); }
+});
 
 let libStats = null;
 function showLibStats() {
@@ -429,7 +463,7 @@ function render() {
       ${left}
       <div style="min-width:0">${s.id === editingId
         ? `<input class="t-edit" data-id="${s.id}" value="${esc(s.title || "")}" placeholder="${esc(s.caption.split(",").slice(0, 3).join(","))}">`
-        : `<div class="t" data-a="rename" title="${t("rename")}">${esc(title)}</div>`
+        : `<div class="t" data-a="rename" role="heading" aria-level="3" title="${t("rename")}">${esc(title)}</div>`
       }<div class="m" title="${t("meta_tip")}">${esc(meta)}</div>${state}</div>
       <div class="actions">${actions}</div>${lyr && openLyrics.has(s.id)
         ? `<div class="lyr-wrap"><pre class="lyr">${esc(lyr)}</pre><a class="download mini lyr-dl" download="${esc((title || s.id).replace(/[\\/:*?"<>|]+/g, "_"))}.txt" href="data:text/plain;charset=utf-8,${encodeURIComponent(lyr)}" title="${t("lyrics_dl")}">TXT ↓</a></div>`
@@ -481,6 +515,7 @@ function arm(key) {
   armedTimer = setTimeout(() => disarm(), 3000);
   redrawArmed();
   document.querySelector(`[data-arm="${CSS.escape(key)}"]`)?.focus();   // Tastatur: Enter ein zweites Mal führt aus
+  announce(t("an_armed"));
 }
 function disarm(redraw = true) {
   if (!armedKey) return;
@@ -630,6 +665,7 @@ function applyVolume() {
   const v = muted ? 0 : volume;
   $("#vol").dataset.level = v === 0 ? "off" : v < 0.5 ? "low" : "high";
   $("#volRange").value = Math.round(volume * 100);
+  $("#volRange").setAttribute("aria-valuetext", `${Math.round(volume * 100)} %`);
   $("#vol").style.setProperty("--v", volume);
   $("#volBtn").title = $("#volBtn").ariaLabel = t(muted ? "unmute" : "mute");
   try { localStorage.setItem("volume", String(volume)); localStorage.setItem("muted", muted ? "1" : "0"); } catch {}

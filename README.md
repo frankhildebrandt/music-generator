@@ -41,6 +41,20 @@ Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acest
 - **Music Generator OFF** beendet alles und schließt die Browser-Tabs
 - Oberfläche in zwölf Sprachen (Auswahl oben rechts): Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Türkisch, Polnisch, Russisch, Ukrainisch, Japanisch, Chinesisch. Korrekturen an `static/i18n.js` sind willkommen.
 
+### Bedienung mit Screenreader
+
+Die App ist für VoiceOver (Mac), NVDA und JAWS (Windows) beschriftet: Jeder Knopf und Regler hat einen vorlesbaren Namen,
+die Regler sagen ihren Wert im Klartext („1 Minute 30 Sekunden“, „Auto“). „Neuer Song“ und „Bibliothek“ sind Bereiche mit
+Überschrift, jeder Song ist eine Überschrift der Ebene 3, so springt man mit der Überschriften-Navigation von Song zu Song.
+Was im Hintergrund passiert, wird angesagt: Songs in der Warteschlange, „Fertig: <Titel>“, Fehler, die Analyse.
+
+- **Tastenkürzel** (Alt bzw. Option): **Alt+G** generieren, **Alt+N** zum Prompt, **Alt+B** zur Bibliothek.
+  **Leertaste** spielt den gewählten Song ab oder hält ihn an.
+- **Löschen und Stoppen** fragen ohne Dialog nach: Der erste Druck schaltet den Knopf scharf („Zum Bestätigen noch einmal
+  drücken“), der zweite führt aus.
+
+Rückmeldungen von Screenreader-Nutzern sind sehr willkommen.
+
 ## Aktualisieren
 
 In der App: Zahnrad › **Nach Updates suchen** › **Jetzt aktualisieren** (holt die neue Fassung von GitHub und startet die App neu; ändert sich acestep.cpp, weist sie auf den Installer hin). Oder von Hand:
