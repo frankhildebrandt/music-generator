@@ -330,14 +330,13 @@ function extractStyleTags(text, hasVocals, max = 6) {
   return keep.sort((a, b) => tagRank(a.tag) - tagRank(b.tag) || a.start - b.start).slice(0, max).map((h) => h.tag);
 }
 
-async function analyzeFile(file, fromMic = false) {
+async function analyzeFile(file, idea = null) {   // idea = Messwerte einer Mikrofon-Aufnahme (measureMelody)
   if (!file) return;
   dzState("busy", t("analyzing", file.name));
   const body = new FormData(); body.append("audio", file);
   try {
     const r = await api("/api/analyze", { method: "POST", body });
-    // Bei einer Mikrofon-Aufnahme beschreibt die Analyse die Aufnahme selbst (Summen, Pfeifen, Stimme); das soll nicht in den Prompt
-    form.prompt.value = fromMic ? cleanIdeaCaption(r.caption || "") : r.caption || "";
+    form.prompt.value = idea ? describeIdea(idea, r.caption, r.keyscale) : r.caption || "";
     form.title.value = randomTitle();
    
     // Nur echter Text außerhalb von [Strukturmarkern] zählt als Gesang — sonst schreibt das
@@ -354,14 +353,14 @@ async function analyzeFile(file, fromMic = false) {
     syncLyrics();
     // Stil: Begriffe aus der Beschreibung ergänzen; was schon im Stil-Feld steht, bleibt
     const have = styleParts(), low = new Set(have.map((x) => x.toLowerCase()));
-    const add = extractStyleTags(r.caption, hasVocals).filter((x) => !low.has(x.toLowerCase()));
+    const add = idea ? [] : extractStyleTags(r.caption, hasVocals).filter((x) => !low.has(x.toLowerCase()));   // bei Ideen rät die Analyse das Instrument falsch
     form.style.value = [...have, ...add].join(", "); syncStyleChips();
     if (r.bpm) { form.bpm.value = r.bpm; }
-    if (r.duration && !fromMic) form.duration.value = Math.min(+form.duration.max, Math.max(+form.duration.min, Math.round(r.duration / 5) * 5));
+    if (r.duration && !idea) form.duration.value = Math.min(+form.duration.max, Math.max(+form.duration.min, Math.round(r.duration / 5) * 5));
     showDur();
     setSelect(form.keyscale, r.keyscale, true);
     setSelect(form.timesignature, String(r.timesignature || ""));
-    dzState("ok", fromMic ? t("idea_ready") : t("analyzed", file.name));
+    dzState("ok", idea ? t("idea_ready") : t("analyzed", file.name));
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (err) {
     dzState("err", `${t("error")}: ${err.message}`);
@@ -375,11 +374,60 @@ dz.addEventListener("click", () => fileInput.click());
 // kommen ins Formular, die Länge bleibt. Die Melodie selbst wird nicht übernommen (ACE-Step kann keine Melodie als
 // Vorgabe verarbeiten, getestet im Oktober 2026). Bewusst nur Mikrofon, kein Datei-Upload.
 const REC_MAX = 30, REC_MIN = 5;
-// Sätze streichen, die die Aufnahme selbst beschreiben (Summen, Pfeifen, nackte Stimme, Aufnahmequalität)
-function cleanIdeaCaption(text) {
-  const bad = /\b(hum(?:s|med|ming)?|whistl(?:e|es|ed|ing)|a ?cap+ella|unaccompanied|solo voice|single voice|lone voice|voice memo|spoken|beatbox\w*|vocalis\w+|sung without|no instruments|without (?:any )?(?:instruments|accompaniment)|low[- ]fi(?:delity)? recording|phone recording|room noise|background noise)\b/i;
-  const kept = text.split(/(?<=[.!?])\s+/).filter((sent) => !bad.test(sent));
-  return kept.join(" ").trim();
+// Die Analyse des Modells kennt nur fertige Songs und hält Summen für Glockenspiel oder Synthesizer (getestet Okt. 2026).
+// Deshalb beschreiben wir eine Mikrofon-Idee selbst aus Messungen: Tonhöhenverlauf (YIN), Tempo der Töne, Bindung.
+// Vom Modell übernehmen wir nur Stimmungswörter, dazu Tempo und Tonart; den Stil wählt der Nutzer.
+function measureMelody(mono, rate) {
+  const step = Math.max(1, Math.round(rate / 16000)), sr = rate / step;      // auf etwa 16 kHz herunter
+  const x = new Float32Array(Math.floor(mono.length / step));
+  for (let i = 0; i < x.length; i++) { let a = 0; for (let k = 0; k < step; k++) a += mono[i * step + k]; x[i] = a / step; }
+  const W = 1024, H = 256, tauMin = Math.floor(sr / 2500), tauMax = Math.ceil(sr / 70);   // 70 Hz (tiefe Stimme) bis 2,5 kHz (Pfeifen)
+  let peak = 0; for (const v of x) peak = Math.max(peak, Math.abs(v));
+  const frames = [], d = new Float32Array(tauMax + 1);
+  for (let start = 0; start + W + tauMax < x.length; start += H) {
+    let e = 0; for (let i = 0; i < W; i++) e += x[start + i] ** 2;
+    const rms = Math.sqrt(e / W);
+    let pitch = null;
+    if (rms > peak * 0.04) {
+      let run = 0;
+      for (let tau = 1; tau <= tauMax; tau++) {
+        let sum = 0; for (let i = 0; i < W; i++) { const df = x[start + i] - x[start + i + tau]; sum += df * df; }
+        run += sum; d[tau] = run ? (sum * tau) / run : 1;            // kumulierte mittlere normierte Differenz
+      }
+      for (let tau = tauMin; tau < tauMax; tau++) {
+        if (d[tau] < 0.15) { while (tau + 1 < tauMax && d[tau + 1] < d[tau]) tau++; pitch = 69 + 12 * Math.log2(sr / tau / 440); break; }
+      }
+    }
+    frames.push({ t: start / sr, rms, pitch, loud: rms > peak * 0.04 });
+  }
+  const voiced = frames.filter((f) => f.pitch !== null);
+  if (voiced.length < 10) return null;
+  const ps = voiced.map((f) => f.pitch).sort((a, b) => a - b), q = (p) => ps[Math.floor(p * (ps.length - 1))];
+  // Tonwechsel: Sprung um mehr als einen Dreiviertelton gegenüber der laufenden Note
+  let notes = 1, cur = voiced[0].pitch;
+  for (const f of voiced) if (Math.abs(f.pitch - cur) > 0.75) { notes++; cur = f.pitch; }
+  const n = voiced.length, mt = voiced.reduce((a, f) => a + f.t, 0) / n, mp = voiced.reduce((a, f) => a + f.pitch, 0) / n;
+  const slope = voiced.reduce((a, f) => a + (f.t - mt) * (f.pitch - mp), 0) / Math.max(1e-9, voiced.reduce((a, f) => a + (f.t - mt) ** 2, 0));
+  const dur = frames.length * H / sr;
+  // gebunden = Anteil der klingenden Stellen mit fester Tonhöhe (Pausen zählen nicht, Konsonanten und Atem schon)
+  return { range: q(0.95) - q(0.05), rate: notes / dur, drift: slope * dur, legato: voiced.length / Math.max(1, frames.filter((f) => f.loud).length) };
+}
+const MOODS = ["magical", "mysterious", "whimsical", "dreamy", "melancholic", "nostalgic", "playful", "gentle", "tender", "hopeful", "haunting",
+  "warm", "calm", "peaceful", "uplifting", "dark", "sad", "joyful", "epic", "triumphant", "eerie", "romantic", "serene", "wistful",
+  "cheerful", "energetic", "intense", "bittersweet", "soothing", "somber", "lighthearted"];
+function describeIdea(m, caption, key) {
+  const minor = /minor/i.test(key || "");
+  const pace = m.rate < 2 ? "slow" : m.rate < 3.5 ? "moderately paced" : "lively";
+  const shape = m.drift < -2 ? "descending" : m.drift > 2 ? "rising" : "gently circling";
+  const width = m.range < 5 ? "narrow" : m.range > 9 ? "wide" : "medium-range";
+  const smooth = m.legato > 0.6;   // Summen hat Atem- und Konsonantenlücken, 0,6 ist schon gebunden
+  const like = m.rate < 2 && smooth ? (minor || m.drift < -2 ? "like a gentle lullaby or a film ballad theme" : "like a tender lullaby or a folk ballad")
+    : m.rate < 3.5 ? (smooth ? "like a heartfelt ballad melody" : "like a simple folk tune")
+    : smooth ? "like a soaring pop melody" : minor ? "like a driving, rhythmic theme" : "like a cheerful dance tune";
+  const low = (caption || "").toLowerCase();
+  const moods = MOODS.filter((w) => new RegExp(`\\b${w}\\b`).test(low)).slice(0, 2);
+  return `${pace[0].toUpperCase() + pace.slice(1)} melody with a ${width}, ${shape} line and ${smooth ? "smooth, flowing" : "detached, rhythmic"} phrasing, ${like}` +
+    (moods.length ? `, ${moods.join(" and ")}` : "");
 }
 
 const recBtn = $("#recBtn"), recTime = $("#recTime");
@@ -424,8 +472,9 @@ async function recFinish() {
   if (performance.now() - start < REC_MIN * 1000) { dzState("err", t("rec_short")); return; }
   recBtn.classList.add("busy");
   try {
-    const wav = await toWav(new Blob(chunks, { type: mr.mimeType }));
-    await analyzeFile(new File([wav], t("rec_name"), { type: "audio/wav" }), true);   // Name ohne Endung: so steht er in der Meldung
+    const { wav, mono, rate } = await toWav(new Blob(chunks, { type: mr.mimeType }));
+    const idea = measureMelody(mono, rate) || { range: 5, rate: 2.5, drift: 0, legato: 0.8 };   // nichts Tonales gefunden: neutrale Werte
+    await analyzeFile(new File([wav], t("rec_name"), { type: "audio/wav" }), idea);   // Name ohne Endung: so steht er in der Meldung
   } catch (err) { dzState("err", `${t("error")}: ${err.message}`); }
   recBtn.classList.remove("busy");
 }
@@ -446,7 +495,7 @@ async function toWav(blob) {
   out.setUint32(28, buf.sampleRate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
   str(36, "data"); out.setUint32(40, n * 2, true);
   for (let i = 0; i < n; i++) { const v = Math.max(-1, Math.min(1, mono[i] * gain)); out.setInt16(44 + i * 2, v < 0 ? v * 32768 : v * 32767, true); }
-  return out.buffer;
+  return { wav: out.buffer, mono, rate: buf.sampleRate };
 }
 // Gedrückt halten: Zeigerereignisse decken Maus und Finger ab, Tastatur über Leertaste/Enter
 recBtn.addEventListener("pointerdown", (e) => { if (e.button === 0) { recBtn.classList.add("held"); recStart(); } });
