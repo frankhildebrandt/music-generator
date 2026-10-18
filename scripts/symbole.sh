@@ -9,7 +9,7 @@ function run(argv) {
   const hide = $.NSDictionary.dictionaryWithObjectForKey($.NSNumber.numberWithBool(true), $.NSFileExtensionHidden);
   for (const [png, file] of [["assets/icon-on.png", "Music Generator ON.command"],
                              ["assets/icon-off.png", "Music Generator OFF.command"],
-                             ["assets/icon-on.png", "Install.command"]]) {
+                             ["assets/icon-on.png", "Mac-Install.command"]]) {
     ws.setIconForFileOptions($.NSImage.alloc.initWithContentsOfFile(root + png), root + file, 0);
     fm.setAttributesOfItemAtPathError(hide, root + file, null);
   }

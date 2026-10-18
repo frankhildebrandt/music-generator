@@ -18,7 +18,7 @@ Fehler in den Skripten beheben, Ergebnis ins private Repo pushen.
 ```powershell
 git clone https://github.com/rabbitfiremediacreation/music-generator.git $HOME\MusicGenerator
 cd $HOME\MusicGenerator
-.\Install.bat        # oder: .\Install.ps1 -Yes  (ohne Rückfragen)
+.\Windows-Install.bat        # oder: .\Windows-Install.ps1 -Yes  (ohne Rückfragen)
 ```
 
 Danach: `Music Generator ON.bat` startet alles und öffnet http://localhost:8765,
@@ -28,7 +28,7 @@ Danach: `Music Generator ON.bat` startet alles und öffnet http://localhost:8765
 
 | Datei | Zweck |
 |---|---|
-| `Install.ps1` / `Install.bat` | Installer. Optionen: `-Yes`, `-LM 0.6B|1.7B|4B`, `-NoStart`, `-Build` |
+| `Windows-Install.ps1` / `Windows-Install.bat` | Installer. Optionen: `-Yes`, `-LM 0.6B|1.7B|4B`, `-NoStart`, `-Build` |
 | `Music Generator ON.ps1` / `.bat` | startet ace-server (Port 8085, bei Modus split zusätzlich 8086 auf CPU) und uvicorn (Port 8765) |
 | `Music Generator OFF.ps1` / `.bat` | beendet die Prozesse auf den drei Ports |
 | `scripts/common.ps1` | Pfade, Port-Hilfsfunktionen, `Start-Hintergrund`. Liest PORT, SYNTH_PORT, LM_PORT, ACESTEP_REPO, ACESTEP_REV, HF_BASE **aus `scripts/common.sh`** (eine Quelle für Mac und Windows) |
@@ -105,7 +105,7 @@ Installation, ON, OFF, Song-Erzeugung (30 s und 90 s), „Server stoppen“ und 
 
 - Antworten und Kommentare auf Deutsch, Lee duzen, kurz.
 - Commits mit `Co-Authored-By: Claude …`-Zeile, pushen nach `origin main` des öffentlichen Repos.
-- Mac-Dateien (`*.command`, `scripts/symbole.sh`, `Install.command`) nicht anfassen; sie werden später zurückgemerged.
+- Mac-Dateien (`*.command`, `scripts/symbole.sh`, `Mac-Install.command`) nicht anfassen; sie werden später zurückgemerged.
 - Werte, die Mac und Windows teilen (Ports, acestep-Version, HF-Adresse), nur in `scripts/common.sh` ändern.
 - Songs/Einstellungen liegen in `data/` und sind in `.gitignore`.
 
@@ -124,16 +124,16 @@ Nebenbefund behoben: `updater.py` dekodierte Git-Ausgabe mit cp1252, Commit-Text
 
 **Vom Mac als ungetestet markiert:**
 - `scripts/common.ps1` liest jetzt zusätzlich `MODEL_FILES` aus `common.sh` in `$MODEL_MB` / `$MODEL_SHA`.
-- `Install.ps1` baut `$FILES` daraus und prüft nach jedem Download die SHA-256 per `Get-FileHash`
+- `Windows-Install.ps1` baut `$FILES` daraus und prüft nach jedem Download die SHA-256 per `Get-FileHash`
   (Download nach `<datei>.neu`, dann Hash, dann umbenennen). Vorhandene Dateien werden nicht erneut geprüft.
 - Beim `-Build`-Pfad wird `--help` gegen die ersten 7 Zeichen des Hashes verglichen.
-- Schnelltest ohne Neuinstallation: eine Modelldatei umbenennen, `.\Install.ps1 -Yes -NoStart` laufen lassen,
+- Schnelltest ohne Neuinstallation: eine Modelldatei umbenennen, `.\Windows-Install.ps1 -Yes -NoStart` laufen lassen,
   Prüfsumme muss „ok" melden; danach die umbenannte Datei löschen.
 
 ## Nachtrag: Deinstallation
 
-`Uninstall.bat` / `Uninstall.ps1` sind neu und wurden ohne PowerShell geschrieben. Bitte auf dem PC prüfen:
-`.\Uninstall.ps1` (nur anschauen und mit Enter abbrechen), dann in einer Kopie des Ordners `.\Uninstall.ps1 -Yes`.
+`Windows-Uninstall.bat` / `Windows-Uninstall.ps1` sind neu und wurden ohne PowerShell geschrieben. Bitte auf dem PC prüfen:
+`.\Windows-Uninstall.ps1` (nur anschauen und mit Enter abbrechen), dann in einer Kopie des Ordners `.\Windows-Uninstall.ps1 -Yes`.
 Erwartet: Server werden beendet, `engine`, `.venv` und `data` (außer `songs` und `music.db*`) verschwinden, die vier Verknüpfungen (Ordner und Desktop) auch.
 Mac und Linux nutzen `scripts/uninstall.sh` und sind getestet.
 
@@ -144,7 +144,7 @@ Ordner löschen, frisch klonen, neu installieren. Kein Fehler, keine Änderung a
 
 Ausgangslage: laufende App (Web-App und Synthese-Server), 7 Songs (82 MB), Modelle inklusive XL-Klangmodell.
 
-**1. Deinstallation** per `Uninstall.bat`, Antworten wie getippt: „Uninstall now?“ → `y`, „Keep songs and library?“ → `n`.
+**1. Deinstallation** per `Windows-Uninstall.bat`, Antworten wie getippt: „Uninstall now?“ → `y`, „Keep songs and library?“ → `n`.
 (Für den Test wurden die beiden Antworten per Pipe übergeben; `Read-Host` liest sie dann aus der Eingabe.)
 
 | Schritt | Ergebnis |
@@ -159,7 +159,7 @@ Ausgangslage: laufende App (Web-App und Synthese-Server), 7 Songs (82 MB), Model
 Nachkontrolle: Im Programmordner blieben nur die Repo-Dateien (7,6 MB), rund 14,6 GB waren frei.
 Git und uv waren weiter installiert, wie angekündigt. Danach den Ordner von Hand gelöscht, wie das Skript es sagt.
 
-**2. Neuinstallation** nach `README-WINDOWS.md`: `git clone` aus dem öffentlichen Repo (ohne Anmeldung), dann `Install.bat -Yes -XL`.
+**2. Neuinstallation** nach `README-WINDOWS.md`: `git clone` aus dem öffentlichen Repo (ohne Anmeldung), dann `Windows-Install.bat -Yes -XL`.
 
 - Binaries neu geladen, alle fünf Modelle geladen, jede Prüfsumme „ok“.
 - Selbsttest lief neu (nach frischer Installation nicht mehr „already tested“): Planung ok, 50 Codes → Modus `single`.
@@ -266,7 +266,7 @@ Bis dahin könnte der Installer den Hash nach dem Download wenigstens ausgeben u
 ohne Ankündigung aus (10. Okt `d881ad2`, 13. Okt `6013134`), sie sind unsigniert und bei VirusTotal unbekannt (Norton meldet `IDP.Generic`).
 Ziel: ein einmal getesteter, fester Satz mit Prüfsumme, den der Installer von uns lädt.
 
-**Schon erledigt (Mac, Commit nach `08774ac`):** `Install.ps1` gibt nach dem Download die Version und die SHA-256 von `ace-server.exe` aus und
+**Schon erledigt (Mac, Commit nach `08774ac`):** `Windows-Install.ps1` gibt nach dem Download die Version und die SHA-256 von `ace-server.exe` aus und
 schreibt Version plus alle Prüfsummen in `engine\acestep.cpp\build\Release\VERSION.txt` (erste Zeile `PREBUILT=...` bleibt, der Selbsttest liest sie).
 **Bitte zuerst testen:** frische Installation (oder nur der Binaries-Schritt in einer Kopie), prüfen dass die Ausgabe stimmt, `VERSION.txt` 24 `SHA256`-Zeilen
 plus `SOURCE=` und `SERVER=` hat und der Selbsttest weiter „already tested"/„trial run" wie gewohnt läuft.
@@ -283,10 +283,10 @@ plus `SOURCE=` und `SERVER=` hat und der Selbsttest weiter „already tested"/�
    **Bevor du `gh release create` ausführst: kurz bei Lee bestätigen lassen** (öffentliche Veröffentlichung).
 4. In `scripts/common.sh` eintragen: `ENGINE_WIN_URL` (Download-Adresse des Release-Assets), `ENGINE_WIN_SHA256` (Hash der ZIP), `ENGINE_WIN_REV="6013134"`.
    `scripts/common.ps1` liest die drei Werte mit (wie schon `HF_BASE` usw.).
-5. `Install.ps1`: Standardweg wird: ZIP von `ENGINE_WIN_URL` laden, SHA-256 prüfen (bei Abweichung löschen und abbrechen, wie bei den Modellen),
+5. `Windows-Install.ps1`: Standardweg wird: ZIP von `ENGINE_WIN_URL` laden, SHA-256 prüfen (bei Abweichung löschen und abbrechen, wie bei den Modellen),
    nach `engine\acestep.cpp\build\Release` entpacken, `VERSION.txt` wie oben schreiben. Der bisherige `/temp/`-Weg entfällt (oder nur mit eigener Option, die klar warnt).
    Der Installer soll dabei auch merken, wenn bereits Dateien einer anderen Version liegen, und sie ersetzen (VERSION.txt vergleichen).
-6. Frisch klonen, `Install.bat -Yes`: Download der ZIP, Prüfsumme „ok", App startet, 30-Sekunden-Song. Auch den Abbruchfall testen: ZIP-Hash in `common.sh` absichtlich verfälschen, Installer muss
+6. Frisch klonen, `Windows-Install.bat -Yes`: Download der ZIP, Prüfsumme „ok", App startet, 30-Sekunden-Song. Auch den Abbruchfall testen: ZIP-Hash in `common.sh` absichtlich verfälschen, Installer muss
    mit Prüfsummenfehler abbrechen und die Datei löschen. Danach zurückändern.
 7. README-WINDOWS (Abschnitt „Virenscanner schlägt Alarm") und Anleitungstexte anpassen: Herkunft jetzt „unveränderte Programmdateien des acestep.cpp-Autors in unserer Veröffentlichung, Prüfsumme geprüft"; Punkt „Für diese Dateien gibt es noch keine Prüfsumme" entfernen.
 8. Ergebnis ins Briefing, Commit mit Co-Authored-By, Push.
@@ -296,7 +296,7 @@ Mac und Linux sind von all dem nicht betroffen.
 
 ### Stand auf dem PC (14. Okt 2026)
 
-**Vorab-Test (Commit c18ea0e, `/temp/`-Weg):** Binaries-Ordner beiseitegelegt, `Install.bat -Yes -NoStart`. Ausgabe
+**Vorab-Test (Commit c18ea0e, `/temp/`-Weg):** Binaries-Ordner beiseitegelegt, `Windows-Install.bat -Yes -NoStart`. Ausgabe
 `done: acestep.cpp 6013134 (2026-10-12)` und der erwartete Hash von `ace-server.exe`. `VERSION.txt`: erste Zeile `PREBUILT=…`,
 dann `SOURCE=`, `SERVER=` und 24 `SHA256`-Zeilen, alle gleich mit den Dateien und dem Stand vom 13. Okt. Selbsttest lief wegen
 der neuen Kennung frisch („trial run“, Modus `single`), ein zweiter Lauf meldete „already tested“. Ok.
@@ -317,7 +317,7 @@ GitHub meldet für das Asset `sha256:647f4ffd…74ac2`; ein Download über `ENGI
 
 **Schritte 4, 5 und 7 umgesetzt:**
 - `common.sh`: `ENGINE_WIN_REV`, `ENGINE_WIN_URL` (Release-Asset), `ENGINE_WIN_SHA256`. `common.ps1` liest sie, `PREBUILT_URL` entfällt.
-- `Install.ps1`: ZIP laden, SHA-256 prüfen (Abweichung: löschen, abbrechen), neben `build\Release` in `Release.neu` entpacken und
+- `Windows-Install.ps1`: ZIP laden, SHA-256 prüfen (Abweichung: löschen, abbrechen), neben `build\Release` in `Release.neu` entpacken und
   prüfen, laufende Modellserver beenden, alte `.exe`/`.dll`/`VERSION.txt` entfernen, neue Dateien hinüberschieben. Die alte
   Installation bleibt also bis zuletzt intakt. `VERSION.txt` bekommt zusätzlich `ENGINE_REV=` und `ZIP_SHA256=`.
   „present“ nur, wenn `ENGINE_REV` passt (oder bei `-Build`-Installationen ohne `VERSION.txt` mit `.git`); sonst wird ersetzt.
@@ -339,7 +339,7 @@ Endung `.zip` (war `.zip.neu`, und die alten Dateien waren da schon gelöscht �
 `@(Get-Content)` nötig, sonst liefert `-match` bei einzeiliger `VERSION.txt` „False“ statt der Zeile.
 
 **Schritt 6 erledigt (gegen das echte Release):** Den lokalen Stand frisch in einen Testordner geklont, nur die Modelle
-hineinkopiert (die Programmdateien nicht), `Install.bat -Yes`: Download vom Release, „checksum ok“, entpackt, `VERSION.txt` mit
+hineinkopiert (die Programmdateien nicht), `Windows-Install.bat -Yes`: Download vom Release, „checksum ok“, entpackt, `VERSION.txt` mit
 `ENGINE_REV=6013134`, `SOURCE=` auf das Release, 24 `SHA256`-Zeilen, keine Reste, Selbsttest → `single`, App startete selbst,
 30-Sekunden-Song in ca. 60 s mit Audio. Danach die Hauptinstallation per `ENGINE_REV=alt` gezwungen, vom Release zu ersetzen:
 ok. Testordner gelöscht, Desktop-Verknüpfungen zeigen wieder auf die Hauptinstallation.

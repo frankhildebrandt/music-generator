@@ -21,7 +21,7 @@ auf einer GTX 1060 (6 GB) dauert ein 30-Sekunden-Song etwa 1 Minute, ein 90-Seku
 git clone https://github.com/rabbitfiremediacreation/music-generator.git $HOME\MusicGenerator
 ```
 
-3. Im Ordner `MusicGenerator` die Datei **Install.bat** doppelklicken.
+3. Im Ordner `MusicGenerator` die Datei **Windows-Install.bat** doppelklicken.
 
 Der Installer
 
@@ -35,7 +35,7 @@ Der Installer
 7. legt die Verknüpfungen **Music Generator ON / OFF** im Programmordner und auf dem Desktop an und startet die App.
 
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
-Optionen (in der PowerShell): `.\Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-XL` (zusätzlich das größere XL-Klangmodell, 5,3 GB, ab 12 GB Grafikspeicher; danach unter Zahnrad › Klangmodell wählbar), `-NoStart`,
+Optionen (in der PowerShell): `.\Windows-Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-XL` (zusätzlich das größere XL-Klangmodell, 5,3 GB, ab 12 GB Grafikspeicher; danach unter Zahnrad › Klangmodell wählbar), `-NoStart`,
 `-Build` (selbst kompilieren, braucht Visual Studio Build Tools und CUDA Toolkit).
 
 ## Benutzen
@@ -54,13 +54,13 @@ Wenn du dem Projekt vertraust:
    ```powershell
    Get-FileHash engine\acestep.cpp\build\Release\ace-server.exe -Algorithm SHA256
    ```
-4. Alternativ selbst bauen: `.\Install.ps1 -Build` (braucht Visual Studio Build Tools und das CUDA-Toolkit). Auch eine selbst gebaute Datei ist unsigniert, kann aber gleich gemeldet werden.
+4. Alternativ selbst bauen: `.\Windows-Install.ps1 -Build` (braucht Visual Studio Build Tools und das CUDA-Toolkit). Auch eine selbst gebaute Datei ist unsigniert, kann aber gleich gemeldet werden.
 
 Der Quellcode von acestep.cpp liegt offen auf [GitHub](https://github.com/ServeurpersoCom/acestep.cpp). Herkunft, Lizenzen (MIT) und die Prüfsummen der Einzeldateien liegen nach der Installation neben den Programmdateien (`README.txt`, `LICENSE-*.txt`, `SHA256SUMS.txt`).
 
 ## Deinstallieren
 
-`Uninstall.bat` doppelklicken. Es zeigt, was entfernt wird, und fragt, ob Songs und Bibliothek bleiben sollen (Vorgabe: behalten). Danach den Programmordner löschen. Git und `uv` bleiben installiert.
+`Windows-Uninstall.bat` doppelklicken. Es zeigt, was entfernt wird, und fragt, ob Songs und Bibliothek bleiben sollen (Vorgabe: behalten). Danach den Programmordner löschen. Git und `uv` bleiben installiert.
 
 ## Unterschiede zum Mac
 
@@ -79,7 +79,7 @@ Der Quellcode von acestep.cpp liegt offen auf [GitHub](https://github.com/Serveu
   (`[Load] ... backend: CUDA0` oder `Vulkan0` ist richtig, `CPU` falsch).
 - **`ErrorOutOfDeviceMemory` im Log, Song endet mit Fehler:** Der Grafikspeicher reicht nicht.
   Der Installer setzt dafür in `data/engine.conf` die Kachelgröße des VAE-Decoders (`VAE_CHUNK`, z. B. 128 bei 6 GB);
-  bei Bedarf kleiner setzen (64) oder mit `.\Install.ps1 -LM 0.6B` ein kleineres Sprachmodell wählen, danach OFF und ON.
+  bei Bedarf kleiner setzen (64) oder mit `.\Windows-Install.ps1 -LM 0.6B` ein kleineres Sprachmodell wählen, danach OFF und ON.
 - **Installer bricht bei „Python-Pakete der App“ ab:** Der Installer legt Python 3.12 fest, weil für das neueste
   Python (3.15) noch keine fertigen Pakete existieren. Falls uv trotzdem meckert: `uv python install 3.12` und erneut starten.
 - **Update in der App** holt wie auf dem Mac die neue Fassung von GitHub und startet neu.

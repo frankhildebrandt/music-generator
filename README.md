@@ -61,15 +61,15 @@ In der App: Zahnrad › **Nach Updates suchen** › **Jetzt aktualisieren** (hol
 
 ```bash
 cd ~/MusicGenerator && git pull
-open Install.command
+open Mac-Install.command
 ```
 
 Songs und Einstellungen in `data/` bleiben erhalten. Das Update in der App startet nur die App neu; danach einmal **OFF** und **ON**, damit auch die Modellserver mit den neuen Einstellungen laufen.
 
 ## Deinstallieren
 
-- **Mac:** `Uninstall.command` doppelklicken (oder im Terminal ausführen)
-- **Windows:** `Uninstall.bat` doppelklicken
+- **Mac:** `Mac-Uninstall.command` doppelklicken (oder im Terminal ausführen)
+- **Windows:** `Windows-Uninstall.bat` doppelklicken
 - **Linux:** `./Uninstall.sh` (oder `./arch_linux.sh --uninstall`)
 
 Das Skript zeigt, was es entfernt, und fragt vorher. Es beendet die Server, löscht Modellserver, Modelle, Python-Umgebung und Einstellungen (unter Windows auch die Verknüpfungen) und fragt, ob **Songs und Bibliothek** (Titel, Ordner, Favoriten) bleiben sollen. Vorgabe ist behalten. Mit `--yes` (Windows: `-Yes`) läuft es ohne Rückfragen und behält Songs und Bibliothek. Nicht entfernt werden der Programmordner selbst, Werkzeuge außerhalb davon (zum Beispiel `uv`) und Songs in einem selbst gewählten Song-Ordner. Zum Schluss den Programmordner löschen. Die Linux-Fassung geht auf eine Idee von ZeroDot1 zurück.
@@ -135,11 +135,11 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8765
 
 | Pfad | Inhalt |
 |---|---|
-| `Install.command` | Installer (Mac) |
-| `Uninstall.command`, `Uninstall.bat` / `.ps1`, `Uninstall.sh` | Deinstallation (Mac, Windows, Linux); `scripts/uninstall.sh` gemeinsam für Mac und Linux |
+| `Mac-Install.command` | Installer (Mac) |
+| `Mac-Uninstall.command`, `Windows-Uninstall.bat` / `.ps1`, `Linux-Uninstall.sh` | Deinstallation (Mac, Windows, Linux); `scripts/uninstall.sh` gemeinsam für Mac und Linux |
 | `Music Generator ON/OFF.command` | Start und Stopp (Mac) |
-| `Install.ps1`, `Music Generator ON/OFF.ps1` + `.bat` | Installer, Start und Stopp (Windows) |
-| `arch_linux.sh`, `Install.sh`, `Music Generator ON/OFF.sh` | Installer, Start und Stopp (Arch Linux & Linux) |
+| `Windows-Install.ps1`, `Music Generator ON/OFF.ps1` + `.bat` | Installer, Start und Stopp (Windows) |
+| `arch_linux.sh`, `Linux-Install.sh`, `Music Generator ON/OFF.sh` | Installer, Start und Stopp (Arch Linux & Linux) |
 | `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version, Modell-Prüfsummen |
 | `scripts/common.ps1` | Windows-Gegenstück, liest die Werte aus `common.sh` |
 | `scripts/metal_selftest.py` | Sprachmodell-Test des Installers |

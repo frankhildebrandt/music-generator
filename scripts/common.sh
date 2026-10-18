@@ -33,7 +33,7 @@ ENGINE_WIN_URL="https://github.com/rabbitfiremediacreation/music-generator/relea
 # shellcheck disable=SC2034
 ENGINE_WIN_SHA256="647f4ffd1cb2f2e20ac3d54e92a45ed83d3cf9278e55e8b4da1c788fbfb74ac2"
 # Nur Mac: fertige Programmdateien (aus ACESTEP_REV gebaut, alle drei Apple-CPU-Varianten, ab macOS 26) als eigene
-# Veröffentlichung im Projekt. Ältere macOS-Versionen und "Install.command --build" bauen weiterhin selbst.
+# Veröffentlichung im Projekt. Ältere macOS-Versionen und "Mac-Install.command --build" bauen weiterhin selbst.
 ENGINE_MAC_REV="b7ba6d9"
 ENGINE_MAC_MIN_OS=26
 ENGINE_MAC_URL="https://github.com/rabbitfiremediacreation/music-generator/releases/download/engine-macos-arm64-b7ba6d9/acestep-cpp-macos-arm64-b7ba6d9.zip"
