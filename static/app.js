@@ -228,6 +228,7 @@ form.addEventListener("submit", async (e) => {
   if (!form.prompt.value.trim() && !form.style.value.trim()) { form.prompt.focus(); return; }
   const btn = $("#genBtn");
   if (btn.disabled) return;
+  btn.classList.remove("fired"); void btn.offsetWidth; btn.classList.add("fired");   // Animation auch bei Enter/Alt+G
   btn.disabled = true;
   try {
     const r = await api("/api/generate", { method: "POST", body: JSON.stringify(readForm()) });

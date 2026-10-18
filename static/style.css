@@ -154,6 +154,17 @@ button { font: inherit; cursor: pointer; }
 .aktion:hover { border-color: var(--accent); }
 .aktion:active { background: linear-gradient(180deg, #2b2c2c, #3a3b3c); }
 .aktion.big { padding: .7rem 1.4rem; font-size: 13px; }
+/* Generieren: sichtbare Rückmeldung beim Auslösen – schrumpft kurz, federt zurück, goldener Puls */
+#genBtn { transition: transform .08s ease-out; }
+#genBtn:active { transform: scale(.92); }
+#genBtn.fired { animation: genfire .45s ease-out; }
+@keyframes genfire {
+  0% { transform: scale(1); }
+  30% { transform: scale(.88); box-shadow: 0 0 0 0 rgba(209, 167, 92, .55); }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); box-shadow: 0 0 0 14px rgba(209, 167, 92, 0); }
+}
+@media (prefers-reduced-motion: reduce) { #genBtn.fired { animation: none; } #genBtn:active { transform: none; } }
 .aktion.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 14px; flex: none; letter-spacing: 0; }
 .gear { background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 6px; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; }
 .gear:hover { color: var(--accent); border-color: var(--border); }
