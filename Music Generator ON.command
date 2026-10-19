@@ -6,7 +6,16 @@ lade_conf
 mkdir -p "$DATA"
 
 if [ ! -x "$ENGINE/build/ace-server" ]; then
-  echo "Not installed yet. Please run 'Install' first."
+  echo "Not installed yet. Please run 'Mac-Install' first."
+  read -n 1 -s -r -p "Press any key to close..."
+  exit 1
+fi
+
+# Unvollständiger Modell-Download (abgebrochene Installation): Hinweis statt rätselhaftem Serverfehler.
+if compgen -G "$MODELS/*.part" >/dev/null || [ ! -f "$MODELS/vae-BF16.gguf" ] \
+   || ! compgen -G "$MODELS/acestep-v15-*.gguf" >/dev/null || ! compgen -G "$MODELS/acestep-5Hz-lm-*.gguf" >/dev/null; then
+  echo "The models are incomplete (the installation was probably interrupted)."
+  echo "Please run 'Mac-Install' again. It continues the download where it stopped."
   read -n 1 -s -r -p "Press any key to close..."
   exit 1
 fi
