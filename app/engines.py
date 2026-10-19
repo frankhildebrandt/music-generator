@@ -23,6 +23,23 @@ def _fmt_time(seconds: int) -> str:
     return f"{m}:{s:02d}"
 
 
+
+async def _get_retry(c: httpx.AsyncClient, base: str, params: dict, tries: int = 4) -> httpx.Response:
+    """GET /job mit Wiederholung: bricht die Verbindung zum Modellserver kurz ab (z. B. beim Abholen des fertigen
+    Songs), ist das Ergebnis dort weiter abrufbar. Beim Retry mit frischer Verbindung statt gleich als Fehler zu melden."""
+    last: Exception | None = None
+    for i in range(tries):
+        try:
+            if i == 0:
+                return await c.get(f"{base}/job", params=params)
+            async with httpx.AsyncClient(timeout=120) as fresh:
+                return await fresh.get(f"{base}/job", params=params)
+        except (httpx.ReadError, httpx.RemoteProtocolError, httpx.ReadTimeout, httpx.WriteError) as e:
+            last = e
+            await asyncio.sleep(1.5 * (i + 1))
+    raise EngineError(f"Verbindung zum Modellserver abgebrochen ({last.__class__.__name__}) – bitte erneut versuchen")
+
+
 class EngineError(Exception):
     pass
 
@@ -87,11 +104,11 @@ class AceStepCpp:
         self._job = (base, job_id)
         # start = Zeitpunkt des Gesamtauftrags (nicht dieser Phase) -> die Anzeige zählt einfach durch
         while True:
-            r = await c.get(f"{base}/job", params={"id": job_id})
+            r = await _get_retry(c, base, {"id": job_id})
             r.raise_for_status()
             status = str(r.json().get("status", "")).lower()
             if status == "done":
-                res = await c.get(f"{base}/job", params={"id": job_id, "result": 1})
+                res = await _get_retry(c, base, {"id": job_id, "result": 1})
                 res.raise_for_status()
                 return res
             if any(w in status for w in ("err", "fail", "cancel")):
