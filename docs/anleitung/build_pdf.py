@@ -452,7 +452,7 @@ def page_windows(c):
     y = para(c, T("p5_10"), M, y, W - 2 * M)
     y -= 12
     y = note(c, T("p5_11"),
-             y, BLUE, "SmartScreen")
+             y, BLUE, "Windows")
     y -= 16
 
     y = h2(c, T("p5_12"), y)
