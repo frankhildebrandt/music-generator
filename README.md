@@ -15,7 +15,7 @@ Voraussetzungen: Mac mit Apple Silicon (M1 oder neuer), mindestens 8 GB Arbeitss
 
 ```bash
 git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
-open ~/MusicGenerator/Install.command
+open ~/MusicGenerator/Mac-Install.command
 ```
 
 Der Installer
@@ -70,7 +70,7 @@ Songs und Einstellungen in `data/` bleiben erhalten. Das Update in der App start
 
 - **Mac:** `Mac-Uninstall.command` doppelklicken (oder im Terminal ausführen)
 - **Windows:** `Windows-Uninstall.bat` doppelklicken
-- **Linux:** `./Uninstall.sh` (oder `./arch_linux.sh --uninstall`)
+- **Linux:** `./Linux-Uninstall.sh` (oder `./arch_linux.sh --uninstall`)
 
 Das Skript zeigt, was es entfernt, und fragt vorher. Es beendet die Server, löscht Modellserver, Modelle, Python-Umgebung und Einstellungen (unter Windows auch die Verknüpfungen) und fragt, ob **Songs und Bibliothek** (Titel, Ordner, Favoriten) bleiben sollen. Vorgabe ist behalten. Mit `--yes` (Windows: `-Yes`) läuft es ohne Rückfragen und behält Songs und Bibliothek. Nicht entfernt werden der Programmordner selbst, Werkzeuge außerhalb davon (zum Beispiel `uv`) und Songs in einem selbst gewählten Song-Ordner. Zum Schluss den Programmordner löschen. Die Linux-Fassung geht auf eine Idee von ZeroDot1 zurück.
 
