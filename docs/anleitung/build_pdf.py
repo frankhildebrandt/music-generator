@@ -285,7 +285,8 @@ def page_overview(c):
             p.close()
             c.drawPath(p, stroke=0, fill=1)
     y -= bh + 22
-    note(c, T("p2_29"), y, GOLD, T("p2_30"))
+    y = note(c, T("p2_29"), y, GOLD, T("p2_30"))
+    note(c, T("p2_31"), y - 14, BLUE, T("p2_32"))
     footer(c, 2)
 
 
@@ -516,6 +517,7 @@ def page_app(c):
     for n, (t, s) in enumerate(legend, 1):
         badge(c, n, lx + 8, ly - 8, 7.5)
         ly = para(c, f"<b>{t}</b> · {s}", lx + 22, ly - 1, lw - 22, st) - 7.5
+    note(c, T("p6_23"), min(ly - 6, 140), GOLD, T("p6_24"), small)
     footer(c, 6)
 
 

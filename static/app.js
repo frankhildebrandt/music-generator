@@ -370,8 +370,8 @@ dz.addEventListener("click", () => fileInput.click());
 
 // ---------------------------------------------------------------- Ideengeber (Aufnahme vom Mikrofon)
 // Knopf im Kopf: gedrückt halten = aufnehmen (Maus, Finger oder Leertaste), 5 bis REC_MAX Sekunden.
-// Die Aufnahme geht als WAV durch dieselbe Analyse wie ein hochgeladener Song: Beschreibung, Stil, Tempo, Tonart, Takt
-// kommen ins Formular, die Länge bleibt. Die Melodie selbst wird nicht übernommen (ACE-Step kann keine Melodie als
+// Die Aufnahme geht als WAV durch dieselbe Analyse wie ein hochgeladener Song: Beschreibung, Tempo, Tonart, Takt
+// kommen ins Formular; Stil und Länge bleiben unverändert. Die Melodie selbst wird nicht übernommen (ACE-Step kann keine Melodie als
 // Vorgabe verarbeiten, getestet im Oktober 2026). Bewusst nur Mikrofon, kein Datei-Upload.
 const REC_MAX = 30, REC_MIN = 5;
 // Die Analyse des Modells kennt nur fertige Songs und hält Summen für Glockenspiel oder Synthesizer (getestet Okt. 2026).

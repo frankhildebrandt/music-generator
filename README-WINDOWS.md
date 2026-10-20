@@ -5,6 +5,8 @@ Der Installer lädt die fertigen Windows-Programmdateien von acestep.cpp in eine
 
 Ausführliche Anleitung mit Bildern (Windows ab Seite 5): **[Installationsanleitung.pdf](Installationsanleitung.pdf)**, English: **[Installation-Guide-EN.pdf](Installation-Guide-EN.pdf)**, 中文: **[Installation-Guide-ZH.pdf](Installation-Guide-ZH.pdf)**
 
+Video zur Installation: **[youtu.be/se2g3tRFzrg](https://youtu.be/se2g3tRFzrg)**
+
 ## Installation
 
 Voraussetzungen: Windows 10/11 (64 Bit), NVIDIA-Grafikkarte mit aktuellem Treiber,
