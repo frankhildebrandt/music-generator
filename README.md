@@ -30,7 +30,9 @@ Der Installer
 7. richtet die Symbole für **Music Generator ON / OFF** ein und startet die App.
 
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
-Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--no-start`, `--build` (Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden; braucht funktionierende Apple-Entwicklerwerkzeuge bzw. Xcode).
+Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--cpu` (Sprachmodell immer auf der CPU rechnen), `--auto` (zurück zur automatischen Wahl), `--no-start`, `--build` (Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden; braucht funktionierende Apple-Entwicklerwerkzeuge bzw. Xcode).
+
+**Klingt der Song verzerrt oder schrecklich?** Auf manchen Apple-Chips rechnet das Sprachmodell auf der GPU falsch, obwohl der Test des Installers durchläuft. Dann in der App unter Zahnrad › „Sprachmodell rechnet auf“ die Option **Nur CPU** wählen und danach einmal OFF und ON ausführen (oder `Mac-Install.command --cpu`). Die Klangerzeugung bleibt auf der GPU, ein Song dauert dadurch etwas länger.
 
 Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acestep.cpp gebaut (Release `engine-macos-arm64-b7ba6d9`, Herkunft und Prüfsummen in `engine/acestep.cpp/build/README.txt` und `SHA256SUMS.txt`). Sie laufen auf M1 bis M4 und neuer, der passende CPU-Code wird beim Start gewählt.
 

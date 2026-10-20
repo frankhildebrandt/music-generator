@@ -859,7 +859,7 @@ async function checkHealth() {
 const dlg = $("#settingsDlg"), sf = $("#settingsForm");
 $("#btnSettings").onclick = async () => {
   const s = await api("/api/settings");
-  for (const k of ["server_url", "lm_url", "timeout_minutes", "songs_dir", "dit"]) sf[k].value = s[k];
+  for (const k of ["server_url", "lm_url", "timeout_minutes", "songs_dir", "dit", "lm_device"]) sf[k].value = s[k];
   sf.dit.querySelector('option[value="xl"]').disabled = !s.dit_xl_available;   // XL nur wählbar, wenn die Datei da ist
   $("#ditHint").hidden = s.dit_xl_available;
   sf.songs_dir.placeholder = s.songs_dir_default;   // Standard als Platzhalter, leer lassen = Standard
@@ -867,7 +867,7 @@ $("#btnSettings").onclick = async () => {
 };
 const saveSettings = () => api("/api/settings", { method: "PUT", body: JSON.stringify({
   server_url: sf.server_url.value.trim(), lm_url: sf.lm_url.value.trim(), timeout_minutes: Number(sf.timeout_minutes.value) || 30,
-  songs_dir: sf.songs_dir.value.trim(), dit: sf.dit.value }) }).catch((err) => { alert(err.message); $("#btnSettings").click(); });
+  songs_dir: sf.songs_dir.value.trim(), dit: sf.dit.value, lm_device: sf.lm_device.value }) }).catch((err) => { alert(err.message); $("#btnSettings").click(); });
 // Anordnung: untereinander oder Generator links / Bibliothek rechts
 function setLayout(l) {
   document.querySelector(".wrap").classList.toggle("side", l === "side");

@@ -394,7 +394,7 @@ def queue():
 
 @app.get("/api/settings")
 def get_settings():
-    return {**db.get_settings(), "songs_dir_default": str(db.SONGS_DIR),
+    return {**db.get_settings(), "lm_device": db.lm_device(), "songs_dir_default": str(db.SONGS_DIR),
             "dit_xl_available": (db.MODELS_DIR / DIT_MODELS["xl"]).is_file()}
 
 
@@ -415,6 +415,9 @@ def put_settings(values: dict, x_lang: str = Header("de")):
             values["dit"] = "standard"
         if values["dit"] == "xl" and not (db.MODELS_DIR / DIT_MODELS["xl"]).is_file():
             raise HTTPException(400, tr(x_lang, "xl_missing"))
+    if "lm_device" in values:   # steht nicht in der Datenbank, sondern in data/engine.conf (gilt nach OFF und ON)
+        dev = values.pop("lm_device")
+        db.set_lm_device("cpu" if dev == "cpu" else "auto")
     if "songs_dir" in values:
         values["songs_dir"] = _move_songs(str(values["songs_dir"] or "").strip(), x_lang)
     return db.save_settings(values)

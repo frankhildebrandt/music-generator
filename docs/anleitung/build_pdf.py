@@ -618,9 +618,10 @@ def page_trouble(c):
             [T("p8_12"), T("p8_13")],
             [T("p8_14"), T("p8_15")],
             [T("p8_16"), T("p8_17")],
-            [T("p8_noise_p"), T("p8_noise_s")]]
+            [T("p8_noise_p"), T("p8_noise_s")],
+            [T("p8_dev_p"), T("p8_dev_s")]]
     y = table(c, rows, y, [140, W - 2 * M - 140])
-    y -= 14
+    y -= 6
     y = h2(c, T("p8_18"), y)
     rows = [[T("p8_19"), T("p8_20")],
             [T("p8_21"), T("p8_22")],
@@ -628,10 +629,10 @@ def page_trouble(c):
             [T("p8_25"), T("p8_26")],
             [T("p8_av_p"), T("p8_av_s")]]
     y = table(c, rows, y, [190, W - 2 * M - 190])
-    y -= 14
+    y -= 6
     y = h2(c, T("p8_27"), y)
     y = para(c, T("p8_28"), M, y, W - 2 * M, small)
-    y -= 14
+    y -= 6
 
     y = h2(c, T("p8_29"), y)
     para(c, T("p8_30"), M, y, W - 2 * M, small)

@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENGINE="$ROOT/engine/acestep.cpp"
 MODELS="$ENGINE/models"
 DATA="$ROOT/data"
-CONF="$DATA/engine.conf"          # vom Installer geschrieben: MODE, LM_FILE
+CONF="$DATA/engine.conf"          # vom Installer geschrieben: MODE, LM_FILE, LM_DEVICE (cpu = Sprachmodell erzwungen auf CPU)
 
 PORT=8765         # Web-App
 SYNTH_PORT=8085   # ace-server Synthese (Metal)
@@ -70,11 +70,15 @@ lade_conf() {   # engine.conf als key=value lesen, nicht ausführen
   MODE=split
   LM_FILE=""
   VAE_CHUNK=""
+  LM_DEVICE=""
   [ -f "$CONF" ] || return 0
   MODE=$(sed -n 's/^MODE=//p' "$CONF" | tail -1)
   LM_FILE=$(sed -n 's/^LM_FILE=//p' "$CONF" | tail -1)
   VAE_CHUNK=$(sed -n 's/^VAE_CHUNK=//p' "$CONF" | tail -1)
+  LM_DEVICE=$(sed -n 's/^LM_DEVICE=//p' "$CONF" | tail -1)
   [ -n "$MODE" ] || MODE=split
+  [ "$LM_DEVICE" = "cpu" ] && MODE=split   # per Einstellung/Installer erzwungen: Sprachmodell auf der CPU
+  return 0
 }
 
 # Mac: Die gebaute Engine trägt den absoluten Bauordner als Suchpfad (rpath) für ihre Bibliotheken. Wird der

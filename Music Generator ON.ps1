@@ -4,13 +4,15 @@ Set-Location $ROOT
 
 # MODE=split  -> Sprachmodell auf CPU (Port 8086), Synthese auf der Grafikkarte (Port 8085)
 # MODE=single -> alles auf einem Server (Port 8085)
-$MODE = "single"; $LM_FILE = ""; $VAE_CHUNK = ""
+$MODE = "single"; $LM_FILE = ""; $VAE_CHUNK = ""; $LM_DEVICE = ""
 if (Test-Path $CONF) {
     foreach ($line in Get-Content $CONF) {
         if ($line -match '^MODE=(.+)$')      { $MODE = $Matches[1].Trim() }
         if ($line -match '^LM_FILE=(.+)$')   { $LM_FILE = $Matches[1].Trim() }
         if ($line -match '^VAE_CHUNK=(.+)$') { $VAE_CHUNK = $Matches[1].Trim() }
+        if ($line -match '^LM_DEVICE=(.+)$') { $LM_DEVICE = $Matches[1].Trim() }
     }
+    if ($LM_DEVICE -eq "cpu") { $MODE = "split" }   # per Einstellung/Installer erzwungen: Sprachmodell auf der CPU
 }
 New-Item -ItemType Directory -Force -Path $DATA | Out-Null
 

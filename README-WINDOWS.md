@@ -37,7 +37,7 @@ Der Installer
 7. legt die Verknüpfungen **Music Generator ON / OFF** im Programmordner und auf dem Desktop an und startet die App.
 
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
-Optionen (in der PowerShell): `.\Windows-Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-XL` (zusätzlich das größere XL-Klangmodell, 5,3 GB, ab 12 GB Grafikspeicher; danach unter Zahnrad › Klangmodell wählbar), `-NoStart`,
+Optionen (in der PowerShell): `.\Windows-Install.ps1 -Yes`, `-LM 0.6B|1.7B|4B`, `-Cpu` (Sprachmodell immer auf der CPU rechnen, auch in der App unter Zahnrad wählbar; `-Auto` stellt zurück), `-XL` (zusätzlich das größere XL-Klangmodell, 5,3 GB, ab 12 GB Grafikspeicher; danach unter Zahnrad › Klangmodell wählbar), `-NoStart`,
 `-Build` (selbst kompilieren, braucht Visual Studio Build Tools und CUDA Toolkit).
 
 ## Benutzen

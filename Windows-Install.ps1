@@ -5,10 +5,12 @@
 # Optionen:  -Yes         keine Rückfragen, Empfehlung übernehmen
 #            -LM SIZE     Sprachmodell erzwingen: 0.6B, 1.7B oder 4B
 #            -NoStart     App am Ende nicht starten
+#            -Cpu         Sprachmodell immer auf der CPU rechnen (hilft, wenn der Klang auf der GPU verzerrt ist)
+#            -Auto        zurück zur automatischen Wahl (Standard)
 #            -XL          zusätzlich das XL-Klangmodell laden (5,3 GB, in den Einstellungen wählbar)
 #            -Build       Modellserver selbst kompilieren statt fertige Binaries zu laden
 #                         (braucht Visual Studio Build Tools + CUDA Toolkit)
-param([switch]$Yes, [string]$LM = "", [switch]$NoStart, [switch]$Build, [switch]$XL)
+param([switch]$Yes, [string]$LM = "", [switch]$NoStart, [switch]$Build, [switch]$XL, [switch]$Cpu, [switch]$Auto)
 
 . (Join-Path $PSScriptRoot "scripts\common.ps1")
 Set-Location $ROOT
@@ -298,7 +300,13 @@ Schritt "Testing graphics card"
 $OLD = @{}
 if (Test-Path $CONF) { foreach ($l in Get-Content $CONF) { if ($l -match '^(\w+)=(.*)$') { $OLD[$Matches[1]] = $Matches[2] } } }
 $STAMP = if (Test-Path (Join-Path $ENGINE "build\Release\VERSION.txt")) { (Get-Content (Join-Path $ENGINE "build\Release\VERSION.txt") -First 1) } else { $ACESTEP_REV }
-if ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
+$LM_DEVICE = $OLD.LM_DEVICE                              # die Wahl aus den Einstellungen bleibt erhalten
+if ($Cpu) { $LM_DEVICE = "cpu" }
+if ($Auto) { $LM_DEVICE = "" }
+if ($LM_DEVICE -eq "cpu") {
+    $MODE = $OLD.MODE   # das echte Testergebnis (falls vorhanden) bleibt für „automatisch“ erhalten; gestartet wird per LM_DEVICE auf der CPU
+    Write-Host "  language model forced to the CPU (mode split), no test needed"
+} elseif ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
     $MODE = $OLD.MODE
     Write-Host "  already tested: mode $MODE"
 } else {
@@ -324,7 +332,9 @@ if ($OLD.MODE -and $OLD.LM_FILE -eq $LM_FILE -and $OLD.TESTED_REV -eq $STAMP) {
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
     Write-Host "  -> mode $MODE"
 }
-@("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP", "VAE_CHUNK=$VAE_CHUNK") | Set-Content $CONF
+$conf = @("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP", "VAE_CHUNK=$VAE_CHUNK")
+if ($LM_DEVICE -eq "cpu") { $conf += "LM_DEVICE=cpu" }
+$conf | Set-Content $CONF
 
 # --- 7. Verknüpfungen -----------------------------------------------------------
 Schritt "Shortcuts (program folder and desktop)"

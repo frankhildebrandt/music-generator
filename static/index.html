@@ -200,6 +200,10 @@
     <label class="field"><span class="lbl" title="Sprachmodell, auf CPU. Leer = gleicher Server wie Synthese." data-i18n-title="lm_tip" data-i18n="lm_srv">Sprachmodell-Server</span>
       <input name="lm_url" placeholder="http://127.0.0.1:8086">
     </label>
+    <label class="field"><span class="lbl" title="Klingt der Song verzerrt oder schrecklich, hier „Nur CPU“ wählen. Das Sprachmodell rechnet dann auf dem Prozessor statt auf der Grafik." data-i18n-title="lm_dev_tip" data-i18n="lm_dev">Sprachmodell rechnet auf</span>
+      <select name="lm_device"><option value="auto" data-i18n="lm_dev_auto">Automatisch</option><option value="cpu" data-i18n="lm_dev_cpu">Nur CPU</option></select>
+      <span class="small" data-i18n="lm_dev_hint">Änderung gilt nach OFF und ON.</span>
+    </label>
     <label class="field"><span class="lbl" data-i18n="timeout">Timeout (Min.)</span>
       <input name="timeout_minutes" type="number" min="1" max="600">
     </label>

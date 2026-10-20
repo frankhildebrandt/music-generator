@@ -24,6 +24,26 @@ def _engine_conf() -> dict:
 
 
 _conf = _engine_conf()
+if _conf.get("LM_DEVICE") == "cpu":
+    _conf["MODE"] = "split"   # Sprachmodell erzwungen auf der CPU (Einstellung oder Installer)
+
+
+def lm_device() -> str:
+    """„cpu“ = Sprachmodell erzwungen auf der CPU, sonst „auto“ (Wert aus data/engine.conf, immer frisch gelesen)."""
+    return "cpu" if _engine_conf().get("LM_DEVICE") == "cpu" else "auto"
+
+
+def set_lm_device(value: str) -> None:
+    """Schreibt LM_DEVICE in data/engine.conf (alle anderen Zeilen bleiben). Wirkt nach „OFF“ und „ON“."""
+    path = DATA / "engine.conf"
+    try:
+        lines = [l for l in path.read_text().splitlines() if not l.startswith("LM_DEVICE=")]
+    except OSError:
+        lines = []
+    if value == "cpu":
+        lines.append("LM_DEVICE=cpu")
+    DATA.mkdir(exist_ok=True)
+    path.write_text("\n".join(lines) + ("\n" if lines else ""))
 
 DEFAULT_SETTINGS = {
     "server_url": "http://127.0.0.1:8085",   # Synthese (DiT + VAE, Metal)

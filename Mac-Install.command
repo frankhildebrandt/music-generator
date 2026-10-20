@@ -5,19 +5,23 @@
 #
 # Optionen:  --yes        keine Rückfragen, Empfehlung übernehmen
 #            --lm SIZE    Sprachmodell erzwingen: 0.6B, 1.7B oder 4B
+#            --cpu        Sprachmodell immer auf der CPU rechnen (hilft, wenn der Klang auf der GPU verzerrt ist)
+#            --auto       zurück zur automatischen Wahl (Standard)
 #            --xl         zusätzlich das XL-Klangmodell laden (5,3 GB, in den Einstellungen wählbar)
 #            --no-start   App am Ende nicht starten
 #            --build      Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden
 source "$(dirname "$0")/scripts/common.sh"
 cd "$ROOT" || exit 1
 
-AUTO=0; START=1; LM_SIZE=""; XL=0; BUILD=0
+AUTO=0; START=1; LM_SIZE=""; XL=0; BUILD=0; DEVICE_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --yes) AUTO=1 ;;
     --no-start) START=0 ;;
     --xl) XL=1 ;;
     --build) BUILD=1 ;;
+    --cpu) DEVICE_ARG=cpu ;;
+    --auto) DEVICE_ARG=auto ;;
     --lm) LM_SIZE="$2"; shift ;;
   esac
   shift
@@ -210,9 +214,15 @@ fi
 # Auf manchen Chips (z. B. M4) rechnet das Sprachmodell unter Metal falsch.
 # Dann läuft es auf der CPU (Modus "split"), sonst reicht ein Server (Modus "single").
 schritt "Testing graphics chip"
-OLD_MODE=""; OLD_LM=""; OLD_REV=""
-[ -f "$CONF" ] && { OLD_MODE=$(sed -n 's/^MODE=//p' "$CONF"); OLD_LM=$(sed -n 's/^LM_FILE=//p' "$CONF"); OLD_REV=$(sed -n 's/^TESTED_REV=//p' "$CONF"); }
-if [ -n "$OLD_MODE" ] && [ "$OLD_LM" = "$LM_FILE" ] && [ "${OLD_REV:0:7}" = "${ACESTEP_REV:0:7}" ]; then   # alte Installationen haben den kurzen Hash
+OLD_MODE=""; OLD_LM=""; OLD_REV=""; OLD_DEVICE=""
+[ -f "$CONF" ] && { OLD_MODE=$(sed -n 's/^MODE=//p' "$CONF"); OLD_LM=$(sed -n 's/^LM_FILE=//p' "$CONF"); OLD_REV=$(sed -n 's/^TESTED_REV=//p' "$CONF"); OLD_DEVICE=$(sed -n 's/^LM_DEVICE=//p' "$CONF"); }
+LM_DEVICE="$OLD_DEVICE"                                  # die Wahl aus den Einstellungen bleibt erhalten
+[ "$DEVICE_ARG" = cpu ] && LM_DEVICE=cpu
+[ "$DEVICE_ARG" = auto ] && LM_DEVICE=""
+if [ "$LM_DEVICE" = cpu ]; then
+  MODE="$OLD_MODE"   # das echte Testergebnis (falls vorhanden) bleibt für „automatisch“ erhalten; gestartet wird per LM_DEVICE auf der CPU
+  echo "  language model forced to the CPU (mode split), no test needed"
+elif [ -n "$OLD_MODE" ] && [ "$OLD_LM" = "$LM_FILE" ] && [ "${OLD_REV:0:7}" = "${ACESTEP_REV:0:7}" ]; then   # alte Installationen haben den kurzen Hash
   MODE="$OLD_MODE"
   echo "  already tested: mode $MODE"
 else
@@ -241,6 +251,7 @@ LM_FILE=$LM_FILE
 TESTED_REV=$ACESTEP_REV
 VAE_CHUNK=$VAE_CHUNK
 EOF
+[ "$LM_DEVICE" = cpu ] && echo "LM_DEVICE=cpu" >> "$CONF"
 
 # --- 7. Start-/Stopp-Symbole ----------------------------------------------------
 schritt "Setting up start and stop icons"
