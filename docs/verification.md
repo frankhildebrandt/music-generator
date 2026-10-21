@@ -4,11 +4,15 @@ Local environment: macOS 26.6.2, Apple M5 Pro, 64 GiB RAM; application version 0
 
 App Sandbox and DMG follow-up:
 
+- [Successful native Mac CI job](https://github.com/frankhildebrandt/music-generator/actions/runs/39598450971/job/119216542103), source commit `d2299c8`: ZIP and DMG both pass their sandbox and packaged-engine checks.
+- The [complete native CI run](https://github.com/frankhildebrandt/music-generator/actions/runs/39598450971) is green for macOS, Windows and Linux. The new import case brings Rust integration coverage to 25 tests on macOS/Linux and 24 on Windows, plus the three frontend tests on every platform.
 - Packaged Mac app enables App Sandbox; supervisor and engine use the two inheritance entitlements. There are no blanket filesystem exceptions.
 - Local ZIP and read-only DMG checks passed: SHA-256, strict/deep signature verification, engine resource hashes, Applications shortcut, copying the app out of the DMG and ejecting the image.
 - Actual OS enforcement passed in both distributions: main app cannot read an unselected file or write into its directory; the inherited engine cannot read that file either. Container storage, loopback health and supervisor shutdown work.
 - TypeScript/Vite, ESLint, three frontend tests, 25 Rust integration tests and Clippy pass locally. The added import case preserves an earlier unsandboxed desktop profile and its model location.
 - The sandboxed GUI imported the existing three-song desktop library through the native folder dialog. The originals remain in the previous profile; models are read from the authorized external folder without copying their large files.
+- The 4B Metal hardware self-test passed. Restarting the app then restored the folder grants and reached the studio without selecting folders again; a real short music generation succeeded after that restart with models outside the sandbox container.
+- The downloaded CI DMG passed SHA-256 and `hdiutil verify`; the corresponding ZIP passed SHA-256 and archive integrity checks. Developer ID signing and notarization are not claimed for these ad-hoc test builds.
 
 Passed automated checks:
 
