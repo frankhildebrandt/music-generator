@@ -1,5 +1,5 @@
 # Vom Installer erzeugt oder heruntergeladen
-engine/
+/engine/
 .venv/
 *.lnk
 
@@ -13,3 +13,14 @@ __pycache__/
 
 # Quelldatei des Logos (die App nutzt static/alphatester.png)
 274_Alphatester_Schrift.png
+
+# Desktop build output and downloaded runtime resources
+node_modules/
+dist/
+release/
+.cache/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/resources/engine/*
+!src-tauri/resources/engine/.gitkeep
+src-tauri/resources/WebView2/
