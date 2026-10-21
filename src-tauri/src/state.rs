@@ -46,6 +46,16 @@ impl AppState {
         let _ = app.emit("library-changed", ());
     }
 
+    // Restore the durable wizard result without reading models or starting the engine.
+    pub fn restore_setup(&self) -> Result<bool> {
+        let complete = self.db.settings()?.setup_complete;
+        self.ready.store(complete, Ordering::SeqCst);
+        if complete {
+            self.wake.notify_one();
+        }
+        Ok(complete)
+    }
+
     pub async fn start_engine(
         &self,
         settings: &Settings,
@@ -56,6 +66,14 @@ impl AppState {
             return Ok(engine.as_ref().unwrap().client.clone());
         }
         engine.take();
+        if settings.setup_complete
+            && !self.is_setting_up()
+            && !crate::setup::models_valid(self, cancel).await?
+        {
+            return Err(message(
+                "Models are missing or invalid. Open Models and hardware test in Settings.",
+            ));
+        }
         let started = Engine::start(
             &self.resources,
             &self.db.root.join("logs"),

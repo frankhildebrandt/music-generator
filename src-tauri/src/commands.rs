@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{atomic::Ordering, Arc},
 };
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 type Desktop<'a> = State<'a, Arc<AppState>>;
 
@@ -26,43 +26,21 @@ pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
         elapsed_ms = started.elapsed().as_millis(),
         "Startup hardware check finished"
     );
-    let models_started = std::time::Instant::now();
-    let mut needs_setup =
-        !crate::setup::models_valid_with_progress(&state, &state.shutdown, |progress| {
-            let _ = app.emit("bootstrap-progress", progress);
-        })
-        .await?;
-    tracing::info!(
-        elapsed_ms = models_started.elapsed().as_millis(),
-        "Startup model verification finished"
-    );
     let settings = state.db.settings()?;
-    needs_setup |=
-        settings.tested_fingerprint != crate::setup::fingerprint(&settings.lm_model, &hardware.gpu);
-    let mut error = None;
+    let needs_setup = !settings.setup_complete;
     if !needs_setup {
-        let _ = app.emit("bootstrap-stage", "starting");
-        match state.start_engine(&settings, &state.shutdown).await {
-            Ok(_) => {
-                app.asset_protocol_scope()
-                    .allow_directory(&settings.songs_dir, false)
-                    .map_err(|e| message(e.to_string()))?;
-                state.ready.store(true, Ordering::SeqCst);
-                state.wake.notify_one();
-            }
-            Err(e) => {
-                needs_setup = true;
-                error = Some(e.to_string());
-            }
-        }
+        app.asset_protocol_scope()
+            .allow_directory(&settings.songs_dir, false)
+            .map_err(|e| message(e.to_string()))?;
     }
+    state.restore_setup()?;
     tracing::info!(
         elapsed_ms = started.elapsed().as_millis(),
         needs_setup,
         "Startup setup check finished"
     );
     Ok(
-        json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"error":error,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
+        json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"error":null,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
     )
 }
 
@@ -326,7 +304,10 @@ pub async fn health(state: Desktop<'_>) -> Result<Value> {
             json!({"ok":synth.is_ok_and(|r| r.status().is_success()) && lm.is_ok_and(|r| r.status().is_success()),"props":props}),
         );
     }
-    Ok(json!({"ok":false,"error":"Model engine is not running"}))
+    let idle = state.ready.load(Ordering::SeqCst);
+    Ok(
+        json!({"ok":idle,"idle":idle,"error":if idle { None } else { Some("Complete model setup first") }}),
+    )
 }
 
 #[tauri::command]
