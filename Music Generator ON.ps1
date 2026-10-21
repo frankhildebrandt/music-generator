@@ -49,8 +49,12 @@ if ($MODE -eq "split") {
         Write-Host "Language model server is already running (port $LM_PORT)."
     } else {
         Write-Host "Starting language model server (CPU)..."
+        # Neuere Programmdateien (ab 2026-10) wählen das Gerät mit --device und ignorieren GGML_BACKEND; ältere kennen nur die Variable.
+        $lmArgs = @("--host", "127.0.0.1", "--port", $LM_PORT) + $SERVER_ARGS
+        $hilfe = (& $ACE --help 2>&1 | Out-String)
+        if ($hilfe -match '--device') { $lmArgs += @("--device", "CPU") }
         $env:GGML_BACKEND = "CPU"
-        Start-Hintergrund $ACE (@("--host", "127.0.0.1", "--port", $LM_PORT) + $SERVER_ARGS) (Join-Path $DATA "ace-lm.log") | Out-Null
+        Start-Hintergrund $ACE $lmArgs (Join-Path $DATA "ace-lm.log") | Out-Null
         Remove-Item Env:\GGML_BACKEND
     }
 }
