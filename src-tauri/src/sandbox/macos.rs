@@ -19,6 +19,13 @@ struct Bookmarks {
 static BOOKMARKS: OnceLock<Mutex<Bookmarks>> = OnceLock::new();
 
 pub fn data_root() -> PathBuf {
+    #[cfg(debug_assertions)]
+    if let Some(path) = std::env::var_os("MUSIC_GENERATOR_PROFILE")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+    {
+        return path;
+    }
     PathBuf::from(NSHomeDirectory().to_string())
         .join("Library/Application Support/de.freicon.music-generator")
 }

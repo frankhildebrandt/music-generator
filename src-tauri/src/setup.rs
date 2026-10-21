@@ -187,7 +187,7 @@ async fn configure_inner(
         }
     }
     app.asset_protocol_scope()
-        .allow_directory(&songs, false)
+        .allow_directory(&songs, true)
         .map_err(|e| message(e.to_string()))?;
     if cancel.is_cancelled() {
         return Err(crate::error::Error::Cancelled);

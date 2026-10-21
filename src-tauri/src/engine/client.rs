@@ -224,6 +224,32 @@ impl EngineClient {
             .await?;
         extract_json(&ctype, &body)
     }
+
+    /// Generate an isolated stem directly through DiT, with optional backing audio.
+    pub async fn generate_stem(
+        &self,
+        params: &Value,
+        source: Option<&std::path::Path>,
+        cancel: &CancellationToken,
+        progress: impl Fn(String),
+    ) -> Result<Vec<u8>> {
+        let mut request = self.http.post(format!("{}/synth", self.synth));
+        if let Some(path) = source {
+            let part = reqwest::multipart::Part::bytes(tokio::fs::read(path).await?)
+                .file_name("context.wav");
+            request = request.multipart(
+                reqwest::multipart::Form::new()
+                    .text("request", serde_json::to_string(params)?)
+                    .part("audio", part),
+            );
+        } else {
+            request = request.json(params);
+        }
+        let (ctype, body) = self
+            .operation(&self.synth, "stem", request, cancel, progress)
+            .await?;
+        Ok(extract_audio(&ctype, &body)?.0)
+    }
 }
 
 fn timeout_error(endpoint: &str, elapsed: Duration) -> Error {
