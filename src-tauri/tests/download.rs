@@ -8,6 +8,7 @@ use axum::{
 use music_generator::{
     download::{download_model, ensure_space, range_total},
     manifest::Model,
+    verification::{ModelVerifier, Verification},
 };
 use sha2::{Digest, Sha256};
 use std::sync::{
@@ -64,11 +65,24 @@ async fn resumes_partial_content_at_the_exact_offset() {
         &url,
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &CancellationToken::new(),
         |_| {},
     )
     .await
     .unwrap();
+    assert_eq!(
+        ModelVerifier::open(dir.path())
+            .verify(
+                &file,
+                &model().sha256,
+                &CancellationToken::new(),
+                |_, _| panic!("downloaded models must not be hashed again")
+            )
+            .await
+            .unwrap(),
+        Verification::Cached
+    );
     assert_eq!(std::fs::read(file).unwrap(), b"abcdef");
     task.abort();
 }
@@ -83,6 +97,7 @@ async fn a_server_ignoring_range_restarts_without_appending() {
         &url,
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &CancellationToken::new(),
         |_| {},
     )
@@ -103,6 +118,7 @@ async fn wrong_range_does_not_modify_existing_partial_data() {
         &url,
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &CancellationToken::new(),
         |_| {}
     )
@@ -121,6 +137,7 @@ async fn wrong_checksums_are_never_promoted_to_models() {
         &url,
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &CancellationToken::new(),
         |_| {}
     )
@@ -140,6 +157,7 @@ async fn verified_existing_model_needs_no_network() {
         "http://127.0.0.1:1",
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &CancellationToken::new(),
         |_| {},
     )
@@ -159,6 +177,7 @@ async fn cancellation_keeps_partial_data_for_retry() {
         "http://127.0.0.1:1",
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &cancel,
         |_| {}
     )
@@ -177,6 +196,7 @@ async fn complete_partial_file_recovers_after_verification_was_interrupted() {
         &url,
         dir.path(),
         &model(),
+        &mut ModelVerifier::open(dir.path()),
         &CancellationToken::new(),
         |_| {},
     )

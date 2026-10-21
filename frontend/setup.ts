@@ -61,7 +61,7 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     };
     await listen<DownloadProgress>("setup-progress", ({ payload }) => {
       const progress = element<HTMLProgressElement>("#setupProgress");
-      if (payload.phase === "verifying") progress.removeAttribute("value"); else progress.value = payload.downloaded / Math.max(payload.total, 1);
+      progress.value = payload.downloaded / Math.max(payload.total, 1);
       element("#setupProgressText").textContent = `${t(`desktop_${payload.phase}`)} ${payload.file} · ${bytes(payload.downloaded)} / ${bytes(payload.total)}${payload.bytes_per_second ? ` · ${(payload.bytes_per_second / 1024 ** 2).toFixed(1)} MiB/s` : ""}`;
     });
     await listen<string>("setup-stage", ({ payload }) => { element<HTMLProgressElement>("#setupProgress").removeAttribute("value"); element("#setupProgressText").textContent = t(payload === "testing" ? "desktop_testing" : "desktop_cpu_fallback"); });

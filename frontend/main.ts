@@ -4,7 +4,8 @@ import { backend } from "./backend";
 import { initializeDesktop } from "./desktop";
 import { element } from "./dom";
 import { showSetup } from "./setup";
-import type { Bootstrap } from "./types";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { Bootstrap, DownloadProgress } from "./types";
 
 let bootstrap: Bootstrap;
 async function showStudio(): Promise<void> {
@@ -16,10 +17,17 @@ async function showStudio(): Promise<void> {
 async function start(): Promise<void> {
   element("#bootRetry").hidden = true;
   element("#bootStatus").textContent = t("desktop_checking");
+  const listeners: UnlistenFn[] = [];
   try {
+    listeners.push(await listen<DownloadProgress>("bootstrap-progress", ({ payload }) => {
+      const percent = Math.min(100, Math.round(payload.downloaded / Math.max(payload.total, 1) * 100));
+      element("#bootStatus").textContent = `${t("desktop_verifying")} ${payload.file} · ${percent}%`;
+    }));
+    listeners.push(await listen("bootstrap-stage", () => { element("#bootStatus").textContent = t("desktop_starting"); }));
     bootstrap = await backend.bootstrap();
     if (bootstrap.needs_setup) await showSetup(bootstrap, showStudio); else await showStudio();
   } catch (error) { element("#bootStatus").textContent = String(error); element("#bootRetry").hidden = false; }
+  finally { listeners.forEach((unlisten) => unlisten()); }
 }
 
 applyI18n();

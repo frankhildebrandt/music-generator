@@ -1,6 +1,7 @@
 use crate::{
     error::{message, Error, Result},
     manifest::Model,
+    verification::{ModelVerifier, Verification},
 };
 use futures_util::StreamExt;
 use reqwest::{
@@ -8,12 +9,11 @@ use reqwest::{
     StatusCode,
 };
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone, Serialize)]
@@ -23,23 +23,6 @@ pub struct DownloadProgress {
     pub downloaded: u64,
     pub total: u64,
     pub bytes_per_second: u64,
-}
-
-pub async fn hash_file(path: &Path, cancel: &CancellationToken) -> Result<String> {
-    let mut file = tokio::fs::File::open(path).await?;
-    let mut buffer = vec![0; 1024 * 1024];
-    let mut hash = Sha256::new();
-    loop {
-        if cancel.is_cancelled() {
-            return Err(Error::Cancelled);
-        }
-        let size = file.read(&mut buffer).await?;
-        if size == 0 {
-            break;
-        }
-        hash.update(&buffer[..size]);
-    }
-    Ok(format!("{:x}", hash.finalize()))
 }
 
 // A partial response is only appendable when its start and declared size agree.
@@ -64,20 +47,27 @@ pub async fn download_model(
     url: &str,
     root: &Path,
     model: &Model,
+    verifier: &mut ModelVerifier,
     cancel: &CancellationToken,
     progress: impl Fn(DownloadProgress),
 ) -> Result<PathBuf> {
     tokio::fs::create_dir_all(root).await?;
     let target = root.join(&model.file);
-    if target.exists() {
+    let verify_progress = |downloaded, total| {
         progress(DownloadProgress {
             file: model.file.clone(),
             phase: "verifying",
-            downloaded: 0,
-            total: model.estimated_bytes,
+            downloaded,
+            total,
             bytes_per_second: 0,
-        });
-        if hash_file(&target, cancel).await? == model.sha256 {
+        })
+    };
+    if target.exists() {
+        if verifier
+            .verify(&target, &model.sha256, cancel, verify_progress)
+            .await?
+            != Verification::Invalid
+        {
             return Ok(target);
         }
         return Err(message(format!("{} failed verification. Choose a different model folder or remove the damaged file before retrying.", model.file)));
@@ -93,8 +83,15 @@ pub async fn download_model(
     };
     // A fully downloaded .part may remain after cancellation during checksum verification.
     if response.status() == StatusCode::RANGE_NOT_SATISFIABLE && offset > 0 {
-        if hash_file(&partial, cancel).await? == model.sha256 {
-            tokio::fs::rename(&partial, &target).await?;
+        if verifier
+            .verify(&partial, &model.sha256, cancel, verify_progress)
+            .await?
+            != Verification::Invalid
+        {
+            if cancel.is_cancelled() {
+                return Err(Error::Cancelled);
+            }
+            verifier.promote(&partial, &target)?;
             return Ok(target);
         }
         tokio::fs::remove_file(&partial).await?;
@@ -161,14 +158,11 @@ pub async fn download_model(
     file.flush().await?;
     file.sync_all().await?;
     drop(file);
-    progress(DownloadProgress {
-        file: model.file.clone(),
-        phase: "verifying",
-        downloaded,
-        total,
-        bytes_per_second: 0,
-    });
-    if hash_file(&partial, cancel).await? != model.sha256 {
+    if verifier
+        .verify(&partial, &model.sha256, cancel, verify_progress)
+        .await?
+        == Verification::Invalid
+    {
         tokio::fs::remove_file(&partial).await?;
         return Err(message(format!(
             "Checksum mismatch for {}; retry the download",
@@ -178,6 +172,6 @@ pub async fn download_model(
     if cancel.is_cancelled() {
         return Err(Error::Cancelled);
     }
-    tokio::fs::rename(&partial, &target).await?;
+    verifier.promote(&partial, &target)?;
     Ok(target)
 }

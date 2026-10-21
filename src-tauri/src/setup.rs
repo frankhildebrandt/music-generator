@@ -1,11 +1,12 @@
 use crate::{
-    download::{download_model, ensure_space, hash_file},
+    download::{download_model, ensure_space, DownloadProgress},
     engine::client::selftest_ok,
     error::{message, Result},
     hardware, manifest,
     state::AppState,
+    verification::{ModelVerifier, Verification},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
     path::{Path, PathBuf},
@@ -32,24 +33,15 @@ pub fn fingerprint(lm: &str, gpu: &str) -> String {
     )
 }
 
-#[derive(Serialize, Deserialize, Default)]
-struct VerificationCache {
-    entries: std::collections::HashMap<String, (String, u64, u128)>,
-}
-
-fn stamp(path: &Path) -> Result<(u64, u128)> {
-    let metadata = path.metadata()?;
-    Ok((
-        metadata.len(),
-        metadata
-            .modified()?
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| message(e.to_string()))?
-            .as_nanos(),
-    ))
-}
-
 pub async fn models_valid(state: &AppState, cancel: &CancellationToken) -> Result<bool> {
+    models_valid_with_progress(state, cancel, |_| {}).await
+}
+
+pub async fn models_valid_with_progress(
+    state: &AppState,
+    cancel: &CancellationToken,
+    progress: impl Fn(DownloadProgress),
+) -> Result<bool> {
     let settings = state.db.settings()?;
     if !settings.setup_complete {
         return Ok(false);
@@ -60,26 +52,28 @@ pub async fn models_valid(state: &AppState, cancel: &CancellationToken) -> Resul
     else {
         return Ok(false);
     };
-    let cache_file = state.db.root.join("verified-models.json");
-    let mut cache: VerificationCache = std::fs::read(&cache_file)
-        .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok())
-        .unwrap_or_default();
+    let mut verifier = ModelVerifier::open(&state.db.root);
     for model in manifest::selected(size, settings.dit == "xl")? {
         let path = PathBuf::from(&settings.models_dir).join(&model.file);
         let Ok(path) = path.canonicalize() else {
             return Ok(false);
         };
-        let (length, modified) = stamp(&path)?;
-        let key = path.to_string_lossy().to_string();
-        if cache.entries.get(&key) != Some(&(model.sha256.clone(), length, modified)) {
-            if hash_file(&path, cancel).await? != model.sha256 {
-                return Ok(false);
-            }
-            cache.entries.insert(key, (model.sha256, length, modified));
+        if verifier
+            .verify(&path, &model.sha256, cancel, |downloaded, total| {
+                progress(DownloadProgress {
+                    file: model.file.clone(),
+                    phase: "verifying",
+                    downloaded,
+                    total,
+                    bytes_per_second: 0,
+                });
+            })
+            .await?
+            == Verification::Invalid
+        {
+            return Ok(false);
         }
     }
-    std::fs::write(cache_file, serde_json::to_vec(&cache)?)?;
     Ok(true)
 }
 
@@ -150,9 +144,10 @@ async fn configure_inner(
         .connect_timeout(std::time::Duration::from_secs(30))
         .read_timeout(std::time::Duration::from_secs(60))
         .build()?;
+    let mut verifier = ModelVerifier::open(&state.db.root);
     for model in selected {
         let url = format!("{}/{}", manifest::manifest().base_url, model.file);
-        download_model(&client, &url, &models, &model, cancel, |p| {
+        download_model(&client, &url, &models, &model, &mut verifier, cancel, |p| {
             let _ = app.emit("setup-progress", p);
         })
         .await?;

@@ -13,6 +13,7 @@ pub mod setup;
 pub mod state;
 pub mod types;
 mod updates;
+pub mod verification;
 mod windows;
 
 use std::sync::Arc;

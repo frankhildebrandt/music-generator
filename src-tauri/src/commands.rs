@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{atomic::Ordering, Arc},
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 type Desktop<'a> = State<'a, Arc<AppState>>;
 
@@ -20,13 +20,28 @@ pub fn remember_folder(path: String) -> Result<()> {
 #[tauri::command]
 pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
     let _operation = state.operation.lock().await;
+    let started = std::time::Instant::now();
     let hardware = crate::hardware::inspect();
-    let mut needs_setup = !crate::setup::models_valid(&state, &state.shutdown).await?;
+    tracing::info!(
+        elapsed_ms = started.elapsed().as_millis(),
+        "Startup hardware check finished"
+    );
+    let models_started = std::time::Instant::now();
+    let mut needs_setup =
+        !crate::setup::models_valid_with_progress(&state, &state.shutdown, |progress| {
+            let _ = app.emit("bootstrap-progress", progress);
+        })
+        .await?;
+    tracing::info!(
+        elapsed_ms = models_started.elapsed().as_millis(),
+        "Startup model verification finished"
+    );
     let settings = state.db.settings()?;
     needs_setup |=
         settings.tested_fingerprint != crate::setup::fingerprint(&settings.lm_model, &hardware.gpu);
     let mut error = None;
     if !needs_setup {
+        let _ = app.emit("bootstrap-stage", "starting");
         match state.start_engine(&settings, &state.shutdown).await {
             Ok(_) => {
                 app.asset_protocol_scope()
@@ -41,6 +56,11 @@ pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
             }
         }
     }
+    tracing::info!(
+        elapsed_ms = started.elapsed().as_millis(),
+        needs_setup,
+        "Startup setup check finished"
+    );
     Ok(
         json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"error":error,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
     )
