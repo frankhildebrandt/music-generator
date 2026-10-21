@@ -2,7 +2,8 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prepareEngine, engineFolder } from "./prepare-engine.mjs";
 import { finalizeLinux } from "./finalize-linux.mjs";
-import { download, exists, hash, platform, root, run, verifyEngine } from "./common.mjs";
+import { createMacDiskImage } from "./macos-dmg.mjs";
+import { download, exists, files, hash, platform, recordHashes, root, run, verifyEngine } from "./common.mjs";
 
 await prepareEngine(); await verifyEngine(engineFolder);
 const output = path.join(root, "release"); await mkdir(output, { recursive: true });
@@ -11,21 +12,36 @@ const name = `Music-Generator-${pkg.version}`;
 const cli = path.join(root,"node_modules/@tauri-apps/cli/tauri.js");
 const target = path.join(root,"src-tauri/target/release");
 let artifact;
+const artifacts = [];
 if (platform === "macos") {
   // GitHub exposes absent secrets as empty strings; Tauri treats even an empty certificate as configured.
   for (const key of Object.keys(process.env)) if (key.startsWith("APPLE_") && !process.env[key]) delete process.env[key];
   await run(process.execPath, [cli,"build","--bundles","app"]);
   const app = path.join(target,"bundle/macos/Music Generator.app");
-  if (!process.env.APPLE_SIGNING_IDENTITY) {
-    // Apple Silicon still requires a valid ad-hoc bundle seal for an unsigned test build.
-    await run("codesign",["--force","--deep","--sign","-","--entitlements",path.join(root,"src-tauri/Entitlements.plist"),app]);
+  const identity = process.env.APPLE_SIGNING_IDENTITY || "-";
+  const helper = path.join(app,"Contents/MacOS/music-engine-supervisor");
+  await cp(path.join(target,"music-engine-supervisor"),helper);
+  const bundledEngine = path.join(app,"Contents/Resources/engine");
+  await rm(bundledEngine,{recursive:true,force:true}); await cp(engineFolder,bundledEngine,{recursive:true});
+  for (const file of await files(bundledEngine)) {
+    const bytes = await readFile(file);
+    if (bytes.length < 4 || ![0xfeedfacf,0xcffaedfe,0xcafebabe].includes(bytes.readUInt32BE(0))) continue;
+    const entitlements = path.basename(file) === "ace-server" ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
+    await run("codesign",["--force","--sign",identity,...entitlements,file]);
   }
+  const { files: preparedFiles, ...provenance } = await verifyEngine(engineFolder);
+  await recordHashes(bundledEngine,{...provenance,prepared_files:preparedFiles});
+  await run("codesign",["--force","--sign",identity,"--entitlements",path.join(root,"src-tauri/Engine.entitlements"),helper]);
+  // Sign inside out; --deep signing would replace the children's inheritance entitlements.
+  await run("codesign",["--force","--sign",identity,"--entitlements",path.join(root,"src-tauri/Entitlements.plist"),app]);
   await run("codesign",["--verify","--deep","--strict",app]);
   if (process.env.APPLE_SIGNING_IDENTITY && process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID) {
     console.log("Tauri signs and notarizes using the configured Apple credentials.");
   }
   artifact = path.join(output,`${name}-macos-arm64.zip`);
   await run("ditto",["-c","-k","--sequesterRsrc","--keepParent",app,artifact]);
+  const dmg = path.join(output,`${name}-macos-arm64.dmg`);
+  await createMacDiskImage(app, dmg); artifacts.push(dmg);
 } else if (platform === "windows") {
   const runtimeDir = path.join(root,"src-tauri/resources/WebView2");
   if (!await exists(runtimeDir)) {
@@ -58,5 +74,8 @@ if (platform === "macos") {
   artifact = path.join(output,`${name}-linux-x64.AppImage`);
   await finalizeLinux(path.join(folder,file), artifact, engineFolder);
 }
-await writeFile(`${artifact}.sha256`,`${await hash(artifact)}  ${path.basename(artifact)}\n`);
-console.log(`Ready: ${artifact}`);
+artifacts.push(artifact);
+for (const file of artifacts) {
+  await writeFile(`${file}.sha256`,`${await hash(file)}  ${path.basename(file)}\n`);
+  console.log(`Ready: ${file}`);
+}

@@ -16,7 +16,26 @@ impl OwnedProcess {
             .create(true)
             .append(true)
             .open(log)?;
-        let mut command = Command::new(std::env::current_exe()?);
+        let executable = std::env::current_exe()?;
+        #[cfg(target_os = "macos")]
+        let executable = {
+            let helper = executable.with_file_name("music-engine-supervisor");
+            if helper.is_file() {
+                helper
+            } else {
+                executable
+            }
+        };
+        let mut command = Command::new(executable);
+        #[cfg(target_os = "macos")]
+        if let Some(index) = args.iter().position(|a| a == "--models") {
+            if let Some(models) = args.get(index + 1) {
+                command.env(
+                    "MUSIC_MODEL_BOOKMARK",
+                    crate::sandbox::transfer(Path::new(models))?,
+                );
+            }
+        }
         command
             .arg("--engine-supervisor")
             .arg(engine)

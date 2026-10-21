@@ -20,7 +20,13 @@ pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
     {
         return Err(message("Import requires an empty library"));
     }
-    let source = root.join("data/music.db");
+    let desktop = root.join("music.db").is_file();
+    let data = if desktop {
+        root.to_path_buf()
+    } else {
+        root.join("data")
+    };
+    let source = data.join("music.db");
     let old = Connection::open_with_flags(&source, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let custom: Option<String> = old
         .query_row(
@@ -33,7 +39,21 @@ pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
     let songs_source = custom
         .filter(|s| !s.is_empty())
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("data/songs"));
+        .unwrap_or_else(|| data.join("songs"));
+    let models_source = if desktop {
+        old.query_row(
+            "SELECT value FROM settings WHERE key='models_dir'",
+            [],
+            |r| r.get::<_, String>(0),
+        )
+        .ok()
+        .and_then(|s| serde_json::from_str::<String>(&s).ok())
+        .filter(|s| !s.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| root.join("models"))
+    } else {
+        root.join("engine/acestep.cpp/models")
+    };
     if !songs_source.is_absolute() {
         return Err(message("Legacy song folder must be absolute"));
     }
@@ -105,9 +125,7 @@ pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
         })();
         con.execute_batch("DETACH DATABASE legacy")?;
         let count = imported?;
-        Ok(
-            json!({"songs":count,"models_dir":root.join("engine/acestep.cpp/models").to_string_lossy()}),
-        )
+        Ok(json!({"songs":count,"models_dir":models_source.to_string_lossy()}))
     })();
     if result.is_err() {
         for path in copied {

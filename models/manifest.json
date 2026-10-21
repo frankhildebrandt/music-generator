@@ -47,9 +47,9 @@
   ],
   "engines": {
     "macos": {
-      "revision": "b7ba6d9",
-      "url": "https://github.com/rabbitfiremediacreation/music-generator/releases/download/engine-macos-arm64-b7ba6d9/acestep-cpp-macos-arm64-b7ba6d9.zip",
-      "sha256": "dee4327b9e14882f8acae1aeef5f97e19327a5444ce2dd7357e22295fb8df915"
+      "revision": "b7ba6d9-sandbox1",
+      "source_revision": "b7ba6d9ce2f19ca7627fb8f340032c3ebe8ae253",
+      "repository": "https://github.com/ServeurpersoCom/acestep.cpp"
     },
     "windows": {
       "revision": "6013134",

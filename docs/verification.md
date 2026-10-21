@@ -2,6 +2,14 @@
 
 Local environment: macOS 26.6.2, Apple M5 Pro, 64 GiB RAM; application version 0.2.0.
 
+App Sandbox and DMG follow-up:
+
+- Packaged Mac app enables App Sandbox; supervisor and engine use the two inheritance entitlements. There are no blanket filesystem exceptions.
+- Local ZIP and read-only DMG checks passed: SHA-256, strict/deep signature verification, engine resource hashes, Applications shortcut, copying the app out of the DMG and ejecting the image.
+- Actual OS enforcement passed in both distributions: main app cannot read an unselected file or write into its directory; the inherited engine cannot read that file either. Container storage, loopback health and supervisor shutdown work.
+- TypeScript/Vite, ESLint, three frontend tests, 25 Rust integration tests and Clippy pass locally. The added import case preserves an earlier unsandboxed desktop profile and its model location.
+- The sandboxed GUI imported the existing three-song desktop library through the native folder dialog. The originals remain in the previous profile; models are read from the authorized external folder without copying their large files.
+
 Passed automated checks:
 
 - TypeScript checking, Vite production build, ESLint.

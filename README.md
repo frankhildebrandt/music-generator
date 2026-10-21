@@ -6,7 +6,7 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 
 | Plattform | Bundle |
 | --- | --- |
-| macOS 26+, Apple Silicon | ZIP mit `Music Generator.app` |
+| macOS 26+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
 | Windows 10/11, x64 | ZIP mit EXE, Engine und WebView2 |
 | Linux, x64 | AppImage mit Vulkan/CPU-Engine |
 
@@ -17,6 +17,7 @@ Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind 
 - Fortsetzbare Modelldownloads mit SHA-256-Prüfung; Sprachmodelle 0.6B, 1.7B und 4B, optional XL.
 - Übernahme einer alten Installation; Originaldaten bleiben erhalten.
 - Modelle und Songs außerhalb der App, mit wählbaren Speicherorten. Updates durch Austausch des Bundles.
+- macOS App Sandbox mit gespeicherten Ordnerfreigaben und vererbter Sandbox für die Engine.
 
 ## Entwickeln und bauen
 

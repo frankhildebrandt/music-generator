@@ -5,6 +5,7 @@ edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 description = "Local music generation desktop app"
+default-run = "music-generator"
 
 [lib]
 name = "music_generator"
@@ -42,6 +43,11 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_System_Power"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSError", "NSString", "NSURL", "NSPathUtilities"] }
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = "3"

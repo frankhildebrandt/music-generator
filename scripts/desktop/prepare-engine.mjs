@@ -1,9 +1,9 @@
-import { cp, mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { appendFile, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { architecture, download, exists, files, manifest, platform, recordHashes, root, run, verifyEngine } from "./common.mjs";
+import { architecture, download, exists, files, hash, manifest, platform, recordHashes, root, run, verifyEngine } from "./common.mjs";
 
 export const engineFolder = path.join(root, "src-tauri/resources/engine");
 
@@ -15,13 +15,20 @@ export async function prepareEngine() {
   const work = await mkdtemp(path.join(tmpdir(), "music-engine-"));
   try {
     let built;
-    if (platform === "linux") {
+    if (platform === "linux" || platform === "macos") {
       const sourceDir = path.join(work, "source");
       await run("git", ["clone", "--no-checkout", source.repository, sourceDir]);
-      await run("git", ["checkout", source.revision], { cwd: sourceDir });
+      await run("git", ["checkout", source.source_revision || source.revision], { cwd: sourceDir });
       await run("git", ["submodule", "update", "--init", "--recursive"], { cwd: sourceDir });
       built = path.join(sourceDir, "build");
-      await run("cmake", ["-S", sourceDir, "-B", built, "-DCMAKE_BUILD_TYPE=Release", "-DGGML_VULKAN=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DCMAKE_BUILD_RPATH=$ORIGIN", "-DCMAKE_INSTALL_RPATH=$ORIGIN"]);
+      if (platform === "macos") {
+        await cp(path.join(root,"scripts/desktop/engine-sandbox.mm"), path.join(sourceDir,"desktop-sandbox.mm"));
+        const cmake = path.join(sourceDir,"CMakeLists.txt");
+        await writeFile(cmake,(await readFile(cmake,"utf8")).replace("LANGUAGES C CXX)","LANGUAGES C CXX OBJC OBJCXX)"));
+        await appendFile(cmake, '\ntarget_sources(ace-server PRIVATE desktop-sandbox.mm)\ntarget_link_libraries(ace-server PRIVATE "-framework Foundation")\n');
+      }
+      const options = platform === "macos" ? ["-DGGML_METAL=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_NATIVE=OFF", "-DCMAKE_OSX_DEPLOYMENT_TARGET=26.0", "-DCMAKE_BUILD_RPATH=@loader_path", "-DCMAKE_INSTALL_RPATH=@loader_path"] : ["-DGGML_VULKAN=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DCMAKE_BUILD_RPATH=$ORIGIN", "-DCMAKE_INSTALL_RPATH=$ORIGIN"];
+      await run("cmake", ["-S", sourceDir, "-B", built, "-DCMAKE_BUILD_TYPE=Release", ...options]);
       await run("cmake", ["--build", built, "--config", "Release", "-j", "2"]);
       for (const file of await files(sourceDir)) if (/^(LICENSE|COPYING)/i.test(path.basename(file))) await cp(file, path.join(built, `LICENSE-${path.relative(sourceDir,file).replaceAll(path.sep,"-")}`));
     } else {
@@ -48,7 +55,7 @@ export async function prepareEngine() {
       }
     }
     if (platform === "windows") await copyWindowsCrt();
-    await recordHashes(engineFolder, { platform, arch: architecture, revision: source.revision, source: source.url || source.repository, archive_sha256: source.sha256 || null });
+    await recordHashes(engineFolder, { platform, arch: architecture, revision: source.revision, source: source.url || source.repository, source_revision: source.source_revision || source.revision, archive_sha256: source.sha256 || null, sandbox_patch_sha256: platform === "macos" ? await hash(path.join(root,"scripts/desktop/engine-sandbox.mm")) : null, recipe_sha256: await hash(path.join(root,"scripts/desktop/prepare-engine.mjs")) });
     await verifyEngine(engineFolder);
     console.log(`Prepared ${platform} engine ${source.revision}.`);
   } finally { await rm(work, { recursive: true, force: true }); }
@@ -78,7 +85,8 @@ async function relocateMac() {
       const dependency = line.trim().split(" (compatibility")[0];
       if (dependency.startsWith("/") && !dependency.startsWith("/usr/lib/") && !dependency.startsWith("/System/") && await exists(path.join(engineFolder, path.basename(dependency)))) await run("install_name_tool", ["-change", dependency, `@loader_path/${path.basename(dependency)}`, file]);
     }
-    await run("codesign", ["--force", "--sign", "-", file]);
+    const inheritance = path.basename(file) === "ace-server" ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
+    await run("codesign", ["--force", "--sign", "-", ...inheritance, file]);
   }
 }
 

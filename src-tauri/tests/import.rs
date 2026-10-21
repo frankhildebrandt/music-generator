@@ -58,3 +58,36 @@ fn failed_import_leaves_the_destination_empty() {
     assert!(import_legacy(&db, old.path()).is_err());
     assert!(db.songs(&SongFilter::default()).unwrap().is_empty());
 }
+
+#[test]
+fn import_unsandboxed_desktop_profile_preserves_source_and_reuses_model_location() {
+    let old = tempfile::tempdir().unwrap();
+    let source = Database::open(old.path()).unwrap();
+    let mut settings = source.settings().unwrap();
+    settings.models_dir = old.path().join("existing models").to_string_lossy().into();
+    source.save_settings(&settings).unwrap();
+    let ids = source
+        .enqueue(&GenerateRequest {
+            prompt: "desktop song".into(),
+            ..Default::default()
+        })
+        .unwrap();
+    source.claim_next().unwrap();
+    source.finish(&ids[0], "desktop.wav", &json!({})).unwrap();
+    std::fs::create_dir_all(old.path().join("songs")).unwrap();
+    std::fs::write(old.path().join("songs/desktop.wav"), b"desktop audio").unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let db = Database::open(target.path()).unwrap();
+    let result = import_legacy(&db, old.path()).unwrap();
+    assert_eq!(result["models_dir"], settings.models_dir);
+    assert_eq!(result["songs"], 1);
+    assert_eq!(
+        std::fs::read(target.path().join("songs/desktop.wav")).unwrap(),
+        b"desktop audio"
+    );
+    assert_eq!(
+        std::fs::read(old.path().join("songs/desktop.wav")).unwrap(),
+        b"desktop audio"
+    );
+    assert_eq!(source.song(&ids[0]).unwrap().status, "done");
+}
