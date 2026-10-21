@@ -60,6 +60,12 @@ jobs:
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/resources/engine
+            src-tauri/resources/WebView2
+          key: desktop-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('models/*.json', 'scripts/desktop/prepare-engine.mjs', 'scripts/desktop/common.mjs') }}
       - run: npm run bundle
       - name: Verify relocated portable bundle
         run: node scripts/desktop/verify-bundle.mjs
