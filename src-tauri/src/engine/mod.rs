@@ -1,4 +1,5 @@
 pub mod client;
+pub mod device;
 pub mod process;
 use crate::{
     error::{message, Error, Result},
@@ -42,7 +43,7 @@ impl Engine {
         let mut processes = Vec::new();
         let (synth, process) = start_one(&binary, logs, settings, false, cancel).await?;
         processes.push(process);
-        let lm = if settings.mode == "split" {
+        let lm = if settings.cpu_lm() {
             let (url, process) = start_one(&binary, logs, settings, true, cancel).await?;
             processes.push(process);
             url
@@ -74,7 +75,16 @@ async fn start_one(
         .no_proxy()
         .timeout(Duration::from_secs(2))
         .build()?;
+    let cpu_args = if cpu {
+        device::cpu_arguments(binary, cancel).await?
+    } else {
+        Vec::new()
+    };
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(120);
     for _ in 0..3 {
+        if tokio::time::Instant::now() >= deadline {
+            break;
+        }
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let port = listener.local_addr()?.port();
         drop(listener);
@@ -91,6 +101,7 @@ async fn start_one(
         if let Some(chunk) = settings.vae_chunk {
             args.extend(["--vae-chunk".into(), chunk.to_string()]);
         }
+        args.extend(cpu_args.iter().cloned());
         let mut process = OwnedProcess::spawn(
             binary,
             &args,
@@ -98,23 +109,25 @@ async fn start_one(
             &logs.join(if cpu { "ace-lm.log" } else { "ace-server.log" }),
         )?;
         let url = format!("http://127.0.0.1:{port}");
-        for _ in 0..180 {
+        while tokio::time::Instant::now() < deadline {
             if cancel.is_cancelled() {
                 return Err(Error::Cancelled);
             }
             if !process.alive()? {
                 break;
             }
-            if client
-                .get(format!("{url}/health"))
-                .send()
-                .await
-                .is_ok_and(|r| r.status().is_success())
-                && process.alive()?
-            {
+            let response = tokio::select! {
+                _ = cancel.cancelled() => return Err(Error::Cancelled),
+                _ = tokio::time::sleep_until(deadline) => break,
+                response = client.get(format!("{url}/health")).send() => response,
+            };
+            if response.is_ok_and(|r| r.status().is_success()) && process.alive()? {
                 return Ok((url, process));
             }
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            tokio::select! {
+                _ = cancel.cancelled() => return Err(Error::Cancelled),
+                _ = tokio::time::sleep(Duration::from_millis(500)) => {},
+            }
         }
     }
     Err(message("Engine did not become ready. See the engine logs; check your graphics driver or run the hardware test again."))

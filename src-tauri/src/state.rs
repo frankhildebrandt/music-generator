@@ -194,6 +194,12 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
 }
 
 pub fn validate_settings(settings: &Settings) -> Result<()> {
+    if !["auto", "cpu"].contains(&settings.lm_device.as_str()) {
+        return Err(message("Unknown language model device"));
+    }
+    if !["wav", "mp3"].contains(&settings.export_format.as_str()) {
+        return Err(message("Unknown export format"));
+    }
     if !settings.poll_interval.is_finite()
         || !(0.1..=60.0).contains(&settings.poll_interval)
         || !settings.timeout_minutes.is_finite()

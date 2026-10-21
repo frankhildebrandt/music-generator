@@ -85,7 +85,7 @@ async function relocateMac() {
       const dependency = line.trim().split(" (compatibility")[0];
       if (dependency.startsWith("/") && !dependency.startsWith("/usr/lib/") && !dependency.startsWith("/System/") && await exists(path.join(engineFolder, path.basename(dependency)))) await run("install_name_tool", ["-change", dependency, `@loader_path/${path.basename(dependency)}`, file]);
     }
-    const inheritance = path.basename(file) === "ace-server" ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
+    const inheritance = ["ace-server", "mp3-codec"].includes(path.basename(file)) ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
     await run("codesign", ["--force", "--sign", "-", ...inheritance, file]);
   }
 }

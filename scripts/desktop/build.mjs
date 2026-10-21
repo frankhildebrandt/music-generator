@@ -26,7 +26,7 @@ if (platform === "macos") {
   for (const file of await files(bundledEngine)) {
     const bytes = await readFile(file);
     if (bytes.length < 4 || ![0xfeedfacf,0xcffaedfe,0xcafebabe].includes(bytes.readUInt32BE(0))) continue;
-    const entitlements = path.basename(file) === "ace-server" ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
+    const entitlements = ["ace-server", "mp3-codec"].includes(path.basename(file)) ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
     await run("codesign",["--force","--sign",identity,...entitlements,file]);
   }
   const { files: preparedFiles, ...provenance } = await verifyEngine(engineFolder);

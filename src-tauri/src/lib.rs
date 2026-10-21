@@ -1,8 +1,10 @@
+pub mod audio_export;
 mod commands;
 pub mod db;
 pub mod download;
 pub mod engine;
 pub mod error;
+pub mod exports;
 pub mod hardware;
 pub mod import;
 pub mod library;

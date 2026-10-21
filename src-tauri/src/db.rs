@@ -267,6 +267,7 @@ impl Database {
         }
         self.lock()
             .execute("DELETE FROM songs WHERE id=?1", [sid])?;
+        crate::audio_export::remove_cached(&self.root, sid);
         Ok(false)
     }
 

@@ -5,7 +5,7 @@ use crate::{
 };
 use rusqlite::params;
 use serde_json::{json, Value};
-use std::{collections::HashSet, path::Path};
+use std::path::Path;
 
 impl Database {
     pub fn folders(&self) -> Result<Value> {
@@ -110,101 +110,5 @@ impl Database {
             }
         }
         result
-    }
-
-    pub fn export_audio(&self, sid: &str, destination: &Path) -> Result<()> {
-        let song = self.song(sid)?;
-        let path = song.path.ok_or_else(|| message("Song has no audio file"))?;
-        if Path::new(&path).canonicalize()? == destination.canonicalize().unwrap_or_default() {
-            return Err(message(
-                "Choose a destination outside the source audio file",
-            ));
-        }
-        std::fs::copy(path, destination)?;
-        Ok(())
-    }
-
-    pub fn export_lyrics(&self, sid: &str, destination: &Path) -> Result<()> {
-        let song = self.song(sid)?;
-        let lyrics = song
-            .result_meta
-            .as_ref()
-            .and_then(|m| m["lyrics"].as_str())
-            .or(song.lyrics.as_deref())
-            .unwrap_or("");
-        std::fs::write(destination, lyrics)?;
-        Ok(())
-    }
-
-    pub fn export_zip(&self, folder: &str, destination: &Path) -> Result<()> {
-        // Export all matching rows, including songs outside the UI's display limit.
-        let con = self.lock();
-        let mut stmt = con.prepare("SELECT id FROM songs WHERE status='done' AND (?1='' OR folder_id=?1 OR (?1='none' AND (folder_id IS NULL OR folder_id NOT IN (SELECT id FROM folders)))) ORDER BY created_at,rowid")?;
-        let ids = stmt
-            .query_map([folder], |r| r.get::<_, String>(0))?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        drop(stmt);
-        drop(con);
-        if ids.is_empty() {
-            return Err(message("No finished songs to export"));
-        }
-        let temp = destination.with_extension(format!("{}.part", id()));
-        let outcome = (|| -> Result<()> {
-            let mut zip = zip::ZipWriter::new(std::fs::File::create(&temp)?);
-            let options = zip::write::SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored);
-            let mut names = HashSet::new();
-            for sid in ids {
-                let song = self.song(&sid)?;
-                let Some(path) = song.path else {
-                    continue;
-                };
-                let mut file = std::fs::File::open(&path)?;
-                let title = clean_name(song.title.as_deref().unwrap_or(&song.caption));
-                let base = format!(
-                    "{}{}",
-                    title,
-                    if song.letter.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" {}", song.letter)
-                    }
-                );
-                let ext = Path::new(&path)
-                    .extension()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("wav");
-                let mut name = format!("{base}.{ext}");
-                if !names.insert(name.to_lowercase()) {
-                    name = format!("{base}-{}.{ext}", song.id);
-                    names.insert(name.to_lowercase());
-                }
-                zip.start_file(name, options)
-                    .map_err(|e| message(e.to_string()))?;
-                std::io::copy(&mut file, &mut zip)?;
-            }
-            zip.finish()
-                .map_err(|e| message(e.to_string()))?
-                .sync_all()?;
-            std::fs::rename(&temp, destination)?;
-            Ok(())
-        })();
-        if outcome.is_err() {
-            let _ = std::fs::remove_file(temp);
-        }
-        outcome
-    }
-}
-
-pub fn clean_name(name: &str) -> String {
-    let clean: String = name
-        .chars()
-        .filter(|c| c.is_alphanumeric() || [' ', '-', '_'].contains(c))
-        .take(80)
-        .collect();
-    if clean.trim().is_empty() {
-        "Song".into()
-    } else {
-        clean.trim().into()
     }
 }

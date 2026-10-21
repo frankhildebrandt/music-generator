@@ -25,7 +25,7 @@ export const backend = {
   deleteFolder: (id: string) => command<void>("delete_folder", { id }),
   queue: () => command<Queue>("queue"),
   settings: () => command<Settings>("get_settings"),
-  saveSettings: (values: Pick<Settings, "timeout_minutes" | "songs_dir" | "dit">) => command<Settings>("save_settings", { values }),
+  saveSettings: (values: Pick<Settings, "timeout_minutes" | "songs_dir" | "dit"> & Partial<Pick<Settings, "lm_device" | "export_format">>) => command<Settings>("save_settings", { values }),
   health: () => command<Health>("health"),
   analyze: async (file: File) => {
     if (file.size > 60 * 1024 * 1024) throw new Error("Audio files must be smaller than 60 MB");

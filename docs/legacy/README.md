@@ -30,7 +30,9 @@ Der Installer
 7. richtet die Symbole für **Music Generator ON / OFF** ein und startet die App.
 
 Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
-Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--no-start`, `--build` (Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden; braucht funktionierende Apple-Entwicklerwerkzeuge bzw. Xcode).
+Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--cpu` (Sprachmodell immer auf der CPU rechnen), `--auto` (zurück zur automatischen Wahl), `--no-start`, `--build` (Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden; braucht funktionierende Apple-Entwicklerwerkzeuge bzw. Xcode).
+
+**Klingt der Song verzerrt oder schrecklich?** Auf manchen Apple-Chips rechnet das Sprachmodell auf der GPU falsch, obwohl der Test des Installers durchläuft. Dann in der App unter Zahnrad › „Sprachmodell rechnet auf“ die Option **Nur CPU** wählen und danach einmal OFF und ON ausführen (oder `Mac-Install.command --cpu`). Die Klangerzeugung bleibt auf der GPU, ein Song dauert dadurch etwas länger.
 
 Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acestep.cpp gebaut (Release `engine-macos-arm64-b7ba6d9`, Herkunft und Prüfsummen in `engine/acestep.cpp/build/README.txt` und `SHA256SUMS.txt`). Sie laufen auf M1 bis M4 und neuer, der passende CPU-Code wird beim Start gewählt.
 
@@ -41,6 +43,7 @@ Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acest
 - **Music Generator ON** startet Modellserver und App und öffnet http://localhost:8765
 - **Music Generator OFF** beendet alles und schließt die Browser-Tabs
 - Oberfläche in zwölf Sprachen (Auswahl oben rechts): Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Türkisch, Polnisch, Russisch, Ukrainisch, Japanisch, Chinesisch. Korrekturen an `static/i18n.js` sind willkommen.
+- **Export:** Unter Zahnrad › Export wählst du, ob der Download (auch das ZIP) als **WAV** (verlustfrei, wie erzeugt) oder als **MP3** (192 kbit/s, deutlich kleiner) kommt. Die Bibliothek behält immer das WAV; MP3 wird beim Download daraus gemacht und zwischengespeichert (`data/export`, darf gelöscht werden).
 - **Idee aufnehmen** (Mikrofon-Knopf oben in der Kopfzeile): gedrückt halten, 5 bis 30 Sekunden summen, pfeifen oder singen. Die App beschreibt die Aufnahme und füllt Prompt, Tempo, Tonart und Takt aus; Stil und Länge bestimmst du. Die Melodie selbst wird nicht übernommen. Es wird nichts gespeichert, alles läuft lokal.
 
 ### Bedienung mit Screenreader
@@ -81,7 +84,7 @@ Das Skript zeigt, was es entfernt, und fragt vorher. Es beendet die Server, lös
 
 ## Linux (Arch Linux & Derivate)
 
-Unter Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
+Der automatische Installer ist **nur für Arch Linux** und Derivate (CachyOS, EndeavourOS, Manjaro), er nutzt `pacman`. Auf Ubuntu/Debian/Fedora bitte die Einrichtung [von Hand](#andere-linux-distributionen-von-hand) unten nehmen (nur CPU: statt `buildcpu.sh` geht auch `cmake -S . -B build -DGGML_NATIVE=ON && cmake --build build -j`). **Ubuntu (experimentell, von Jano69, noch nicht auf echter Hardware getestet):** `./ubuntu.sh --dry-run` zeigt den Ablauf, `./ubuntu.sh --install-only` installiert (apt; CUDA nur mit vorhandenem Toolkit, sonst `--backend cpu`), `./ubuntu.sh --start` startet. Für Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
 
 ```bash
 git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator

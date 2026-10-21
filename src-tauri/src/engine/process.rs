@@ -63,6 +63,9 @@ impl OwnedProcess {
     pub fn alive(&mut self) -> Result<bool> {
         Ok(self.child.try_wait()?.is_none())
     }
+    pub fn status(&mut self) -> Result<Option<std::process::ExitStatus>> {
+        Ok(self.child.try_wait()?)
+    }
 }
 
 impl Drop for OwnedProcess {

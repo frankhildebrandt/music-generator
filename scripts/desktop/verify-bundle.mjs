@@ -92,6 +92,17 @@ try {
     child.stdin.end();
     if (child.exitCode === null) child.kill();
   }
+  const wav = Buffer.alloc(44 + 44100 * 2 * 2);
+  wav.write("RIFF"); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8); wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(44100, 24); wav.writeUInt32LE(88200, 28);
+  wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write("data", 36); wav.writeUInt32LE(wav.length - 44, 40);
+  const original = path.join(work, "export fixture.wav"), encoded = path.join(work, "exported.mp3");
+  await writeFile(original, wav);
+  await run(path.join(engine, platform === "windows" ? "mp3-codec.exe" : "mp3-codec"), ["-i", original, "-o", encoded, "-b", "192"], { cwd: engine });
+  const mp3 = await readFile(encoded);
+  assert(mp3.length >= 1000 && (mp3.subarray(0, 3).toString() === "ID3" || (mp3[0] === 255 && (mp3[1] & 224) === 224)), "Invalid encoded MP3");
+  assert.deepEqual(await readFile(original), wav, "MP3 export changed the original WAV");
+  console.log("Bundled MP3 conversion at 192 kbit/s passed; original WAV preserved.");
   }
 } finally {
   if (mounted) await run("hdiutil", ["detach", mount]);
