@@ -12,6 +12,8 @@ Download the bundle for your platform from https://github.com/frankhildebrandt/m
 
 Extract the complete ZIP and open Music Generator. Keep the Windows EXE, `engine` and `WebView2` directories together. On Linux run `chmod +x Music-Generator-*.AppImage` once and open the AppImage. If FUSE is unavailable, run `./Music-Generator-VERSION-linux-x64.AppImage --appimage-extract`, then `./squashfs-root/AppRun`.
 
+macOS uses its native red/yellow/green window controls on the left. Windows and Linux use the custom minimize/maximize/close controls on the right. The title bar is draggable, and the layout fills the window at every supported size.
+
 These first builds are unsigned test builds. macOS Gatekeeper and Windows SmartScreen can display warnings. There is no installer or requirement to install Python, Node.js, Git, compilers or package managers. GPU drivers are supplied by the operating system/vendor, not by this app. Windows ships WebView2 app-locally. On Windows 10 the app applies Microsoft's required read/execute permissions to that runtime directory; application data is not included in this permission change. Extract onto a local writable drive, not a network share.
 
 ## First-run assistant
@@ -61,7 +63,11 @@ npm run bundle
 
 The preparation script downloads the pinned Mac/Windows engine archives, checks their hashes, preserves runtime libraries/licenses and records final file hashes. Mac library search paths are relative. Linux builds the pinned engine revision with Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
 
-The `Desktop bundles` GitHub Actions workflow builds each platform natively and uploads artifacts. A version tag or manual dispatch triggers it; it does not automatically publish a GitHub Release. Attach the tested artifacts and their SHA-256 files to a release tagged `vVERSION` for in-app update discovery. The version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` must match.
+The `Desktop bundles` GitHub Actions workflow builds each platform natively and uploads artifacts. A version tag, manual dispatch or push to `codex/desktop-bundles` triggers it; it does not automatically publish a GitHub Release. Linux uses a checksummed Vulkan SDK 1.4.309.0 for its shader compiler, since Ubuntu 22.04 does not provide `glslc` in its standard package archive.
+
+After packaging, `node scripts/desktop/verify-bundle.mjs` checks the artifact checksum, extracts it into a different directory containing spaces, verifies all engine resource hashes and starts the packaged supervisor/engine in CPU mode. A tiny tensor-free GGUF fixture permits an HTTP health check without model downloads or inference. The test also checks shutdown when the supervisor control pipe closes, plus the Windows runtime files. These checks do not generate music.
+
+Attach the tested artifacts and their SHA-256 files to a release tagged `vVERSION` for in-app update discovery. The version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` must match.
 
 For signed macOS releases configure the standard Tauri secrets `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`. Keep certificates and passwords out of source control. Windows signing can be added to the portable packaging step once a certificate is available; current Windows builds are unsigned.
 

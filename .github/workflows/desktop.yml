@@ -38,6 +38,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          cache-on-failure: true
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: |
@@ -60,6 +61,8 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
       - run: npm run bundle
+      - name: Verify relocated portable bundle
+        run: node scripts/desktop/verify-bundle.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: Music-Generator-${{ matrix.name }}
