@@ -1,3 +1,4 @@
+use super::progress::{stream_logs, Progress};
 use crate::error::{message, Error, Result};
 use serde_json::{json, Value};
 use std::{
@@ -35,7 +36,7 @@ impl EngineClient {
         endpoint: &str,
         request: reqwest::RequestBuilder,
         cancel: &CancellationToken,
-        progress: impl Fn(String),
+        progress: impl Fn(Progress),
     ) -> Result<(String, Vec<u8>)> {
         let response = tokio::select! { _ = cancel.cancelled() => return Err(Error::Cancelled), r = request.send() => r? };
         let job: Value = checked(response).await?.json().await?;
@@ -46,7 +47,7 @@ impl EngineClient {
         };
         let outcome = tokio::select! {
             _ = cancel.cancelled() => Err(Error::Cancelled),
-            r = tokio::time::timeout(self.timeout, self.wait(base, &jid, &progress)) => r.unwrap_or_else(|_| Err(message(format!("{endpoint}: time limit exceeded")))),
+            r = tokio::time::timeout(self.timeout, self.track(base, &jid, endpoint, &progress)) => r.unwrap_or_else(|_| Err(message(format!("{endpoint}: time limit exceeded")))),
         };
         if outcome.is_err() {
             let _ = self
@@ -60,13 +61,39 @@ impl EngineClient {
         outcome
     }
 
+    async fn track(
+        &self,
+        base: &str,
+        jid: &str,
+        endpoint: &str,
+        progress: &impl Fn(Progress),
+    ) -> Result<(String, Vec<u8>)> {
+        let start = Instant::now();
+        let phase = if endpoint == "lm" { "lm" } else { "synth" };
+        let (latest, current) = tokio::sync::watch::channel(Progress::new(phase));
+        let report = |mut update: Progress| {
+            update.elapsed_seconds = start.elapsed().as_secs();
+            if *latest.borrow() != update {
+                latest.send_replace(update.clone());
+                progress(update);
+            }
+        };
+        progress(current.borrow().clone());
+        tokio::select! {
+            result = self.wait(base, jid, start, current, progress) => result,
+            _ = stream_logs(&self.http, base, jid, report) => unreachable!(),
+        }
+    }
+
     async fn wait(
         &self,
         base: &str,
         jid: &str,
-        progress: &impl Fn(String),
+        start: Instant,
+        current: tokio::sync::watch::Receiver<Progress>,
+        progress: &impl Fn(Progress),
     ) -> Result<(String, Vec<u8>)> {
-        let start = Instant::now();
+        let mut last = None;
         loop {
             let state: Value = self.get_job(base, jid, false).await?.json().await?;
             let status = state["status"].as_str().unwrap_or("").to_lowercase();
@@ -86,8 +113,12 @@ impl EngineClient {
             {
                 return Err(message(format!("Engine job failed: {state}")));
             }
-            let seconds = start.elapsed().as_secs();
-            progress(format!("{}:{:02}", seconds / 60, seconds % 60));
+            let mut update = current.borrow().clone();
+            update.elapsed_seconds = start.elapsed().as_secs();
+            if last.as_ref() != Some(&update) {
+                progress(update.clone());
+                last = Some(update);
+            }
             tokio::time::sleep(self.poll).await;
         }
     }
@@ -112,7 +143,7 @@ impl EngineClient {
         &self,
         request: &Value,
         cancel: &CancellationToken,
-        progress: impl Fn(String),
+        progress: impl Fn(Progress),
     ) -> Result<Value> {
         let (ctype, body) = self
             .operation(
@@ -132,7 +163,7 @@ impl EngineClient {
         lm_file: &str,
         dit: &str,
         cancel: &CancellationToken,
-        progress: impl Fn(String),
+        progress: impl Fn(Progress),
     ) -> Result<(Vec<u8>, String, Value)> {
         const FIELDS: &[&str] = &[
             "caption",
@@ -158,10 +189,8 @@ impl EngineClient {
                 request[field] = value.clone();
             }
         }
-        progress("LM · 0:00".into());
-        let mut enriched = self
-            .language_model(&request, cancel, |s| progress(format!("LM · {s}")))
-            .await?;
+
+        let mut enriched = self.language_model(&request, cancel, &progress).await?;
         if enriched["audio_codes"]
             .as_str()
             .unwrap_or("")
@@ -182,7 +211,7 @@ impl EngineClient {
                     .post(format!("{}/synth", self.synth))
                     .json(&enriched),
                 cancel,
-                |s| progress(format!("Synth · {s}")),
+                progress,
             )
             .await?;
         let (audio, extension) = extract_audio(&ctype, &body)?;

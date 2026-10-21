@@ -20,7 +20,7 @@ export interface Song {
 }
 export interface Folder { id: string; name: string; count: number }
 export interface Filter { q?: string; favorites?: boolean; group?: string; folder?: string }
-export interface Queue { running: { id: string; caption: string; message: string | null }[]; queued: number; active: boolean; library: { count: number; bytes: number } }
+export interface Queue { progress: JobProgress | null; running: { id: string; caption: string; message: string | null }[]; queued: number; active: boolean; library: { count: number; bytes: number } }
 export interface Health { ok: boolean; error?: string; props?: { models?: Record<string, string[]> } }
 export interface Update { available: boolean; current: string; latest?: string; url?: string; notes?: string }
 export interface Model { file: string; estimated_bytes: number; sha256: string; kind: string }
@@ -31,3 +31,8 @@ export interface Bootstrap {
 }
 export interface SetupRequest { lm: string; xl: boolean; models_dir: string; songs_dir: string }
 export interface DownloadProgress { file: string; phase: "downloading" | "verifying"; downloaded: number; total: number; bytes_per_second: number }
+
+export interface JobProgress {
+  job_id: string; sequence: number; phase: "starting" | "loading" | "lm" | "synth" | "dit" | "vae" | "saving";
+  step: number | null; total_steps: number | null; elapsed_seconds: number;
+}

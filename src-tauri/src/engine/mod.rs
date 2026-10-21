@@ -1,6 +1,7 @@
 pub mod client;
 pub mod device;
 pub mod process;
+pub mod progress;
 use crate::{
     error::{message, Error, Result},
     types::Settings,
