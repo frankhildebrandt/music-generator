@@ -8,6 +8,8 @@ pub struct Settings {
     pub songs_dir: String,
     pub lm_model: String,
     pub dit: String,
+    pub lm_device: String,
+    pub export_format: String,
     pub poll_interval: f64,
     pub timeout_minutes: f64,
     pub mode: String,
@@ -23,6 +25,8 @@ impl Default for Settings {
             songs_dir: String::new(),
             lm_model: String::new(),
             dit: "standard".into(),
+            lm_device: "auto".into(),
+            export_format: "wav".into(),
             poll_interval: 1.5,
             timeout_minutes: 30.0,
             mode: "single".into(),
@@ -30,6 +34,12 @@ impl Default for Settings {
             tested_fingerprint: String::new(),
             setup_complete: false,
         }
+    }
+}
+
+impl Settings {
+    pub fn cpu_lm(&self) -> bool {
+        self.lm_device == "cpu" || self.mode == "split"
     }
 }
 

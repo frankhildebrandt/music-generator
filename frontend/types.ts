@@ -1,5 +1,6 @@
 export interface Settings {
   models_dir: string; songs_dir: string; lm_model: string; dit: "standard" | "xl";
+  lm_device: "auto" | "cpu"; export_format: "wav" | "mp3"; mp3_available?: boolean;
   poll_interval: number; timeout_minutes: number; mode: "single" | "split";
   vae_chunk: number | null; tested_fingerprint: string; setup_complete: boolean;
   songs_dir_default?: string; dit_xl_available?: boolean;

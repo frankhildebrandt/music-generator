@@ -184,6 +184,7 @@ pub fn get_settings(state: Desktop<'_>) -> Result<Value> {
     let settings = state.db.settings()?;
     let mut result = serde_json::to_value(&settings)?;
     result["songs_dir_default"] = json!(state.db.root.join("songs"));
+    result["mp3_available"] = json!(crate::audio_export::codec_path(&state.resources).is_file());
     result["dit_xl_available"] = json!(PathBuf::from(settings.models_dir)
         .join("acestep-v15-xl-sft-Q8_0.gguf")
         .is_file());
@@ -197,6 +198,24 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
         .try_lock()
         .map_err(|_| message("Please wait for the current generation or analysis"))?;
     let mut settings = state.db.settings()?;
+    let old_device = settings.lm_device.clone();
+    if let Some(device) = values.get("lm_device") {
+        settings.lm_device = device
+            .as_str()
+            .ok_or_else(|| message("Invalid language model device"))?
+            .into();
+    }
+    if let Some(format) = values.get("export_format") {
+        settings.export_format = format
+            .as_str()
+            .ok_or_else(|| message("Invalid export format"))?
+            .into();
+    }
+    if settings.export_format == "mp3"
+        && !crate::audio_export::codec_path(&state.resources).is_file()
+    {
+        return Err(message("mp3_failed"));
+    }
     if let Some(timeout) = values.get("timeout_minutes") {
         settings.timeout_minutes = timeout.as_f64().ok_or_else(|| message("Invalid timeout"))?;
     }
@@ -231,6 +250,10 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
         }
     }
     state.db.save_settings(&settings)?;
+    if old_device != settings.lm_device {
+        state.stop_engine().await;
+        state.restore_setup()?;
+    }
     app.asset_protocol_scope()
         .allow_directory(&settings.songs_dir, false)
         .map_err(|e| message(e.to_string()))?;
@@ -318,25 +341,20 @@ pub async fn export_file(
     folder: Option<String>,
     destination: String,
 ) -> Result<()> {
-    let db = state.db.clone();
     let destination = PathBuf::from(destination);
     if !destination.is_absolute() {
         return Err(message("Select an absolute destination"));
     }
-    tauri::async_runtime::spawn_blocking(move || match kind.as_str() {
-        "audio" => db.export_audio(
-            id.as_deref().ok_or_else(|| message("Missing song"))?,
-            &destination,
-        ),
-        "lyrics" => db.export_lyrics(
-            id.as_deref().ok_or_else(|| message("Missing song"))?,
-            &destination,
-        ),
-        "zip" => db.export_zip(folder.as_deref().unwrap_or(""), &destination),
-        _ => Err(message("Unknown export format")),
-    })
+    crate::exports::export(
+        state.db.clone(),
+        state.resources.clone(),
+        kind,
+        id,
+        folder,
+        destination,
+        state.shutdown.child_token(),
+    )
     .await
-    .map_err(|e| message(e.to_string()))?
 }
 
 #[tauri::command]
