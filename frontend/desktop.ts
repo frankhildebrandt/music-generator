@@ -33,7 +33,7 @@ export async function initializeDesktop(): Promise<void> {
     button.onclick = async () => {
       const field = element<HTMLInputElement>(button.dataset.pickFolder!);
       const folder = await open({ directory: true, defaultPath: field.value || undefined });
-      if (typeof folder === "string") { field.value = folder; field.dispatchEvent(new Event("change", { bubbles: true })); }
+      if (typeof folder === "string") { await backend.rememberFolder(folder); field.value = folder; field.dispatchEvent(new Event("change", { bubbles: true })); }
     };
   }
 }

@@ -128,6 +128,8 @@ async fn configure_inner(
     if !models.is_absolute() || !songs.is_absolute() {
         return Err(message("Select absolute folders"));
     }
+    crate::sandbox::remember(&models)?;
+    crate::sandbox::remember(&songs)?;
     std::fs::create_dir_all(&models)?;
     std::fs::create_dir_all(&songs)?;
     let required: u64 = selected

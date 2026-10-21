@@ -45,12 +45,13 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-setup-pick]")) button.onclick = async () => {
       const field = element<HTMLInputElement>(`#${button.dataset.setupPick}`);
       const path = await open({ directory: true, defaultPath: field.value || undefined });
-      if (typeof path === "string") { field.value = path; await updateEstimate(); }
+      if (typeof path === "string") { await backend.rememberFolder(path); field.value = path; await updateEstimate(); }
     };
     element("#importLibrary").onclick = async () => {
       const root = await open({ directory: true }); if (typeof root !== "string") return;
       setBusy(true); element("#setupError").textContent = "";
       try {
+        await backend.rememberFolder(root);
         const result = await backend.importLibrary(root);
         element("#importStatus").textContent = `${t("desktop_import_done")}: ${result.songs}`;
         element<HTMLInputElement>("#setupModels").value = result.models_dir;

@@ -6,11 +6,13 @@ Download the bundle for your platform from https://github.com/frankhildebrandt/m
 
 | Platform | Bundle | Requirements |
 | --- | --- | --- |
-| macOS | `Music-Generator-VERSION-macos-arm64.zip` | Apple Silicon, macOS 26+ |
+| macOS | `Music-Generator-VERSION-macos-arm64.dmg` or `.zip` | Apple Silicon, macOS 26+ |
 | Windows | `Music-Generator-VERSION-windows-x64.zip` | Windows 10/11 x64, current GPU driver |
 | Linux | `Music-Generator-VERSION-linux-x64.AppImage` | x64; Ubuntu 22.04 or compatible newer distribution, current GPU driver |
 
 Extract the complete ZIP and open Music Generator. Keep the Windows EXE, `engine` and `WebView2` directories together. On Linux run `chmod +x Music-Generator-*.AppImage` once and open the AppImage. If FUSE is unavailable, run `./Music-Generator-VERSION-linux-x64.AppImage --appimage-extract`, then `./squashfs-root/AppRun`.
+
+On macOS you can instead open the DMG and drag Music Generator onto its Applications shortcut (or copy it into another folder). Eject the disk image and open the copied app. The DMG contains the same sealed `.app` as the ZIP and does not run an installer. Both downloads include a SHA-256 file. CI verifies the read-only disk image, copies its app into a relocated folder, ejects the image and tests the copied app's signature, engine files, engine startup and shutdown.
 
 macOS uses its native red/yellow/green window controls on the left. Windows and Linux use the custom minimize/maximize/close controls on the right. The title bar is draggable, and the layout fills the window at every supported size.
 
@@ -28,11 +30,15 @@ The first setup needs several GB and internet access. Model URLs, immutable revi
 
 ## Data and updates
 
-- macOS: `~/Library/Application Support/de.alphatester.music-generator/`
+- macOS: `~/Library/Containers/de.alphatester.music-generator/Data/Library/Application Support/de.alphatester.music-generator/`
 - Windows: `%LOCALAPPDATA%\de.alphatester.music-generator\`
 - Linux: `$XDG_DATA_HOME/de.alphatester.music-generator/` (normally `~/.local/share/…`)
 
 The database is `music.db`. Models and songs default to subdirectories there; their locations are selectable. Logs are in `logs/desktop.log`, `logs/ace-server.log`, and, in split mode, `logs/ace-lm.log`.
+
+Packaged macOS builds enable Apple's App Sandbox. Network client/server entitlements permit model downloads, update checks and the internal loopback engine connection; microphone and user-selected file access are enabled separately. There are no blanket home-directory or temporary-exception grants. Pick external model/song folders through Browse so macOS can authorize them. Security-scoped bookmarks restore those grants after restarting. The engine receives a transferable bookmark for its model folder and runs under the inherited sandbox through a dedicated supervisor. Both child executables carry only the sandbox and inheritance entitlements.
+
+Earlier unsandboxed desktop test builds used `~/Library/Application Support/de.alphatester.music-generator/`. To retain that library, select that directory using the first-run import button; it copies the database and songs into an empty sandbox library and reuses verified models after authorization. Existing files remain in place. Legacy browser-project imports still use the same button.
 
 The app does not write into the program bundle. Replace the complete app/bundle for updates; models and library remain available. Setup → Version checks releases in this fork and opens the platform's new bundle. The app does not perform Git pulls or replace its own running files. Setup → Models and hardware test can download another model or repeat the test. Changing the song folder copies files first and switches the saved path only after successful copying; queued/running songs must finish or be cancelled before moving.
 
@@ -61,11 +67,11 @@ npm run bundle
 
 `release/` contains the platform bundle and its SHA-256 file. `npm run bundle` verifies/prepares the engine first. The Rust release build also refuses missing, mismatched or modified engine resources. `npm run build` builds only the frontend.
 
-The preparation script downloads the pinned Mac/Windows engine archives, checks their hashes, preserves runtime libraries/licenses and records final file hashes. Mac library search paths are relative. Linux builds the pinned engine revision with Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
+The preparation script builds the pinned Mac/Linux engine source revisions and checks the pinned Windows archive hash. The Mac revision adds the small `engine-sandbox.mm` bookmark bridge; its patch and build-recipe hashes are recorded alongside runtime-file hashes. Mac CPU code targets portable Apple Silicon and uses relative library paths. The app, supervisor and engine are signed from the inside out with separate parent/child entitlements. Linux builds Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
 
 The `Desktop bundles` GitHub Actions workflow builds each platform natively and uploads artifacts. A version tag, manual dispatch or push to `codex/desktop-bundles` triggers it; it does not automatically publish a GitHub Release. Linux uses a checksummed Vulkan SDK 1.4.309.0 for its shader compiler, since Ubuntu 22.04 does not provide `glslc` in its standard package archive.
 
-After packaging, `node scripts/desktop/verify-bundle.mjs` checks the artifact checksum, extracts it into a different directory containing spaces, verifies all engine resource hashes and starts the packaged supervisor/engine in CPU mode. A tiny tensor-free GGUF fixture permits an HTTP health check without model downloads or inference. The test also checks shutdown when the supervisor control pipe closes, plus the Windows runtime files. These checks do not generate music.
+After packaging, `node scripts/desktop/verify-bundle.mjs` checks the artifact checksum, extracts it into a different directory containing spaces, verifies all engine resource hashes and starts the packaged supervisor/engine in CPU mode. A tiny tensor-free GGUF fixture permits an HTTP health check without model downloads or inference. The test also checks shutdown when the supervisor control pipe closes, plus the Windows runtime files. macOS additionally checks signing entitlements and actual OS denial of unselected file reads/writes by the main app and a read by the inherited engine. It repeats those checks after copying the app from a read-only DMG and ejecting it (`--dmg`). These checks do not generate music.
 
 Attach the tested artifacts and their SHA-256 files to a release tagged `vVERSION` for in-app update discovery. The version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` must match.
 

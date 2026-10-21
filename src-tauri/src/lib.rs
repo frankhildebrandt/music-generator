@@ -8,6 +8,7 @@ pub mod import;
 pub mod library;
 pub mod manifest;
 pub mod power;
+pub mod sandbox;
 pub mod setup;
 pub mod state;
 pub mod types;
@@ -39,6 +40,9 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            let root = sandbox::data_root();
+            #[cfg(not(target_os = "macos"))]
             let root = app.path().app_local_data_dir()?;
             std::fs::create_dir_all(root.join("logs"))?;
             let log = std::fs::OpenOptions::new()
@@ -49,6 +53,7 @@ pub fn run() {
                 .with_ansi(false)
                 .with_writer(std::sync::Mutex::new(log))
                 .try_init();
+            sandbox::initialize(&root)?;
             let resources = if cfg!(debug_assertions) {
                 std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources")
             } else {
@@ -81,7 +86,8 @@ pub fn run() {
             commands::health,
             commands::export_file,
             commands::check_update,
-            commands::exit_app
+            commands::exit_app,
+            commands::remember_folder
         ])
         .build(tauri::generate_context!())
         .expect("Unable to start Music Generator");
@@ -97,6 +103,8 @@ pub fn run() {
             let state = app.state::<Arc<state::AppState>>();
             state.begin_shutdown();
             tauri::async_runtime::block_on(state.stop_engine());
+            #[cfg(target_os = "macos")]
+            sandbox::shutdown();
         }
     });
 }

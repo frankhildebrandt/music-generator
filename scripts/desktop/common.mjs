@@ -52,6 +52,8 @@ export async function recordHashes(folder, metadata) {
 export async function verifyEngine(folder) {
   const provenance = JSON.parse(await readFile(path.join(folder, "VERSION.desktop.json"), "utf8"));
   if (provenance.platform !== platform || provenance.arch !== architecture || provenance.revision !== manifest.engines[platform].revision) throw new Error("Engine belongs to a different platform or revision");
+  if (platform === "macos" && provenance.sandbox_patch_sha256 !== await hash(path.join(root,"scripts/desktop/engine-sandbox.mm"))) throw new Error("Engine sandbox bridge needs rebuilding");
+  if (platform === "macos" && provenance.recipe_sha256 !== await hash(path.join(root,"scripts/desktop/prepare-engine.mjs"))) throw new Error("Engine build recipe changed");
   const executable = platform === "windows" ? "ace-server.exe" : "ace-server";
   if (!provenance.files[executable]) throw new Error("Engine executable is missing from checksums");
   for (const [file, checksum] of Object.entries(provenance.files)) {

@@ -13,6 +13,11 @@ use tauri::{AppHandle, Manager, State};
 type Desktop<'a> = State<'a, Arc<AppState>>;
 
 #[tauri::command]
+pub fn remember_folder(path: String) -> Result<()> {
+    crate::sandbox::remember(std::path::Path::new(&path))
+}
+
+#[tauri::command]
 pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
     let _operation = state.operation.lock().await;
     let hardware = crate::hardware::inspect();
@@ -218,6 +223,7 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
             PathBuf::from(dir)
         };
         if dir != std::path::Path::new(&settings.songs_dir) {
+            crate::sandbox::remember(&dir)?;
             let db = state.db.clone();
             let target = dir.clone();
             tauri::async_runtime::spawn_blocking(move || db.change_songs_dir(&target))

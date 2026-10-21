@@ -8,6 +8,7 @@ async function command<T>(name: string, args?: Record<string, unknown>): Promise
 const audioUrl = (song: Song): Song => ({ ...song, url: song.path ? convertFileSrc(song.path) : null });
 
 export const backend = {
+  rememberFolder: (path: string) => command<void>("remember_folder", { path }),
   bootstrap: () => command<Bootstrap>("bootstrap"),
   setup: (request: SetupRequest) => command<{ ok: boolean; mode: string }>("setup_models", { request }),
   estimate: (request: SetupRequest) => command<{ missing_bytes: number; free_bytes: number }>("setup_estimate", { request }),

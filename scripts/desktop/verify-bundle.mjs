@@ -1,22 +1,35 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
-import { chmod, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, readlink, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { exists, files, hash, platform, root, run, verifyEngine } from "./common.mjs";
+import { verifyMacSandbox } from "./verify-macos-sandbox.mjs";
 
 // Exercise the distributed files from a relocated directory, without loading any models.
 const output = path.join(root, "release");
-const suffix = platform === "linux" ? "-linux-x64.AppImage" : `-${platform}-${platform === "macos" ? "arm64" : "x64"}.zip`;
+const diskImage = process.argv.includes("--dmg");
+assert(!diskImage || platform === "macos", "DMG verification requires macOS");
+const suffix = diskImage ? "-macos-arm64.dmg" : platform === "linux" ? "-linux-x64.AppImage" : `-${platform}-${platform === "macos" ? "arm64" : "x64"}.zip`;
 const filename = (await readdir(output)).find(file => file.endsWith(suffix));
 assert(filename, "Platform bundle is missing");
 const artifact = path.join(output, filename);
 assert.equal(await hash(artifact), (await readFile(`${artifact}.sha256`, "utf8")).split(/\s/)[0]);
 const work = await mkdtemp(path.join(tmpdir(), "Music Generator portable test "));
+const mount = path.join(work, "mounted");
+let mounted = false;
 try {
-  if (platform === "linux") {
+  if (diskImage) {
+    await run("hdiutil", ["verify", artifact]);
+    await mkdir(mount);
+    await run("hdiutil", ["attach", "-readonly", "-nobrowse", "-mountpoint", mount, artifact]);
+    mounted = true;
+    assert.equal(await readlink(path.join(mount, "Applications")), "/Applications");
+    await run("ditto", [path.join(mount, "Music Generator.app"), path.join(work, "Music Generator.app")]);
+    await run("hdiutil", ["detach", mount]); mounted = false;
+  } else if (platform === "linux") {
     await chmod(artifact, 0o755);
     await run(artifact, ["--appimage-extract"], { cwd: work });
   } else if (platform === "windows") {
@@ -31,12 +44,16 @@ try {
   await verifyEngine(engine);
   const app = extracted.find(file => path.basename(file) === (platform === "windows" ? "Music Generator.exe" : "music-generator"));
   assert(app, "Application executable is missing");
+  if (platform === "macos") await run("codesign", ["--verify", "--deep", "--strict", path.dirname(path.dirname(path.dirname(app)))]);
   if (platform === "windows") {
     assert(await exists(path.join(path.dirname(app), "WebView2/msedgewebview2.exe")), "Fixed WebView2 is missing");
     for (const dll of ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"]) {
       assert(await exists(path.join(engine, dll)), `Engine runtime ${dll} is missing`);
     }
   }
+  if (platform === "macos") {
+    await verifyMacSandbox(app, engine);
+  } else {
   const listener = createServer();
   listener.listen(0, "127.0.0.1"); await once(listener, "listening");
   const port = listener.address().port;
@@ -74,4 +91,8 @@ try {
     child.stdin.end();
     if (child.exitCode === null) child.kill();
   }
-} finally { await rm(work, { recursive: true, force: true }); }
+  }
+} finally {
+  if (mounted) await run("hdiutil", ["detach", mount]);
+  await rm(work, { recursive: true, force: true });
+}
