@@ -16,6 +16,8 @@ Die fertigen Binaries sind mit CUDA 13 gebaut und enthalten nur Code für RTX 30
 Ältere Karten (GTX 10xx/16xx, RTX 20xx) laufen automatisch über Vulkan, das ist langsamer, aber es geht:
 auf einer GTX 1060 (6 GB) dauert ein 30-Sekunden-Song etwa 1 Minute, ein 90-Sekunden-Song etwa 2,5 Minuten.
 
+**AMD:** Laut einem Nutzerbericht läuft auch AMD-Grafik über Vulkan, zum Beispiel eine Radeon 780M (Mini-PC mit Ryzen 7 8745HS, 64 GB RAM, im BIOS 8 GB für die Grafik zugeteilt): Installation ohne Fehler, Standard-Klangmodell etwa 3 bis 5 Minuten pro Song, XL etwa 5 bis 8 Minuten. Ein Einzelbericht, die Zeiten hängen stark vom Rechner ab.
+
 1. Falls `git` fehlt: PowerShell öffnen und `winget install Git.Git` ausführen (oder der Installer macht es).
 2. In der PowerShell:
 

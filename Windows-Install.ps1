@@ -68,8 +68,8 @@ Write-Host "  Windows:         $($os.Caption) $($os.Version)"
 Write-Host "  Free disk space: $FREE_GB GB"
 if (-not $NVIDIA) {
     Write-Host ""
-    Write-Host "  Note: No NVIDIA graphics card found. Only CUDA has been tested; with AMD/Intel (Vulkan)"
-    Write-Host "  or CPU only it may be very slow."
+    Write-Host "  Note: No NVIDIA graphics card found. AMD graphics (Vulkan) has been reported to work"
+    Write-Host "  (Radeon 780M: about 3-5 minutes per song), Intel is untested. CPU only may be very slow."
     if (-not (Ja "  Continue anyway?")) { Abbruch "Cancelled." }
 }
 
