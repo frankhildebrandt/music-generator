@@ -86,7 +86,7 @@ if (-not $pids.Count) {
 }
 
 # --- Warten, bis alles antwortet --------------------------------------------
-for ($i = 0; $i -lt 60; $i++) {
+for ($i = 0; $i -lt 240; $i++) {   # bis zu 2 Minuten: der erste Start (Virenscanner, Python-Umgebung) dauert unter Windows manchmal länger als 30 Sekunden
     if ((Port-Laeuft $PORT) -and (Port-Laeuft $SYNTH_PORT) -and ($MODE -ne "split" -or (Port-Laeuft $LM_PORT))) { break }
     Start-Sleep -Milliseconds 500
 }

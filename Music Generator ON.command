@@ -106,7 +106,7 @@ if [ -z "$PID" ]; then
 fi
 
 # --- Warten, bis alles antwortet --------------------------------------------
-for _ in $(seq 1 60); do
+for _ in $(seq 1 240); do
   laeuft "$PORT" && laeuft "$SYNTH_PORT" && { [ "$MODE" != "split" ] || laeuft "$LM_PORT"; } && break
   sleep 0.5
 done
