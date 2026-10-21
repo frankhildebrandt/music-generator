@@ -1,19 +1,27 @@
 use crate::{
     db::Database,
-    engine::{client::EngineClient, Engine},
+    engine::{client::EngineClient, progress::Progress, Engine},
     error::{message, Result},
     types::Settings,
 };
 use std::{
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
     },
 };
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
+
+#[derive(Clone, serde::Serialize)]
+pub struct JobProgress {
+    pub job_id: String,
+    pub sequence: u64,
+    #[serde(flatten)]
+    pub progress: Progress,
+}
 
 pub struct AppState {
     pub db: Arc<Database>,
@@ -24,6 +32,8 @@ pub struct AppState {
     pub setup_cancel: Mutex<Option<CancellationToken>>,
     pub shutdown: CancellationToken,
     pub ready: AtomicBool,
+    pub progress: Mutex<Option<JobProgress>>,
+    progress_sequence: AtomicU64,
     pub wake: Notify,
 }
 
@@ -38,12 +48,25 @@ impl AppState {
             setup_cancel: Mutex::new(None),
             shutdown: CancellationToken::new(),
             ready: AtomicBool::new(false),
+            progress: Mutex::new(None),
+            progress_sequence: AtomicU64::new(0),
             wake: Notify::new(),
         }
     }
 
     pub fn changed(&self, app: &AppHandle) {
         let _ = app.emit("library-changed", ());
+    }
+
+    pub fn report_progress(&self, app: &AppHandle, sid: &str, progress: Progress) {
+        let _ = self.db.progress(sid, &progress.message());
+        let update = JobProgress {
+            job_id: sid.into(),
+            sequence: self.progress_sequence.fetch_add(1, Ordering::SeqCst),
+            progress,
+        };
+        *self.progress.lock().unwrap() = Some(update.clone());
+        let _ = app.emit("generation-progress", update);
     }
 
     // Restore the durable wizard result without reading models or starting the engine.
@@ -148,6 +171,7 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
         if state.db.song(&sid).is_ok_and(|s| s.status != "running") {
             cancel.cancel();
         }
+        state.report_progress(&app, &sid, Progress::new("starting"));
         state.changed(&app);
         let _awake = crate::power::KeepAwake::new();
         let outcome = async {
@@ -159,11 +183,11 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
                 "acestep-v15-sft-Q8_0.gguf"
             };
             let (audio, ext, meta) = client
-                .generate(&params, &settings.lm_model, dit, &cancel, |text| {
-                    let _ = state.db.progress(&sid, &text);
-                    state.changed(&app);
+                .generate(&params, &settings.lm_model, dit, &cancel, |progress| {
+                    state.report_progress(&app, &sid, progress);
                 })
                 .await?;
+            state.report_progress(&app, &sid, Progress::new("saving"));
             let dir = PathBuf::from(settings.songs_dir);
             tokio::fs::create_dir_all(&dir).await?;
             let filename = format!("{sid}.{ext}");
@@ -181,6 +205,7 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
             Ok::<_, crate::error::Error>(())
         }
         .await;
+        *state.progress.lock().unwrap() = None;
         *state.running.lock().unwrap() = None;
         if let Err(error) = outcome {
             if !state.shutdown.is_cancelled() {

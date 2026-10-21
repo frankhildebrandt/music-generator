@@ -13,6 +13,7 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind möglich. Downloads werden unter [Releases](https://github.com/frankhildebrandt/music-generator/releases) veröffentlicht; lokal gebaute Pakete liegen in `release/`.
 
 - Bestehende Bedienung, zwölf Sprachen, Bibliothek, Favoriten, Ordner und Varianten.
+- Echtzeit-Fortschritt mit Modellladephasen, Sprachmodell, gemessenen DiT-Schritten und VAE-Decodierung.
 - Mikrofonideen und Audioanalyse, Waveform-Player und native WAV-/TXT-/ZIP-Exporte.
 - Wahlweise MP3-Export mit 192 kbit/s für Einzeldateien und ZIPs; die Bibliothek behält das Original-WAV.
 - Sprachmodell wahlweise automatisch oder nur auf CPU; die Synthese kann weiterhin die Grafikkarte nutzen.

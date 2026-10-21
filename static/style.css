@@ -216,6 +216,12 @@ button { font: inherit; cursor: pointer; }
 @keyframes stripes { from { transform: translateX(0); } to { transform: translateX(19.8px); } }
 @media (prefers-reduced-motion: reduce) { .mini-bar::before { animation: none; } }
 
+/* The measured bar represents DiT steps only; other phases remain indeterminate. */
+.step-progress { display: block; width: 100%; height: 7px; margin-top: 6px; border: 1px solid var(--accent2); border-radius: 999px; overflow: hidden; background: transparent; appearance: none; }
+.step-progress::-webkit-progress-bar { background: transparent; }
+.step-progress::-webkit-progress-value { background: var(--accent2); }
+.step-progress::-moz-progress-bar { background: var(--accent2); }
+
 /* Bibliothek */
 .libhead { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
 .libhead .libtitle { margin-right: auto; display: flex; align-items: baseline; min-width: 0; }

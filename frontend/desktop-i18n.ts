@@ -21,3 +21,22 @@ for (const [language, values] of Object.entries(translations)) {
   Object.assign(I18N[language as keyof typeof I18N], Object.fromEntries(keys.map((key, i) => [`desktop_${key}`, values[i]])));
 }
 export { keys, translations };
+
+const progressKeys = ["starting", "loading", "lm", "synth", "dit", "vae", "saving"];
+const progressLabels: Record<string, string[]> = {
+  en: ["Starting engine", "Loading models", "Language model", "Synthesis", "DiT", "VAE decoding", "Saving audio"],
+  de: ["Engine wird gestartet", "Modelle werden geladen", "Sprachmodell", "Synthese", "DiT", "VAE-Decodierung", "Audio wird gespeichert"],
+  es: ["Iniciando motor", "Cargando modelos", "Modelo de lenguaje", "Síntesis", "DiT", "Decodificación VAE", "Guardando audio"],
+  fr: ["Démarrage du moteur", "Chargement des modèles", "Modèle de langage", "Synthèse", "DiT", "Décodage VAE", "Enregistrement audio"],
+  it: ["Avvio del motore", "Caricamento modelli", "Modello linguistico", "Sintesi", "DiT", "Decodifica VAE", "Salvataggio audio"],
+  pt: ["Iniciando motor", "Carregando modelos", "Modelo de linguagem", "Síntese", "DiT", "Decodificação VAE", "Salvando áudio"],
+  tr: ["Motor başlatılıyor", "Modeller yükleniyor", "Dil modeli", "Sentez", "DiT", "VAE kod çözme", "Ses kaydediliyor"],
+  pl: ["Uruchamianie silnika", "Ładowanie modeli", "Model językowy", "Synteza", "DiT", "Dekodowanie VAE", "Zapisywanie audio"],
+  ru: ["Запуск движка", "Загрузка моделей", "Языковая модель", "Синтез", "DiT", "Декодирование VAE", "Сохранение аудио"],
+  uk: ["Запуск рушія", "Завантаження моделей", "Мовна модель", "Синтез", "DiT", "Декодування VAE", "Збереження аудіо"],
+  ja: ["エンジンを起動中", "モデルを読み込み中", "言語モデル", "合成", "DiT", "VAEデコード", "音声を保存中"],
+  zh: ["正在启动引擎", "正在加载模型", "语言模型", "合成", "DiT", "VAE 解码", "正在保存音频"],
+};
+for (const [language, values] of Object.entries(progressLabels)) {
+  Object.assign(I18N[language as keyof typeof I18N], Object.fromEntries(progressKeys.map((key, i) => [`desktop_progress_${key}`, values[i]])));
+}

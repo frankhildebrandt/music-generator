@@ -5,7 +5,8 @@ import { backend } from "./backend";
 import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { listen } from "@tauri-apps/api/event";
+import { startLibrarySync } from "./library-sync";
+import { progressText, progressBar } from "./progress";
 import { notify as alert, askName } from "./dialogs";
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -20,6 +21,7 @@ function announce(text, urgent = false) {
 
 // Stil-Karten, nach Art gruppiert; der Würfel mischt daraus einen Stil
 let songs = [];
+const jobProgress = new Map();
 let currentId = null;
 let onlyFav = false;       // Favoriten-Filter der Bibliothek
 const openLyrics = new Set();   // Songs, deren generierte Lyrics gerade aufgeklappt sind
@@ -315,21 +317,43 @@ fileInput.addEventListener("change", () => analyzeFile(fileInput.files[0]));
 dz.addEventListener("drop", (e) => { e.preventDefault(); dz.classList.remove("drag"); analyzeFile(e.dataTransfer.files[0]); });
 
 // ---------------------------------------------------------------- Bibliothek
-async function refresh() {
-  let busy = true;   // bei einem Fehler (Server startet gerade neu) zügig erneut versuchen
-  try {
-    folders = await backend.folders();
-    if (curFolder && curFolder !== "none" && !folders.folders.some((f) => f.id === curFolder)) setFolder("", false);
-    if (!dragging) renderFolders();
-    songs = await backend.songs({ q: $("#search").value, favorites: onlyFav, folder: curFolder });
-    announceChanges(songs);
-    if (!editingId && !dragging) render();   // während des Umbenennens nicht neu zeichnen, sonst verliert das Feld den Fokus
-    const qu = await backend.queue();
-    busy = qu.running.length || qu.queued;
-    libStats = qu.library; showLibStats();
-  } catch {}
-  clearTimeout(refresh.t);
-  refresh.t = setTimeout(refresh, busy ? 1500 : 8000);
+function refresh() { librarySync.refresh(); }
+
+async function loadLibrary() {
+  const nextFolders = await backend.folders();
+  folders = nextFolders;
+  if (curFolder && curFolder !== "none" && !folders.folders.some((f) => f.id === curFolder)) setFolder("", false);
+  const filter = { q: $("#search").value, favorites: onlyFav, folder: curFolder };
+  const [nextSongs, qu] = await Promise.all([backend.songs(filter), backend.queue()]);
+  songs = nextSongs;
+  const active = new Set(qu.running.map((s) => s.id));
+  for (const id of jobProgress.keys()) if (!active.has(id)) jobProgress.delete(id);
+  if (qu.progress && active.has(qu.progress.job_id)) rememberProgress(qu.progress);
+  announceChanges(songs);
+  if (!dragging) renderFolders();
+  if (!editingId && !dragging) render();
+  libStats = qu.library; showLibStats();
+}
+
+// Update only the active row; keep players, focus, drag state and open lyrics intact.
+function applyProgress(progress) {
+  const song = songs.find((s) => s.id === progress.job_id);
+  if (song && song.status !== "running") return;
+  if (!rememberProgress(progress)) return;
+  const row = $("#library").querySelector(`[data-id="${CSS.escape(progress.job_id)}"]`);
+  const status = row?.querySelector(".generation-progress");
+  if (status) status.innerHTML = progressMarkup(progress);
+}
+
+function rememberProgress(progress) {
+  const previous = jobProgress.get(progress.job_id);
+  if (previous && previous.sequence >= progress.sequence) return false;
+  jobProgress.set(progress.job_id, progress);
+  return true;
+}
+
+function progressMarkup(progress, message = "0:00") {
+  return `<div class="s run">${esc(progress ? progressText(progress, t) : message)}</div>${progressBar(progress)}`;
 }
 
 // Ansage, wenn ein Song fertig wird oder scheitert (beim ersten Laden nur merken, nichts sagen)
@@ -382,7 +406,7 @@ function render() {
     else if (s.status === "error") left = `<div class="slot err" title="${esc(s.message)}">!</div>`;
     else if (s.status === "running") left = `<div class="slot run">♪</div>`;
     else left = `<div class="slot">${s.status === "cancelled" ? "✕" : "…"}</div>`;
-    if (s.status === "running") state = `<div class="s run">${esc(s.message || "0:00")}</div><div class="mini-bar"></div>`;
+    if (s.status === "running") state = `<div class="generation-progress">${progressMarkup(jobProgress.get(s.id), s.message || "0:00")}</div>`;
     if (s.status === "queued") state = `<div class="s">${t("waiting")}</div>`;
     if (s.status === "cancelled") state = `<div class="s">${t("cancelled")}</div>`;
     if (s.status === "error") state = `<div class="s err" title="${esc(s.message)}">${t("error")} · ${esc(shortErr(s.message))}</div>`;
@@ -527,7 +551,7 @@ $("#library").addEventListener("dragstart", (e) => {
   e.dataTransfer.setData("text/song", row.dataset.id);
   e.dataTransfer.effectAllowed = "move";
 });
-document.addEventListener("dragend", () => { dragging = false; document.querySelectorAll(".chip.drop").forEach((c) => c.classList.remove("drop")); });
+document.addEventListener("dragend", () => { dragging = false; document.querySelectorAll(".chip.drop").forEach((c) => c.classList.remove("drop")); refresh(); });
 const dropChip = (e) => (e.dataTransfer.types.includes("text/song") ? e.target.closest?.(".chip.fold:not([data-f=''])") : null);
 $("#folderBar").addEventListener("dragover", (e) => { const c = dropChip(e); if (c) { e.preventDefault(); c.classList.add("drop"); } });
 $("#folderBar").addEventListener("dragleave", (e) => e.target.closest?.(".chip")?.classList.remove("drop"));
@@ -699,9 +723,8 @@ document.addEventListener("langchange", () => {
 checkHealth();
 setInterval(checkHealth, 15000);
 loadExportFmt().then(() => render());
-refresh();
-
-let refreshEvent;
-void listen("library-changed", () => { clearTimeout(refreshEvent); refreshEvent = setTimeout(refresh, 100); });
+const librarySync = startLibrarySync(loadLibrary, applyProgress);
+window.addEventListener("focus", refresh);
+window.addEventListener("pagehide", () => librarySync.stop(), { once: true });
 
 document.addEventListener("studio-ready", () => { void refresh(); void checkHealth(); });
