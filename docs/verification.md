@@ -1,6 +1,6 @@
 # Desktop verification — 2026-10-21
 
-Upstream synchronization (0.2.3, 2026-10-22): see [upstream-sync.md](upstream-sync.md) for the original commits, Rust/Tauri adaptations and new verification coverage. Local checks pass: 34 Rust tests, six frontend tests, TypeScript/Vite, ESLint, Rustfmt and Clippy. Earlier sections below describe the corresponding historical test versions.
+Upstream synchronization (0.2.3, 2026-10-22): see [upstream-sync.md](upstream-sync.md) for the original commits, Rust/Tauri adaptations and new verification coverage. Local checks pass: 35 Rust tests, six frontend tests, TypeScript/Vite, ESLint, Rustfmt and Clippy. Earlier sections below describe the corresponding historical test versions.
 
 Persistent first-run completion (0.2.2):
 

@@ -32,3 +32,15 @@ async fn cpu_selection_supports_both_engine_cli_generations() {
     cancel.cancel();
     assert!(cpu_arguments(&binary, &cancel).await.is_err());
 }
+
+#[tokio::test]
+async fn a_hanging_device_probe_cannot_silently_select_the_gpu() {
+    let root = tempfile::tempdir().unwrap();
+    let binary = root.path().join("engine");
+    std::fs::write(&binary, "#!/bin/sh\nexec sleep 60\n").unwrap();
+    std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let error = cpu_arguments(&binary, &CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("device detection timed out"));
+}
