@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::{message, Error, Result};
 use std::{path::Path, time::Duration};
 use tokio_util::sync::CancellationToken;
 
@@ -8,6 +8,9 @@ pub async fn cpu_arguments(binary: &Path, cancel: &CancellationToken) -> Result<
         return Err(Error::Cancelled);
     }
     let mut command = tokio::process::Command::new(binary);
+    if let Some(folder) = binary.parent() {
+        command.current_dir(folder);
+    }
     command
         .arg("--help")
         .kill_on_drop(true)
@@ -18,17 +21,20 @@ pub async fn cpu_arguments(binary: &Path, cancel: &CancellationToken) -> Result<
         _ = cancel.cancelled() => return Err(Error::Cancelled),
         output = tokio::time::timeout(Duration::from_secs(5), command.output()) => output,
     };
-    let supported = output.ok().and_then(|o| o.ok()).is_some_and(|o| {
+    let output = output.map_err(|_| {
+        message("Language model device detection timed out. Retry the hardware test.")
+    })??;
+    let supported = {
         let help = format!(
             "{}\n{}",
-            String::from_utf8_lossy(&o.stdout),
-            String::from_utf8_lossy(&o.stderr)
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
         );
         help.split_whitespace().any(|word| {
             let word = word.trim_matches(['[', ']', '(', ')', ',']);
             word == "--device" || word.starts_with("--device=")
         })
-    });
+    };
     Ok(if supported {
         vec!["--device".into(), "CPU".into()]
     } else {
