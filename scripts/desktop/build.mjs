@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prepareEngine, engineFolder } from "./prepare-engine.mjs";
+import { finalizeLinux } from "./finalize-linux.mjs";
 import { download, exists, hash, platform, root, run, verifyEngine } from "./common.mjs";
 
 await prepareEngine(); await verifyEngine(engineFolder);
@@ -54,7 +55,8 @@ if (platform === "macos") {
   await run(process.execPath,[cli,"build","--bundles","appimage"]);
   const folder = path.join(target,"bundle/appimage"); const file = (await readdir(folder)).find(n=>n.endsWith(".AppImage"));
   if (!file) throw new Error("AppImage was not generated");
-  artifact = path.join(output,`${name}-linux-x64.AppImage`); await cp(path.join(folder,file),artifact);
+  artifact = path.join(output,`${name}-linux-x64.AppImage`);
+  await finalizeLinux(path.join(folder,file), artifact, engineFolder);
 }
 await writeFile(`${artifact}.sha256`,`${await hash(artifact)}  ${path.basename(artifact)}\n`);
 console.log(`Ready: ${artifact}`);
