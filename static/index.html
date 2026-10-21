@@ -211,6 +211,10 @@
       <select name="dit"><option value="standard" data-i18n="dit_standard">Standard</option><option value="xl" data-i18n="dit_xl">XL</option></select>
       <span class="small" id="ditHint" hidden data-i18n="dit_xl_missing"></span>
     </label>
+    <label class="field"><span class="lbl" title="Gilt für Download und ZIP. In der Bibliothek bleibt immer das verlustfreie WAV; MP3 wird beim Download daraus gemacht (192 kbit/s)." data-i18n-title="exp_tip" data-i18n="exp">Export</span>
+      <select name="export_format"><option value="wav" data-i18n="exp_wav">WAV (verlustfrei)</option><option value="mp3" data-i18n="exp_mp3">MP3 (kleiner)</option></select>
+      <span class="small" id="expHint" hidden data-i18n="exp_no_mp3">MP3-Wandler nicht gefunden, nur WAV möglich.</span>
+    </label>
     <label class="field"><span class="lbl" title="Leer = data/songs im Programmordner. Beim Ändern werden die vorhandenen Songs dorthin verschoben." data-i18n-title="songs_dir_tip" data-i18n="songs_dir">Song-Ordner</span>
       <input name="songs_dir" placeholder="">
     </label>

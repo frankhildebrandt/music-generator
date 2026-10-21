@@ -53,6 +53,7 @@ DEFAULT_SETTINGS = {
     "poll_interval": 1.5,
     "timeout_minutes": 30,
     "dit": "standard",                 # Klangmodell: "standard" (2B) oder "xl" (4B, braucht die XL-Datei)
+    "export_format": "wav",            # Download/Export: "wav" (verlustfrei, wie erzeugt) oder "mp3" (umgewandelt, kleiner)
     "songs_dir": "",                   # leer = data/songs im Programmordner, sonst absoluter Pfad
 }
 

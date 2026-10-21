@@ -36,6 +36,7 @@ let songs = [];
 let currentId = null;
 let onlyFav = false;       // Favoriten-Filter der Bibliothek
 const openLyrics = new Set();   // Songs, deren generierte Lyrics gerade aufgeklappt sind
+let exportFmt = "wav";   // Download-Format laut Einstellung (nur für die Beschriftung des Download-Knopfs)
 let folders = { folders: [], all: 0, none: 0 };
 let curFolder = "";      // "" = alle, "none" = unsortiert, sonst Ordner-ID
 try { curFolder = localStorage.getItem("folder") || ""; } catch {}
@@ -597,7 +598,7 @@ function render() {
     const lyr = s.status === "done" && s.lyrics !== "[Instrumental]" && /[^\s\[\]]/.test((m.lyrics || "").replace(/\[[^\]]*\]/g, "")) ? m.lyrics.trim() : "";
     const actions = [
       s.status === "done" && `<button class="sek icon ${s.favorite ? "on" : ""}" data-a="fav" title="${t("fav")}">${s.favorite ? "★" : "☆"}</button>`,
-      s.status === "done" && `<a class="download icon fmt" href="${s.url}?download=1" title="${t("download")}">${s.file.endsWith(".wav") ? "WAV" : "MP3"}</a>`,
+      s.status === "done" && `<a class="download icon fmt" href="${s.url}?download=1" title="${t("download")}">${exportFmt === "mp3" || s.file.endsWith(".mp3") ? "MP3" : "WAV"}</a>`,
       lyr && `<button class="sek icon txt ${openLyrics.has(s.id) ? "on" : ""}" data-a="lyrics" title="${t("show_lyrics")}">TXT</button>`,
       folders.folders.length > 0 && `<button class="sek icon" data-a="move" title="${t("move")}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>`,
       `<button class="sek icon" data-a="more" title="${t("more")}">＋</button>`,
@@ -859,7 +860,9 @@ async function checkHealth() {
 const dlg = $("#settingsDlg"), sf = $("#settingsForm");
 $("#btnSettings").onclick = async () => {
   const s = await api("/api/settings");
-  for (const k of ["server_url", "lm_url", "timeout_minutes", "songs_dir", "dit", "lm_device"]) sf[k].value = s[k];
+  for (const k of ["server_url", "lm_url", "timeout_minutes", "songs_dir", "dit", "lm_device", "export_format"]) sf[k].value = s[k];
+  sf.export_format.querySelector('option[value="mp3"]').disabled = !s.mp3_available;   // MP3 nur, wenn der Wandler der Engine da ist
+  $("#expHint").hidden = s.mp3_available;
   sf.dit.querySelector('option[value="xl"]').disabled = !s.dit_xl_available;   // XL nur wählbar, wenn die Datei da ist
   $("#ditHint").hidden = s.dit_xl_available;
   sf.songs_dir.placeholder = s.songs_dir_default;   // Standard als Platzhalter, leer lassen = Standard
@@ -867,7 +870,7 @@ $("#btnSettings").onclick = async () => {
 };
 const saveSettings = () => api("/api/settings", { method: "PUT", body: JSON.stringify({
   server_url: sf.server_url.value.trim(), lm_url: sf.lm_url.value.trim(), timeout_minutes: Number(sf.timeout_minutes.value) || 30,
-  songs_dir: sf.songs_dir.value.trim(), dit: sf.dit.value, lm_device: sf.lm_device.value }) }).catch((err) => { alert(err.message); $("#btnSettings").click(); });
+  songs_dir: sf.songs_dir.value.trim(), dit: sf.dit.value, lm_device: sf.lm_device.value, export_format: sf.export_format.value }) }).catch((err) => { alert(err.message); $("#btnSettings").click(); });
 // Anordnung: untereinander oder Generator links / Bibliothek rechts
 function setLayout(l) {
   document.querySelector(".wrap").classList.toggle("side", l === "side");
@@ -933,7 +936,8 @@ $("#stopBtn").onclick = async () => {
   } catch (e) { $("#stopInfo").className = "small err-t"; $("#stopInfo").textContent = e.message; refresh(); }
 };
 
-dlg.addEventListener("close", async () => { if (dlg.returnValue === "save") { await saveSettings(); checkHealth(); } });
+const loadExportFmt = () => api("/api/settings").then((s) => { exportFmt = s.export_format === "mp3" ? "mp3" : "wav"; }).catch(() => {});
+dlg.addEventListener("close", async () => { if (dlg.returnValue === "save") { await saveSettings(); await loadExportFmt(); render(); checkHealth(); } });
 
 // Sprachumschalter (DE | EN)
 $("#uiLang").addEventListener("change", (e) => setLang(e.target.value));
@@ -944,4 +948,5 @@ document.addEventListener("langchange", () => {
 
 checkHealth();
 setInterval(checkHealth, 15000);
+loadExportFmt().then(() => render());
 refresh();

@@ -43,6 +43,7 @@ Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acest
 - **Music Generator ON** startet Modellserver und App und öffnet http://localhost:8765
 - **Music Generator OFF** beendet alles und schließt die Browser-Tabs
 - Oberfläche in zwölf Sprachen (Auswahl oben rechts): Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Türkisch, Polnisch, Russisch, Ukrainisch, Japanisch, Chinesisch. Korrekturen an `static/i18n.js` sind willkommen.
+- **Export:** Unter Zahnrad › Export wählst du, ob der Download (auch das ZIP) als **WAV** (verlustfrei, wie erzeugt) oder als **MP3** (192 kbit/s, deutlich kleiner) kommt. Die Bibliothek behält immer das WAV; MP3 wird beim Download daraus gemacht und zwischengespeichert (`data/export`, darf gelöscht werden).
 - **Idee aufnehmen** (Mikrofon-Knopf oben in der Kopfzeile): gedrückt halten, 5 bis 30 Sekunden summen, pfeifen oder singen. Die App beschreibt die Aufnahme und füllt Prompt, Tempo, Tonart und Takt aus; Stil und Länge bestimmst du. Die Melodie selbst wird nicht übernommen. Es wird nichts gespeichert, alles läuft lokal.
 
 ### Bedienung mit Screenreader

@@ -299,16 +299,58 @@ async def delete_song(sid: str):
         return {"cancelled": True}
     if r["file"]:
         (db.songs_dir() / r["file"]).unlink(missing_ok=True)
+    for old in (db.DATA / "export").glob(f"{sid}_*.mp3"):   # umgewandelte MP3-Kopien des Downloads
+        old.unlink(missing_ok=True)
     db.execute("DELETE FROM songs WHERE id=?", (sid,))
     return {"deleted": True}
 
 
+MP3_KBPS = 192
+
+
+def _mp3_tool() -> Path | None:
+    """Der MP3-Wandler der Engine (mp3-codec), wenn er mitgeliefert wurde."""
+    b = db.ROOT / "engine" / "acestep.cpp" / "build"
+    for p in (b / "mp3-codec", b / "mp3-codec.exe", b / "Release" / "mp3-codec.exe", b / "bin" / "mp3-codec.exe"):
+        if p.is_file():
+            return p
+    return None
+
+
+def _export_file(r: dict, lang: str = "de") -> Path:
+    """Datei für den Download: das Original (WAV) oder, wenn unter Einstellungen MP3 gewählt ist, eine umgewandelte Kopie.
+    Die Bibliothek behält immer das verlustfreie Original; die MP3 liegt nur als Zwischenspeicher in data/export."""
+    src = db.songs_dir() / r["file"]
+    if db.get_settings().get("export_format") != "mp3" or src.suffix.lower() == ".mp3":
+        return src
+    tool = _mp3_tool()
+    if not tool:
+        raise HTTPException(500, tr(lang, "mp3_failed"))
+    cache = db.DATA / "export"
+    cache.mkdir(exist_ok=True)
+    out = cache / f"{r['id']}_{MP3_KBPS}.mp3"
+    if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
+        return out
+    part = cache / f"{r['id']}_{MP3_KBPS}.part.mp3"
+    try:
+        res = subprocess.run([str(tool), "-i", str(src), "-o", str(part), "-b", str(MP3_KBPS)],
+                             capture_output=True, timeout=180)
+    except (OSError, subprocess.TimeoutExpired):
+        part.unlink(missing_ok=True)
+        raise HTTPException(500, tr(lang, "mp3_failed"))
+    if res.returncode or not part.is_file() or part.stat().st_size < 1000:
+        part.unlink(missing_ok=True)
+        raise HTTPException(500, tr(lang, "mp3_failed"))
+    part.replace(out)
+    return out
+
+
 @app.get("/api/songs/{sid}/audio")
-def song_audio(sid: str, download: bool = False):
+def song_audio(sid: str, download: bool = False, x_lang: str = Header("de")):
     r = db.one("SELECT * FROM songs WHERE id=?", (sid,))
     if not r or not r["file"]:
         raise HTTPException(404)
-    path = db.songs_dir() / r["file"]
+    path = _export_file(r, x_lang) if download else db.songs_dir() / r["file"]
     name = None
     if download:
         base = r["title"] or r["caption"][:40]
@@ -370,9 +412,9 @@ def download_zip(folder: str = "", x_lang: str = Header("de")):
     zip_name = clean(f["name"] if f else "Music Generator") or "Music Generator"
     lt, used = letters(), set()
     tmp = tempfile.NamedTemporaryFile(prefix="mg-", suffix=".zip", dir=db.DATA, delete=False)
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:   # WAV lässt sich kaum packen -> nur bündeln
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:   # WAV und MP3 lassen sich kaum packen -> nur bündeln
         for r in rows:
-            path = db.songs_dir() / r["file"]
+            path = _export_file(r, x_lang)
             base = " ".join(x for x in (clean(r["title"] or r["caption"][:40]) or "Song", lt.get(r["id"], "")) if x)
             name = f"{base}{path.suffix}"
             if name.lower() in used:
@@ -394,7 +436,7 @@ def queue():
 
 @app.get("/api/settings")
 def get_settings():
-    return {**db.get_settings(), "lm_device": db.lm_device(), "songs_dir_default": str(db.SONGS_DIR),
+    return {**db.get_settings(), "lm_device": db.lm_device(), "mp3_available": _mp3_tool() is not None, "songs_dir_default": str(db.SONGS_DIR),
             "dit_xl_available": (db.MODELS_DIR / DIT_MODELS["xl"]).is_file()}
 
 
@@ -415,6 +457,10 @@ def put_settings(values: dict, x_lang: str = Header("de")):
             values["dit"] = "standard"
         if values["dit"] == "xl" and not (db.MODELS_DIR / DIT_MODELS["xl"]).is_file():
             raise HTTPException(400, tr(x_lang, "xl_missing"))
+    if "export_format" in values:
+        values["export_format"] = "mp3" if values["export_format"] == "mp3" else "wav"
+        if values["export_format"] == "mp3" and not _mp3_tool():
+            raise HTTPException(400, tr(x_lang, "mp3_failed"))
     if "lm_device" in values:   # steht nicht in der Datenbank, sondern in data/engine.conf (gilt nach OFF und ON)
         dev = values.pop("lm_device")
         db.set_lm_device("cpu" if dev == "cpu" else "auto")

@@ -3,6 +3,20 @@
 LANGS = ("de", "en", "es", "fr", "it", "pt", "tr", "pl", "ru", "uk", "ja", "zh")
 
 MSG = {
+    "mp3_failed": {
+        "de": "Umwandlung in MP3 fehlgeschlagen. In den Einstellungen unter „Export“ WAV wählen.",
+        "en": "Conversion to MP3 failed. Choose WAV under “Export” in the settings.",
+        "es": "Falló la conversión a MP3. Elige WAV en «Exportar» en los ajustes.",
+        "fr": "La conversion en MP3 a échoué. Choisissez WAV sous « Export » dans les réglages.",
+        "it": "Conversione in MP3 non riuscita. Scegli WAV sotto «Esporta» nelle impostazioni.",
+        "pt": "Falha na conversão para MP3. Escolha WAV em «Exportar» nas configurações.",
+        "tr": "MP3'e dönüştürme başarısız. Ayarlarda «Dışa aktar» altında WAV seçin.",
+        "pl": "Konwersja do MP3 nie powiodła się. W ustawieniach w „Eksport” wybierz WAV.",
+        "ru": "Не удалось преобразовать в MP3. В настройках в разделе «Экспорт» выберите WAV.",
+        "uk": "Не вдалося перетворити на MP3. У налаштуваннях у розділі «Експорт» оберіть WAV.",
+        "ja": "MP3への変換に失敗しました。設定の「エクスポート」でWAVを選んでください。",
+        "zh": "转换为 MP3 失败。请在设置的“导出”中选择 WAV。",
+    },
     "no_prompt": {
         "de": "Prompt oder Stil fehlt",
         "en": "Prompt or style missing",
