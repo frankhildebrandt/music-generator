@@ -129,7 +129,9 @@ for ((i=0;i<120;i++)); do if ! kill -0 "$test_pid" 2>/dev/null; then break; fi; 
 [[ $ready == 1 ]] || { echo 'Server health check failed; see data/selftest.log' >&2; exit 1; }
 if ! uv run python scripts/metal_selftest.py "$TEST_PORT" "$LM_FILE"; then MODE=split; echo 'Single-mode inference failed; selected split mode.'; fi
 cleanup; trap - EXIT
+OLD_DEVICE=""; [[ -f "$CONF" ]] && OLD_DEVICE=$(sed -n 's/^LM_DEVICE=//p' "$CONF" | tail -1)   # Wahl aus den Einstellungen (Sprachmodell nur auf der CPU) bleibt erhalten
 conf_tmp=$(mktemp "$DATA/engine.conf.XXXXXX")
 printf 'MODE=%s\nLM_FILE=%s\nTESTED_REV=%s\nVAE_CHUNK=\nBACKEND=%s\n' "$MODE" "$LM_FILE" "$ACESTEP_REV" "$BACKEND" > "$conf_tmp"
+[[ "$OLD_DEVICE" == cpu ]] && echo "LM_DEVICE=cpu" >> "$conf_tmp"
 mv "$conf_tmp" "$CONF"
 echo "Installation finished: backend=$BACKEND mode=$MODE. Start using ./ubuntu.sh --start"
