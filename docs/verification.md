@@ -1,5 +1,13 @@
 # Desktop verification — 2026-10-21
 
+Setup verification optimization (0.2.1):
+
+- On the same M5 Pro, checking the same five real models (12.51 GiB, including 4B and XL) with an empty verification cache took 26.351 seconds before and 6.444 seconds after enabling ARM SHA-256 acceleration and increasing the read buffer. This is about 4.1× faster (76% less time). The OS file cache was not cleared; these figures measure model verification, not engine startup or the language-model self-test.
+- Reusing the existing 0.2.0 verification cache took 0.813 ms after the change. Successful downloads and checks now populate the same persistent cache immediately, including after promoting a `.part` file. Subsequent setup attempts and launches no longer hash those files again while their canonical path, checksum, length and modification time match.
+- Verification progress now reports actual bytes, including during startup, and engine startup is displayed separately. Startup phase timings are written to the desktop log. Hardware detection refreshes RAM only instead of collecting process and CPU statistics.
+- Local TypeScript/Vite, ESLint, three frontend tests, 29 Rust integration tests, Rustfmt and Clippy passed. Added regressions cover persistent reuse, changed content/checksums, a damaged cache, cancellation during verification and reuse of downloaded files without another checksum pass.
+- Portable-bundle verification selects the current application version explicitly, so an older package in `release/` cannot accidentally satisfy the check.
+
 Local environment: macOS 26.6.2, Apple M5 Pro, 64 GiB RAM; application version 0.2.0.
 
 App Sandbox and DMG follow-up:

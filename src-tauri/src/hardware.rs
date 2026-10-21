@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::process::Command;
-use sysinfo::System;
+use sysinfo::{MemoryRefreshKind, System};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Hardware {
@@ -59,7 +59,8 @@ pub fn recommend(ram: u64, vram: Option<u64>) -> (&'static str, Option<u32>) {
 }
 
 pub fn inspect() -> Hardware {
-    let sys = System::new_all();
+    let mut sys = System::new();
+    sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
     let ram = sys.total_memory();
     let (gpu, vram) = adapter();
     let (lm, chunk) = recommend(ram, vram);
