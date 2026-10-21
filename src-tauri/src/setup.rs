@@ -1,5 +1,5 @@
 use crate::{
-    download::{download_model, ensure_space, DownloadProgress},
+    download::{download_model, ensure_space},
     engine::client::selftest_ok,
     error::{message, Result},
     hardware, manifest,
@@ -34,14 +34,6 @@ pub fn fingerprint(lm: &str, gpu: &str) -> String {
 }
 
 pub async fn models_valid(state: &AppState, cancel: &CancellationToken) -> Result<bool> {
-    models_valid_with_progress(state, cancel, |_| {}).await
-}
-
-pub async fn models_valid_with_progress(
-    state: &AppState,
-    cancel: &CancellationToken,
-    progress: impl Fn(DownloadProgress),
-) -> Result<bool> {
     let settings = state.db.settings()?;
     if !settings.setup_complete {
         return Ok(false);
@@ -59,15 +51,7 @@ pub async fn models_valid_with_progress(
             return Ok(false);
         };
         if verifier
-            .verify(&path, &model.sha256, cancel, |downloaded, total| {
-                progress(DownloadProgress {
-                    file: model.file.clone(),
-                    phase: "verifying",
-                    downloaded,
-                    total,
-                    bytes_per_second: 0,
-                });
-            })
+            .verify(&path, &model.sha256, cancel, |_, _| {})
             .await?
             == Verification::Invalid
         {
@@ -194,12 +178,15 @@ async fn configure_inner(
             ));
         }
     }
-    settings.tested_fingerprint = fingerprint;
-    settings.setup_complete = true;
-    state.db.save_settings(&settings)?;
     app.asset_protocol_scope()
         .allow_directory(&songs, false)
         .map_err(|e| message(e.to_string()))?;
+    if cancel.is_cancelled() {
+        return Err(crate::error::Error::Cancelled);
+    }
+    settings.tested_fingerprint = fingerprint;
+    settings.setup_complete = true;
+    state.db.save_settings(&settings)?;
     state.ready.store(true, Ordering::SeqCst);
     state.wake.notify_one();
     state.changed(app);

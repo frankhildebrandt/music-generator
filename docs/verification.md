@@ -1,5 +1,13 @@
 # Desktop verification — 2026-10-21
 
+Persistent first-run completion (0.2.2):
+
+- Startup now trusts the existing SQLite `setup_complete` flag. It neither scans model files nor waits for the engine. Existing completed installations need no migration or repeated hardware test.
+- Generation/analysis starts the engine on demand and validates model availability/integrity then. Pending jobs resume through the existing worker. The health command treats a configured, idle app as healthy rather than incorrectly showing it as offline.
+- Completion is committed only after successful folder scoping and a final cancellation check. Failures during later model use do not erase a previously completed setup or prevent access to the library.
+- A real SQLite restart regression verifies that unfinished setup remains unfinished, completed setup restores readiness without models or engine resources, no engine is started, and missing models are reported on first use while completion stays saved.
+- Local TypeScript/Vite, ESLint, three frontend tests, 30 Rust integration tests, Rustfmt and Clippy passed. No new end-to-end GUI startup timing is claimed here.
+
 Setup verification optimization (0.2.1):
 
 - On the same M5 Pro, checking the same five real models (12.51 GiB, including 4B and XL) with an empty verification cache took 26.351 seconds before and 6.444 seconds after enabling ARM SHA-256 acceleration and increasing the read buffer. This is about 4.1× faster (76% less time). The OS file cache was not cleared; these figures measure model verification, not engine startup or the language-model self-test.

@@ -28,6 +28,8 @@ These first builds are unsigned test builds. macOS Gatekeeper and Windows SmartS
 
 The first setup needs several GB and internet access. Model URLs, immutable revisions and SHA-256 checksums are in `models/manifest.json`. Generation, recording, analysis and playback are local after setup. Update checks only contact GitHub when requested.
 
+The assistant saves its completion status in SQLite only after downloads, integrity checks, the hardware test and folder access have succeeded. Later launches use that saved result and open the studio directly, without a model scan or waiting for the engine. Existing completed installations use this behavior without repeating setup. The engine starts when generation or analysis needs it; pending jobs also resume in the background. Models are checked at that point, using their saved checksum results where possible. Missing or invalid models report an error directing you to model management; the library remains accessible. Repeat setup and hardware testing explicitly through Settings → Models and hardware test.
+
 ## Data and updates
 
 - macOS: `~/Library/Containers/de.alphatester.music-generator/Data/Library/Application Support/de.alphatester.music-generator/`
