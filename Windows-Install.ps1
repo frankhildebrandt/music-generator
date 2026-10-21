@@ -142,7 +142,8 @@ Write-Host "  $(& git --version)"
 
 Schritt "uv (Python environment)"
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    try { Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression } catch { Abbruch "uv could not be installed: $_" }
+    # Eigener Scope (& { }): das uv-Skript definiert u. a. eine Funktion „Download“ und würde unsere sonst überschreiben
+    try { & { Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression } } catch { Abbruch "uv could not be installed: $_" }
     $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
     if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { Abbruch "uv could not be installed." }
 }
