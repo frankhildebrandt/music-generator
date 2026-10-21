@@ -1,5 +1,5 @@
 use crate::{
-    db::{safe_song_path, Database},
+    db::Database,
     error::{message, Result},
     types::id,
 };
@@ -9,10 +9,11 @@ use std::path::{Path, PathBuf};
 
 // Import from a SQLite backup, so WAL data is included without editing the old installation.
 pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
-    if db
-        .lock()
-        .query_row("SELECT COUNT(*) FROM songs", [], |r| r.get::<_, u32>(0))?
-        > 0
+    if !db.pro_projects()?.is_empty()
+        || db
+            .lock()
+            .query_row("SELECT COUNT(*) FROM songs", [], |r| r.get::<_, u32>(0))?
+            > 0
         || db
             .lock()
             .query_row("SELECT COUNT(*) FROM folders", [], |r| r.get::<_, u32>(0))?
@@ -84,26 +85,31 @@ pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
             }
         }
         let mut stmt = con.prepare("SELECT file FROM songs WHERE file IS NOT NULL")?;
-        let files = stmt
+        let mut files = stmt
             .query_map([], |r| r.get::<_, String>(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         drop(stmt);
         drop(con);
+        files.extend(staged.pro_asset_names()?);
         let dest = PathBuf::from(db.settings()?.songs_dir);
         std::fs::create_dir_all(&dest)?;
         let bytes = files
             .iter()
-            .map(|f| safe_song_path(&songs_source, f).and_then(|p| Ok(p.metadata()?.len())))
+            .map(|f| {
+                crate::pro::assets::library_path(&songs_source, f)
+                    .and_then(|p| Ok(p.metadata()?.len()))
+            })
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .sum::<u64>();
         crate::download::ensure_space(&dest, bytes + 64 * 1024 * 1024)?;
         for name in &files {
-            let to = safe_song_path(&dest, name)?;
+            let to = crate::pro::assets::library_path(&dest, name)?;
             if to.exists() {
                 return Err(message(format!("Song destination already contains {name}")));
             }
-            let from = safe_song_path(&songs_source, name)?;
+            let from = crate::pro::assets::library_path(&songs_source, name)?;
+            std::fs::create_dir_all(to.parent().unwrap())?;
             copied.push(to.clone());
             std::fs::copy(from, to)?;
         }
@@ -120,6 +126,12 @@ pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
                 "INSERT INTO folders SELECT id,name,created_at FROM legacy.folders",
                 [],
             )?;
+            for table in ["pro_projects", "pro_takes", "pro_jobs"] {
+                tx.execute(
+                    &format!("INSERT INTO {table} SELECT * FROM legacy.{table}"),
+                    [],
+                )?;
+            }
             tx.commit()?;
             Ok(count)
         })();

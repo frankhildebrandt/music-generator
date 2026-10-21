@@ -5,12 +5,14 @@ import { initializeDesktop } from "./desktop";
 import { element } from "./dom";
 import { showSetup } from "./setup";
 import type { Bootstrap } from "./types";
+import { initializeModes } from "./modes";
 
 let bootstrap: Bootstrap;
 async function showStudio(): Promise<void> {
   element("#setupScreen").hidden = true; element("#studio").hidden = false;
   await import("./studio.js");
   document.dispatchEvent(new Event("studio-ready"));
+  initializeModes();
 }
 
 async function start(): Promise<void> {

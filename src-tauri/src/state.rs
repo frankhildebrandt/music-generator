@@ -44,6 +44,7 @@ impl AppState {
 
     pub fn changed(&self, app: &AppHandle) {
         let _ = app.emit("library-changed", ());
+        let _ = app.emit("pro-changed", ());
     }
 
     // Restore the durable wizard result without reading models or starting the engine.
@@ -140,6 +141,30 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
             }
         };
         let Some((sid, params)) = next else {
+            match state.db.pro_claim() {
+                Ok(Some((jid, project, request))) => {
+                    let cancel = state.shutdown.child_token();
+                    *state.running.lock().unwrap() = Some((jid.clone(), cancel.clone()));
+                    if !state.db.pro_running(&jid).unwrap_or(false) {
+                        cancel.cancel();
+                    }
+                    state.changed(&app);
+                    let _awake = crate::power::KeepAwake::new();
+                    let outcome =
+                        crate::pro::jobs::run(&state, &app, &jid, project, request, &cancel).await;
+                    *state.running.lock().unwrap() = None;
+                    if let Err(error) = outcome {
+                        if !state.shutdown.is_cancelled() {
+                            let _ = state.db.pro_job_status(&jid, "error", &error.to_string());
+                        }
+                    }
+                    state.changed(&app);
+                    drop(operation);
+                    continue;
+                }
+                Err(error) => tracing::error!("Pro queue: {error}"),
+                _ => {}
+            }
             drop(operation);
             tokio::select! { _ = state.shutdown.cancelled() => break, _ = wake => continue }
         };

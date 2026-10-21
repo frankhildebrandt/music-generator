@@ -30,7 +30,7 @@ pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
     let needs_setup = !settings.setup_complete;
     if !needs_setup {
         app.asset_protocol_scope()
-            .allow_directory(&settings.songs_dir, false)
+            .allow_directory(&settings.songs_dir, true)
             .map_err(|e| message(e.to_string()))?;
     }
     state.restore_setup()?;
@@ -256,7 +256,7 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
         state.restore_setup()?;
     }
     app.asset_protocol_scope()
-        .allow_directory(&settings.songs_dir, false)
+        .allow_directory(&settings.songs_dir, true)
         .map_err(|e| message(e.to_string()))?;
     // Apply timing changes without losing the synthesis log used by diagnostics.
     if let Some(engine) = state.engine.lock().await.as_mut() {
