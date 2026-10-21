@@ -332,9 +332,10 @@ if ($LM_DEVICE -eq "cpu") {
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
     Write-Host "  -> mode $MODE"
 }
-$conf = @("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP", "VAE_CHUNK=$VAE_CHUNK")
-if ($LM_DEVICE -eq "cpu") { $conf += "LM_DEVICE=cpu" }
-$conf | Set-Content $CONF
+# Achtung: PowerShell unterscheidet Variablennamen nicht nach Groß-/Kleinschreibung ($conf wäre derselbe Name wie $CONF, der Pfad)
+$confZeilen = @("MODE=$MODE", "LM_FILE=$LM_FILE", "TESTED_REV=$STAMP", "VAE_CHUNK=$VAE_CHUNK")
+if ($LM_DEVICE -eq "cpu") { $confZeilen += "LM_DEVICE=cpu" }
+$confZeilen | Set-Content $CONF
 
 # --- 7. Verknüpfungen -----------------------------------------------------------
 Schritt "Shortcuts (program folder and desktop)"
