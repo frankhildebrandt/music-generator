@@ -83,7 +83,7 @@ Das Skript zeigt, was es entfernt, und fragt vorher. Es beendet die Server, lös
 
 ## Linux (Arch Linux & Derivate)
 
-Unter Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
+Der automatische Installer ist **nur für Arch Linux** und Derivate (CachyOS, EndeavourOS, Manjaro), er nutzt `pacman`. Auf Ubuntu/Debian/Fedora bitte die Einrichtung [von Hand](#andere-linux-distributionen-von-hand) unten nehmen (nur CPU: statt `buildcpu.sh` geht auch `cmake -S . -B build -DGGML_NATIVE=ON && cmake --build build -j`). Für Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
 
 ```bash
 git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator

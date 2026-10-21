@@ -542,7 +542,7 @@ installiere() {
     elif [ "$CHOSEN_BACKEND" = "vulkan" ]; then
       CMAKE_FLAGS=(-DGGML_VULKAN=ON)
     else
-      CMAKE_FLAGS=(-DGGML_CPU_ALL_VARIANTS=ON)
+      CMAKE_FLAGS=(-DGGML_NATIVE=ON)   # reine CPU-Variante; ALL_VARIANTS bräuchte zusätzlich GGML_BACKEND_DL
     fi
 
     (
@@ -558,7 +558,7 @@ installiere() {
           (
             cd "$ENGINE"
             rm -rf build
-            cmake -S . -B build -DGGML_CPU_ALL_VARIANTS=ON
+            cmake -S . -B build -DGGML_NATIVE=ON
             cmake --build build --config Release -j "$(nproc)"
           ) > "$DATA/build.log" 2>&1 || abbruch "The CPU build failed as well. See data/build.log"
         else
