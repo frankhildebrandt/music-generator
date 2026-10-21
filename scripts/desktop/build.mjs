@@ -11,6 +11,8 @@ const cli = path.join(root,"node_modules/@tauri-apps/cli/tauri.js");
 const target = path.join(root,"src-tauri/target/release");
 let artifact;
 if (platform === "macos") {
+  // GitHub exposes absent secrets as empty strings; Tauri treats even an empty certificate as configured.
+  for (const key of Object.keys(process.env)) if (key.startsWith("APPLE_") && !process.env[key]) delete process.env[key];
   await run(process.execPath, [cli,"build","--bundles","app"]);
   const app = path.join(target,"bundle/macos/Music Generator.app");
   if (!process.env.APPLE_SIGNING_IDENTITY) {
