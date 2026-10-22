@@ -1,5 +1,12 @@
 # Desktop verification — 2026-10-21
 
+Intel desktop follow-up (0.2.4, 2026-10-22):
+
+- Separate native x64 DMG/ZIP with a macOS 13.3 deployment target, CPU-only pinned engine, portable runtime-selected CPU variants, sandbox inheritance and native window controls. A `macos-15-intel` CI job builds/tests the Intel packages alongside the existing three platform jobs.
+- Local checks passed: TypeScript/Vite, ESLint, six frontend tests, one Node build-policy test, 37 Rust tests, Rustfmt and Clippy with warnings as errors. The new Rust cases verify that Intel uses one CPU server even with saved split/CPU preferences, and that update assets are selected by architecture.
+- Bundle verification additionally checks every Mach-O architecture/deployment target, the app's minimum-OS plist value and absence of a Metal backend in Intel packages. The packaged sandbox probe checks a shared CPU LM/synthesis server on Intel, while retaining the separate-CPU-LM assertion on Apple Silicon. Existing actual sandbox enforcement and WAV/MP3/ZIP checks apply to both architectures.
+- Native Intel CI results will be recorded after completion. This host is Apple Silicon; no local Intel hardware inference or macOS 13.3 GUI/audio acceptance is claimed. CPU setup checks engine startup/health and skips the GPU correctness benchmark; it does not perform music inference. Older Intel machines can take many minutes per song. Existing 0.2.3 release artifacts are unchanged.
+
 Upstream synchronization (0.2.3, 2026-10-22): see [upstream-sync.md](upstream-sync.md) for the original commits, Rust/Tauri adaptations and new verification coverage. Local checks pass: 35 Rust tests, six frontend tests, TypeScript/Vite, ESLint, Rustfmt and Clippy. Earlier sections below describe the corresponding historical test versions.
 
 Persistent first-run completion (0.2.2):

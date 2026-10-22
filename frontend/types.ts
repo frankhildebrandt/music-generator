@@ -1,6 +1,7 @@
 export interface Settings {
   models_dir: string; songs_dir: string; lm_model: string; dit: "standard" | "xl";
   lm_device: "auto" | "cpu"; export_format: "wav" | "mp3"; mp3_available?: boolean;
+  cpu_only?: boolean;
   poll_interval: number; timeout_minutes: number; mode: "single" | "split";
   vae_chunk: number | null; tested_fingerprint: string; setup_complete: boolean;
   songs_dir_default?: string; dit_xl_available?: boolean;
@@ -26,7 +27,7 @@ export interface Update { available: boolean; current: string; latest?: string; 
 export interface Model { file: string; estimated_bytes: number; sha256: string; kind: string }
 export interface Bootstrap {
   needs_setup: boolean; settings: Settings; version: string; data_dir: string; error: string | null;
-  hardware: { ram_bytes: number; gpu: string; vram_bytes: number | null; recommended_lm: string; vae_chunk: number | null; platform: string };
+  hardware: { ram_bytes: number; gpu: string; vram_bytes: number | null; recommended_lm: string; vae_chunk: number | null; platform: string; cpu_only: boolean };
   manifest: { version: number; base_url: string; models: Model[] };
 }
 export interface SetupRequest { lm: string; xl: boolean; models_dir: string; songs_dir: string }

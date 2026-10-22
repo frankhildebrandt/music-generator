@@ -1,6 +1,6 @@
 {
   "name": "music-generator-desktop",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "check": "tsc --noEmit",
     "test": "vitest run",
+    "test:desktop": "node --test scripts/desktop/targets.test.mjs",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "engine:prepare": "node scripts/desktop/prepare-engine.mjs",
     "bundle": "node scripts/desktop/build.mjs",

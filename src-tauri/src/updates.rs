@@ -20,13 +20,7 @@ pub async fn check() -> Result<Value> {
         .trim_start_matches('v');
     let version = semver::Version::parse(latest).map_err(|e| message(e.to_string()))?;
     let current = semver::Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
-    let suffix = if cfg!(target_os = "macos") {
-        "macos-arm64.zip"
-    } else if cfg!(windows) {
-        "windows-x64.zip"
-    } else {
-        "linux-x64.AppImage"
-    };
+    let suffix = asset_suffix(std::env::consts::OS, std::env::consts::ARCH);
     let asset = release["assets"].as_array().and_then(|assets| {
         assets
             .iter()
@@ -40,4 +34,29 @@ pub async fn check() -> Result<Value> {
     Ok(
         json!({"available":version>current && url.is_some(),"current":current.to_string(),"latest":latest,"url":url,"notes":release["body"]}),
     )
+}
+
+fn asset_suffix(os: &str, arch: &str) -> &'static str {
+    if os == "macos" {
+        if arch == "x86_64" {
+            "macos-x64.zip"
+        } else {
+            "macos-arm64.zip"
+        }
+    } else if os == "windows" {
+        "windows-x64.zip"
+    } else {
+        "linux-x64.AppImage"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn updates_select_the_correct_architecture() {
+        assert_eq!(super::asset_suffix("macos", "x86_64"), "macos-x64.zip");
+        assert_eq!(super::asset_suffix("macos", "aarch64"), "macos-arm64.zip");
+        assert_eq!(super::asset_suffix("windows", "x86_64"), "windows-x64.zip");
+        assert_eq!(super::asset_suffix("linux", "x86_64"), "linux-x64.AppImage");
+    }
 }

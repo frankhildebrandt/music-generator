@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { chmod, mkdtemp, mkdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { exists, files, hash, platform, root, run, verifyEngine } from "./common.mjs";
+import { architecture, exists, files, hash, platform, root, run, target, verifyEngine } from "./common.mjs";
 import { verifyMacSandbox } from "./verify-macos-sandbox.mjs";
 
 // Exercise the distributed files from a relocated directory, without loading any models.
 const output = path.join(root, "release");
 const diskImage = process.argv.includes("--dmg");
 assert(!diskImage || platform === "macos", "DMG verification requires macOS");
-const suffix = diskImage ? "-macos-arm64.dmg" : platform === "linux" ? "-linux-x64.AppImage" : `-${platform}-${platform === "macos" ? "arm64" : "x64"}.zip`;
+const suffix = diskImage ? `-macos-${architecture}.dmg` : platform === "linux" ? "-linux-x64.AppImage" : `-${platform}-${architecture}.zip`;
 const { version } = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const filename = `Music-Generator-${version}${suffix}`;
 const artifact = path.join(output, filename);
@@ -53,6 +53,24 @@ try {
     }
   }
   if (platform === "macos") {
+    const expectedArch = architecture === "x64" ? "x86_64" : "arm64";
+    for (const file of extracted) {
+      const bytes = await readFile(file);
+      if (bytes.length < 4 || ![0xfeedfacf,0xcffaedfe,0xcafebabe].includes(bytes.readUInt32BE(0))) continue;
+      assert.equal(execFileSync("lipo", ["-archs", file], { encoding: "utf8" }).trim(), expectedArch, `Wrong Mach-O architecture: ${file}`);
+      const headers = execFileSync("otool", ["-l", file], { encoding: "utf8" });
+      const versions = [...headers.matchAll(/cmd LC_BUILD_VERSION[\s\S]*?\n\s+minos ([\d.]+)|cmd LC_VERSION_MIN_MACOSX[\s\S]*?\n\s+version ([\d.]+)/g)];
+      assert(versions.length, `No macOS deployment target in ${file}`);
+      for (const version of versions) {
+        const actual = (version[1] || version[2]).split(".").map(Number); while (actual.length < 3) actual.push(0);
+        const limit = target.minimumSystemVersion.split(".").map(Number); limit.push(0);
+        assert(actual[0] < limit[0] || (actual[0] === limit[0] && (actual[1] < limit[1] || (actual[1] === limit[1] && actual[2] <= limit[2]))), `Higher deployment target in ${file}: ${version[1] || version[2]}`);
+      }
+    }
+    const bundle = path.dirname(path.dirname(path.dirname(app)));
+    const minimum = execFileSync("/usr/libexec/PlistBuddy", ["-c", "Print :LSMinimumSystemVersion", path.join(bundle, "Contents/Info.plist")], { encoding: "utf8" }).trim();
+    assert.equal(minimum, target.minimumSystemVersion);
+    if (target.cpuOnly) assert(!extracted.some(file => /ggml-metal/i.test(path.basename(file))), "Intel bundle must not include a Metal backend");
     await verifyMacSandbox(app, engine);
   } else {
   const listener = createServer();

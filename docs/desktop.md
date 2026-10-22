@@ -7,6 +7,7 @@ Download the bundle for your platform from https://github.com/frankhildebrandt/m
 | Platform | Bundle | Requirements |
 | --- | --- | --- |
 | macOS | `Music-Generator-VERSION-macos-arm64.dmg` or `.zip` | Apple Silicon, macOS 26+ |
+| macOS Intel (experimental) | `Music-Generator-VERSION-macos-x64.dmg` or `.zip` | Intel x64, macOS 13.3+, at least 8 GiB RAM; CPU only |
 | Windows | `Music-Generator-VERSION-windows-x64.zip` | Windows 10/11 x64, current GPU driver |
 | Linux | `Music-Generator-VERSION-linux-x64.AppImage` | x64; Ubuntu 22.04 or compatible newer distribution, current GPU driver |
 
@@ -15,6 +16,10 @@ Extract the complete ZIP and open Music Generator. Keep the Windows EXE, `engine
 On macOS you can instead open the DMG and drag Music Generator onto its Applications shortcut (or copy it into another folder). Eject the disk image and open the copied app. The DMG contains the same sealed `.app` as the ZIP and does not run an installer. Both downloads include a SHA-256 file. CI verifies the read-only disk image, copies its app into a relocated folder, ejects the image and tests the copied app's signature, engine files, engine startup and shutdown.
 
 macOS uses its native red/yellow/green window controls on the left. Windows and Linux use the custom minimize/maximize/close controls on the right. The title bar is draggable, and the layout fills the window at every supported size.
+
+Intel Macs use a separate native x64 bundle; no Rosetta, Python, Node.js or local compilation is needed. Both language-model inference and synthesis run on the CPU, even when an old profile requests a separate CPU language model. One engine process handles both tasks to avoid duplicating model memory. The Intel engine excludes Metal and includes runtime-selected portable CPU variants rather than instructions tied to the build host. macOS 13.3 is the deployment target (including Accelerate's newer LAPACK API); native CI runs on macOS 15. Actual generation, GUI/audio and minimum-OS acceptance remain manual checks: this is experimental support, not a claim of tests on every Intel Mac or on macOS 13.3.
+
+Expect many minutes per song on older Intel CPUs. Start with a ten-second song, the 0.6B language model and standard sound model; XL remains optional and needs more memory/time. Setup verifies model checksums and engine startup/health, skips the inapplicable GPU benchmark and saves completion normally. It does not claim to have generated a song during setup. CPU performance guidance appears in the assistant and settings in all twelve languages.
 
 These first builds are unsigned test builds. macOS Gatekeeper and Windows SmartScreen can display warnings. There is no installer or requirement to install Python, Node.js, Git, compilers or package managers. GPU drivers are supplied by the operating system/vendor, not by this app. Windows ships WebView2 app-locally. On Windows 10 the app applies Microsoft's required read/execute permissions to that runtime directory; application data is not included in this permission change. Extract onto a local writable drive, not a network share.
 
@@ -75,7 +80,7 @@ npm run bundle
 
 `release/` contains the platform bundle and its SHA-256 file. `npm run bundle` verifies/prepares the engine first. The Rust release build also refuses missing, mismatched or modified engine resources. `npm run build` builds only the frontend.
 
-The preparation script builds the pinned Mac/Linux engine source revisions and checks the pinned Windows archive hash. The Mac revision adds the small `engine-sandbox.mm` bookmark bridge; its patch and build-recipe hashes are recorded alongside runtime-file hashes. Mac CPU code targets portable Apple Silicon and uses relative library paths. The app, supervisor and engine are signed from the inside out with separate parent/child entitlements. Linux builds Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
+The preparation script builds the pinned Mac/Linux engine source revisions and checks the pinned Windows archive hash. The Mac revision adds the small `engine-sandbox.mm` bookmark bridge; its patch and build-recipe hashes are recorded alongside runtime-file hashes. Mac CPU code targets portable Apple Silicon or Intel variants and uses relative library paths. The app, supervisor and engine are signed from the inside out with separate parent/child entitlements. Linux builds Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
 
 The `Desktop bundles` GitHub Actions workflow builds each platform natively and uploads artifacts. A version tag, manual dispatch or push to `codex/desktop-bundles` triggers it; it does not automatically publish a GitHub Release. Linux uses a checksummed Vulkan SDK 1.4.309.0 for its shader compiler, since Ubuntu 22.04 does not provide `glslc` in its standard package archive.
 

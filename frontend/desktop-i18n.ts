@@ -16,8 +16,24 @@ const translations: Record<string, readonly string[]> = {
   zh: ["欢迎使用 Music Generator", "正在检查配置…", "你的电脑", "导入现有曲库", "曲库已导入", "模型文件夹", "浏览…", "语言模型", "推荐", "同时下载 XL 声音模型", "下载 / 可用空间", "下载模型并测试", "准备就绪 — 开始创作", "正在测试语言模型…", "正在测试 CPU 模式…", "正在验证校验和…", "正在下载…", "模型与硬件测试", "返回工作室", "有正在进行的任务或下载。退出吗？ 未完成的歌曲将在下次启动时继续。", "最小化", "最大化 / 还原", "关闭", "下载新版应用包", "歌曲保存在应用之外。更改文件夹将移动现有歌曲。", "请在模型与硬件测试中下载 XL。", "选择文件夹和模型。配置完成后一切都在本地运行。", "选择旧项目文件夹。歌曲和元数据会被复制；现有模型可继续使用。", "正在启动音乐引擎…"],
 };
 
+const intelHints: Record<string, string> = {
+  de: "Intel-Mac: Sprachmodell und Klangerzeugung rechnen auf der CPU. Ein Song kann viele Minuten dauern. Beginne mit 10 Sekunden und dem 0.6B-Sprachmodell. Der Assistent prüft den Engine-Start, ohne den langen GPU-Test auszuführen.",
+  en: "Intel Mac: both language model and sound generation run on the CPU. A song can take many minutes. Start with 10 seconds and the 0.6B language model. Setup checks engine startup without running the lengthy GPU test.",
+  es: "Mac Intel: el modelo de lenguaje y el sonido usan la CPU. Una canción puede tardar muchos minutos. Empieza con 10 segundos y el modelo 0.6B. La configuración comprueba el arranque sin la larga prueba de GPU.",
+  fr: "Mac Intel : le modèle de langage et le son utilisent le CPU. Un morceau peut prendre plusieurs minutes. Commencez par 10 secondes et le modèle 0.6B. La configuration vérifie le démarrage sans le long test GPU.",
+  it: "Mac Intel: modello linguistico e generazione audio usano la CPU. Un brano può richiedere molti minuti. Inizia con 10 secondi e il modello 0.6B. La configurazione verifica l’avvio senza il lungo test GPU.",
+  pt: "Mac Intel: o modelo de linguagem e o som usam a CPU. Uma música pode demorar muitos minutos. Começa com 10 segundos e o modelo 0.6B. A configuração verifica o arranque sem o longo teste de GPU.",
+  tr: "Intel Mac: dil modeli ve ses üretimi CPU üzerinde çalışır. Bir şarkı uzun dakikalar sürebilir. 10 saniye ve 0.6B modeliyle başlayın. Kurulum uzun GPU testi yerine motorun başlamasını kontrol eder.",
+  pl: "Mac Intel: model językowy i dźwięk korzystają z CPU. Utwór może powstawać wiele minut. Zacznij od 10 sekund i modelu 0.6B. Konfiguracja sprawdza uruchomienie bez długiego testu GPU.",
+  ru: "Intel Mac: языковая модель и синтез звука работают на CPU. Создание песни может занять много минут. Начните с 10 секунд и модели 0.6B. Настройка проверяет запуск без долгого теста GPU.",
+  uk: "Intel Mac: мовна модель та синтез звуку працюють на CPU. Створення пісні може тривати багато хвилин. Почніть із 10 секунд і моделі 0.6B. Налаштування перевіряє запуск без тривалого тесту GPU.",
+  ja: "Intel Macでは言語モデルも音声生成もCPUを使います。1曲に何分もかかる場合があります。まず10秒、0.6Bモデルでお試しください。設定では長いGPUテストを省略し、エンジンの起動を確認します。",
+  zh: "Intel Mac 的语言模型和声音生成都使用 CPU。一首歌可能需要很多分钟。建议先尝试 10 秒和 0.6B 模型。设置只检查引擎启动，不运行耗时的 GPU 测试。",
+};
+
 for (const [language, values] of Object.entries(translations)) {
   if (values.length !== keys.length) throw new Error(`Incomplete desktop translation: ${language}`);
   Object.assign(I18N[language as keyof typeof I18N], Object.fromEntries(keys.map((key, i) => [`desktop_${key}`, values[i]])));
+  Object.assign(I18N[language as keyof typeof I18N], { desktop_intel_cpu_hint: intelHints[language] });
 }
 export { keys, translations };

@@ -657,6 +657,7 @@ $("#btnSettings").onclick = async () => {
   for (const k of ["timeout_minutes", "songs_dir", "dit", "lm_device", "export_format"]) sf[k].value = s[k];
   sf.export_format.querySelector("option[value=mp3]").disabled = !s.mp3_available;
   $("#expHint").hidden = s.mp3_available;
+  $("#settingsIntelHint").hidden = !s.cpu_only;
   sf.dit.querySelector('option[value="xl"]').disabled = !s.dit_xl_available;   // XL nur wählbar, wenn die Datei da ist
   $("#ditHint").hidden = s.dit_xl_available;
   sf.songs_dir.placeholder = s.songs_dir_default;   // Standard als Platzhalter, leer lassen = Standard
