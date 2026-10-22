@@ -1,6 +1,6 @@
 # Upstream synchronization — 2026-10-22
 
-Base: rabbitfiremediacreation/music-generator `main` at `91440ee0d3bebcb38ddf96430886d0d8cb0c18fc` (2026-10-21). This commit and its ancestors are merged into the desktop branch; the Python/browser changes are implemented through Rust/Tauri.
+Base: rabbitfiremediacreation/music-generator `main` at `eb19a988e31ab9072e9d0f5f02e158cf710a7e0b` (2026-10-22). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes through `91440ee` are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
 
 | Original changes | Desktop implementation |
 | --- | --- |
@@ -9,6 +9,9 @@ Base: rabbitfiremediacreation/music-generator `main` at `91440ee0d3bebcb38ddf964
 | `91440ee`: WAV / MP3 downloads and ZIP | Native dialogs, 192 kbit/s bundled converter, original WAV retained for playback, source-stamped cache and deletion cleanup, localized errors |
 | `0cc2851`: allow slow first engine startup | Two-minute readiness budget per engine, shared across port retries, with cancellation and owned-process cleanup |
 | Ubuntu/Arch/Windows/macOS installer fixes and usage reports | Desktop bundles continue replacing installers. Updated PDFs and READMEs remain explicitly historical; the new Ubuntu script is archived in `docs/legacy/` |
+| `eb19a98`: Intel-Mac CPU synthesis, installer GPU-test bypass and Python log-based memory hint | Keep the removed Python backend and root installer/start scripts deleted. Intel Macs remain outside the desktop scope; no Intel synthesis support or Python log-tail error hint is introduced. Preserve the updated original README/PDFs and guide sources as historical documentation, and state the desktop platform limit explicitly in the root README |
+
+The `eb19a98` conflict resolution changes documentation only relative to desktop commit `0021f3c`. Application, engine, manifests and build configuration remain unchanged. The published `v0.2.3-test.1` artifacts still correspond to `0021f3c`; this documentation merge does not replace them.
 
 Existing settings migrate through defaults (`auto`, `wav`); the completed first-run flag remains authoritative. Automatic hardware-test fallback is separate from the explicit CPU preference, so selecting Auto does not erase a known CPU fallback. Model management preserves the manual device choice. The app still contains no Python runtime or frontend webserver; Node.js remains a build dependency only.
 
