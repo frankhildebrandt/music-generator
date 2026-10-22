@@ -11,6 +11,7 @@ import email
 import email.policy
 import json
 import time
+from pathlib import Path
 from typing import Awaitable, Callable
 
 import httpx
@@ -147,7 +148,13 @@ class AceStepCpp:
             if r.status_code >= 400:
                 raise EngineError(f"/synth: HTTP {r.status_code} {r.text[:300]}")
             res = await self._wait(c, self.base, str(r.json()["id"]), "Synthese", start, progress)
-            audio, ext = _extract_audio(res)
+            try:
+                audio, ext = _extract_audio(res)
+            except EngineError:
+                hint = _memory_hint()
+                if hint:
+                    raise EngineError(hint)
+                raise
         meta = {k: enriched.get(k) for k in ("bpm", "duration", "keyscale", "timesignature", "vocal_language", "lyrics", "caption")}
         return audio, ext, meta
 
@@ -161,6 +168,22 @@ class AceStepCpp:
             res = await self._wait(c, self.lm_base, str(r.json()["id"]), "Analyse", time.monotonic(), lambda _msg: asyncio.sleep(0))
             data = _extract_json(res)
             return data[0] if isinstance(data, list) else data
+
+
+def _memory_hint() -> str:
+    """Steht im Log des Synthese-Servers, dass der Grafikspeicher nicht reichte (typisch bei Intel-Macs und kleinen Karten)?"""
+    log = Path(__file__).resolve().parent.parent / "data" / "ace-server.log"
+    try:
+        with open(log, "rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - 12000))
+            tail = f.read().decode("utf-8", "replace").lower()
+    except OSError:
+        return ""
+    if "out of memory" in tail or "failed to allocate" in tail:
+        return ("Der Grafikspeicher reicht für diese Songlänge nicht (out of memory). Kürzeren Song wählen oder die Klangerzeugung "
+                "auf der CPU rechnen lassen. / The graphics memory is too small for this song length. Choose a shorter song or run on the CPU.")
+    return ""
 
 
 def _extract_json(res: httpx.Response):

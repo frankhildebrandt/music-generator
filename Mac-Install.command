@@ -57,7 +57,8 @@ echo "  Free disk space: $FREE_GB GB"
 
 if [ "$ARCH" != "arm64" ]; then
   echo ""
-  echo "  Note: Intel Mac. Only Apple Silicon (M1 or newer) has been tested; it may be very slow."
+  echo "  Note: Intel Mac. Only Apple Silicon (M1 or newer) is officially supported. On Intel the model server is"
+  echo "  compiled here (about 2 minutes) and everything runs on the CPU: a 30-second song can take 10+ minutes."
   ja "  Continue anyway?" || abbruch "Cancelled."
 fi
 
@@ -222,6 +223,9 @@ LM_DEVICE="$OLD_DEVICE"                                  # die Wahl aus den Eins
 if [ "$LM_DEVICE" = cpu ]; then
   MODE="$OLD_MODE"   # das echte Testergebnis (falls vorhanden) bleibt für „automatisch“ erhalten; gestartet wird per LM_DEVICE auf der CPU
   echo "  language model forced to the CPU (mode split), no test needed"
+elif [ "$ARCH" != "arm64" ]; then
+  MODE=single   # Intel-Mac: alles läuft auf der CPU, ein GPU-Test ist sinnlos (und dauert dort sehr lange)
+  echo "  Intel Mac: language model and synthesis run on the CPU, no graphics test needed"
 elif [ -n "$OLD_MODE" ] && [ "$OLD_LM" = "$LM_FILE" ] && [ "${OLD_REV:0:7}" = "${ACESTEP_REV:0:7}" ]; then   # alte Installationen haben den kurzen Hash
   MODE="$OLD_MODE"
   echo "  already tested: mode $MODE"

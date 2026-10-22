@@ -79,9 +79,16 @@ fi
 if laeuft "$SYNTH_PORT"; then
   echo "Synthesis server is already running (port $SYNTH_PORT)."
 else
-  echo "Starting synthesis server (Metal)..."
-  nohup "$ENGINE/build/ace-server" --host 127.0.0.1 --port "$SYNTH_PORT" \
-    "${SERVER_ARGS[@]}" > "$DATA/ace-server.log" 2>&1 &
+  if [ "$(uname -m)" = "arm64" ]; then
+    echo "Starting synthesis server (Metal)..."
+    nohup "$ENGINE/build/ace-server" --host 127.0.0.1 --port "$SYNTH_PORT" \
+      "${SERVER_ARGS[@]}" > "$DATA/ace-server.log" 2>&1 &
+  else
+    # Intel-Mac: Die Intel-Grafik hat zu wenig Speicher (bei 30 s Länge „out of memory“) und rechnet auf Metal sehr langsam.
+    echo "Starting synthesis server (Intel Mac: CPU, slow)..."
+    GGML_BACKEND=CPU nohup "$ENGINE/build/ace-server" --host 127.0.0.1 --port "$SYNTH_PORT" \
+      "${SERVER_ARGS[@]}" > "$DATA/ace-server.log" 2>&1 &
+  fi
   disown
 fi
 

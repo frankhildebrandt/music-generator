@@ -14,6 +14,8 @@ Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) ü
 
 Voraussetzungen: Mac mit Apple Silicon (M1 oder neuer), mindestens 8 GB Arbeitsspeicher, 7–11 GB frei.
 
+**Intel-Macs** gehen nur eingeschränkt: Der Installer kompiliert den Modellserver selbst (etwa 2 Minuten, braucht die Xcode-Kommandozeilenwerkzeuge), und alles rechnet auf der CPU, weil die Intel-Grafik zu wenig Speicher hat. Gemessen auf einem MacBook Pro mit Core i5 und 8 GB: ein 30-Sekunden-Song brauchte etwa 13 Minuten, ein 10-Sekunden-Song etwa 1,5 Minuten. Längere Songs laufen leicht in die 30-Minuten-Grenze (Zahnrad › Timeout). Der Installer dauert dort rund 45 Minuten.
+
 ```bash
 git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
 open ~/MusicGenerator/Mac-Install.command
