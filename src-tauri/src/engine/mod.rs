@@ -19,6 +19,11 @@ pub struct Engine {
     pub client: EngineClient,
 }
 
+// CPU-only Macs share one server: a second CPU LM would duplicate model memory.
+pub fn device_plan(settings: &Settings, cpu_only: bool) -> (bool, bool) {
+    (cpu_only, settings.cpu_lm() && !cpu_only)
+}
+
 pub fn engine_path(resources: &Path) -> PathBuf {
     resources.join("engine").join(if cfg!(windows) {
         "ace-server.exe"
@@ -40,11 +45,20 @@ impl Engine {
                 "Bundled engine is missing. Run npm run engine:prepare before building the app.",
             ));
         }
+        let (cpu_synth, separate_lm) = device_plan(settings, crate::hardware::cpu_only());
         let mut processes = Vec::new();
-        let (synth, process) = start_one(&binary, logs, settings, false, cancel).await?;
+        let (synth, process) = start_one(
+            &binary,
+            &logs.join("ace-server.log"),
+            settings,
+            cpu_synth,
+            cancel,
+        )
+        .await?;
         processes.push(process);
-        let lm = if settings.cpu_lm() {
-            let (url, process) = start_one(&binary, logs, settings, true, cancel).await?;
+        let lm = if separate_lm {
+            let (url, process) =
+                start_one(&binary, &logs.join("ace-lm.log"), settings, true, cancel).await?;
             processes.push(process);
             url
         } else {
@@ -65,12 +79,14 @@ impl Engine {
 
 async fn start_one(
     binary: &Path,
-    logs: &Path,
+    log: &Path,
     settings: &Settings,
     cpu: bool,
     cancel: &CancellationToken,
 ) -> Result<(String, OwnedProcess)> {
-    std::fs::create_dir_all(logs)?;
+    if let Some(folder) = log.parent() {
+        std::fs::create_dir_all(folder)?;
+    }
     let client = reqwest::Client::builder()
         .no_proxy()
         .timeout(Duration::from_secs(2))
@@ -102,12 +118,7 @@ async fn start_one(
             args.extend(["--vae-chunk".into(), chunk.to_string()]);
         }
         args.extend(cpu_args.iter().cloned());
-        let mut process = OwnedProcess::spawn(
-            binary,
-            &args,
-            cpu,
-            &logs.join(if cpu { "ace-lm.log" } else { "ace-server.log" }),
-        )?;
+        let mut process = OwnedProcess::spawn(binary, &args, cpu, log)?;
         let url = format!("http://127.0.0.1:{port}");
         while tokio::time::Instant::now() < deadline {
             if cancel.is_cancelled() {

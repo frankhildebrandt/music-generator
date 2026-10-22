@@ -25,8 +25,9 @@ pub struct SetupRequest {
 
 pub fn fingerprint(lm: &str, gpu: &str) -> String {
     format!(
-        "{}:{}:{}:{:?}",
+        "{}:{}:{}:{}:{:?}",
         std::env::consts::OS,
+        std::env::consts::ARCH,
         manifest::manifest().engines,
         lm,
         gpu
@@ -152,30 +153,37 @@ async fn configure_inner(
     settings.vae_chunk = hw.vae_chunk;
     settings.mode = "single".into();
     let fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
-    let _ = app.emit("setup-stage", "testing");
-    let test = json!({"caption":"calm ambient pad, soft piano","lyrics":"[Instrumental]","duration":10,"vocal_language":"unknown","seed":42,"lm_model":settings.lm_model});
-    let accelerated = state.start_engine(&settings, cancel).await;
-    let mut okay = false;
-    if let Ok(mut engine) = accelerated {
-        engine.timeout = std::time::Duration::from_secs(300);
-        okay = engine
-            .language_model(&test, cancel, |_| {})
-            .await
-            .is_ok_and(|v| selftest_ok(&v));
-    }
-    if cancel.is_cancelled() {
-        return Err(crate::error::Error::Cancelled);
-    }
-    if !okay {
-        state.stop_engine().await;
-        settings.mode = "split".into();
-        let _ = app.emit("setup-stage", "cpu-fallback");
-        let mut engine = state.start_engine(&settings, cancel).await?;
-        engine.timeout = std::time::Duration::from_secs(300);
-        if !selftest_ok(&engine.language_model(&test, cancel, |_| {}).await?) {
-            return Err(message(
-                "Language model self-test failed on CPU. See the engine logs.",
-            ));
+    if hw.cpu_only {
+        // The Intel engine contains no GPU backend. A GPU correctness benchmark is
+        // inapplicable and can take minutes on older CPUs; verify server readiness.
+        let _ = app.emit("setup-stage", "starting");
+        state.start_engine(&settings, cancel).await?;
+    } else {
+        let _ = app.emit("setup-stage", "testing");
+        let test = json!({"caption":"calm ambient pad, soft piano","lyrics":"[Instrumental]","duration":10,"vocal_language":"unknown","seed":42,"lm_model":settings.lm_model});
+        let accelerated = state.start_engine(&settings, cancel).await;
+        let mut okay = false;
+        if let Ok(mut engine) = accelerated {
+            engine.timeout = std::time::Duration::from_secs(300);
+            okay = engine
+                .language_model(&test, cancel, |_| {})
+                .await
+                .is_ok_and(|v| selftest_ok(&v));
+        }
+        if cancel.is_cancelled() {
+            return Err(crate::error::Error::Cancelled);
+        }
+        if !okay {
+            state.stop_engine().await;
+            settings.mode = "split".into();
+            let _ = app.emit("setup-stage", "cpu-fallback");
+            let mut engine = state.start_engine(&settings, cancel).await?;
+            engine.timeout = std::time::Duration::from_secs(300);
+            if !selftest_ok(&engine.language_model(&test, cancel, |_| {}).await?) {
+                return Err(message(
+                    "Language model self-test failed on CPU. See the engine logs.",
+                ));
+            }
         }
     }
     app.asset_protocol_scope()

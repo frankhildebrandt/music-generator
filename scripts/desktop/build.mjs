@@ -3,7 +3,7 @@ import path from "node:path";
 import { prepareEngine, engineFolder } from "./prepare-engine.mjs";
 import { finalizeLinux } from "./finalize-linux.mjs";
 import { createMacDiskImage } from "./macos-dmg.mjs";
-import { download, exists, files, hash, platform, recordHashes, root, run, verifyEngine } from "./common.mjs";
+import { architecture, download, exists, files, hash, platform, recordHashes, root, run, target as desktop, verifyEngine } from "./common.mjs";
 
 await prepareEngine(); await verifyEngine(engineFolder);
 const output = path.join(root, "release"); await mkdir(output, { recursive: true });
@@ -16,7 +16,10 @@ const artifacts = [];
 if (platform === "macos") {
   // GitHub exposes absent secrets as empty strings; Tauri treats even an empty certificate as configured.
   for (const key of Object.keys(process.env)) if (key.startsWith("APPLE_") && !process.env[key]) delete process.env[key];
-  await run(process.execPath, [cli,"build","--bundles","app"]);
+  // Match the engine's deployment target, including the Rust supervisor and MP3 helper.
+  process.env.MACOSX_DEPLOYMENT_TARGET = desktop.minimumSystemVersion;
+  const config = JSON.stringify({ bundle: { macOS: { minimumSystemVersion: desktop.minimumSystemVersion } } });
+  await run(process.execPath, [cli,"build","--bundles","app","--config",config]);
   const app = path.join(target,"bundle/macos/Music Generator.app");
   const identity = process.env.APPLE_SIGNING_IDENTITY || "-";
   const helper = path.join(app,"Contents/MacOS/music-engine-supervisor");
@@ -38,9 +41,9 @@ if (platform === "macos") {
   if (process.env.APPLE_SIGNING_IDENTITY && process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID) {
     console.log("Tauri signs and notarizes using the configured Apple credentials.");
   }
-  artifact = path.join(output,`${name}-macos-arm64.zip`);
+  artifact = path.join(output,`${name}-macos-${architecture}.zip`);
   await run("ditto",["-c","-k","--sequesterRsrc","--keepParent",app,artifact]);
-  const dmg = path.join(output,`${name}-macos-arm64.dmg`);
+  const dmg = path.join(output,`${name}-macos-${architecture}.dmg`);
   await createMacDiskImage(app, dmg); artifacts.push(dmg);
 } else if (platform === "windows") {
   const runtimeDir = path.join(root,"src-tauri/resources/WebView2");

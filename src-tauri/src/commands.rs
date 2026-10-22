@@ -185,6 +185,7 @@ pub fn get_settings(state: Desktop<'_>) -> Result<Value> {
     let mut result = serde_json::to_value(&settings)?;
     result["songs_dir_default"] = json!(state.db.root.join("songs"));
     result["mp3_available"] = json!(crate::audio_export::codec_path(&state.resources).is_file());
+    result["cpu_only"] = json!(crate::hardware::cpu_only());
     result["dit_xl_available"] = json!(PathBuf::from(settings.models_dir)
         .join("acestep-v15-xl-sft-Q8_0.gguf")
         .is_file());

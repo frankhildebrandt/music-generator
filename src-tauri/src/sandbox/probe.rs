@@ -41,7 +41,9 @@ pub fn run(forbidden: &Path) -> Result<()> {
     };
     let result = tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async {
         let engine = Engine::start(&resources, &root.join("logs"), &settings, &CancellationToken::new()).await?;
-        if engine.client.synth == engine.client.lm { return Err(message("CPU-only language model did not start a separate process")); }
+        if crate::hardware::cpu_only() {
+            if engine.client.synth != engine.client.lm { return Err(message("Intel CPU engine unexpectedly duplicated the language-model process")); }
+        } else if engine.client.synth == engine.client.lm { return Err(message("CPU-only language model did not start a separate process")); }
         drop(engine);
         verify_exports(&resources, &root).await?;
         let log = std::fs::read_to_string(root.join("logs/ace-server.log"))?;

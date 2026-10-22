@@ -3,12 +3,11 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { architecture, download, exists, files, hash, manifest, platform, recordHashes, root, run, verifyEngine } from "./common.mjs";
+import { architecture, download, engineRecipeHash, exists, files, hash, manifest, platform, recordHashes, root, run, target, verifyEngine } from "./common.mjs";
 
 export const engineFolder = path.join(root, "src-tauri/resources/engine");
 
 export async function prepareEngine() {
-  if ((platform === "macos" && architecture !== "arm64") || (platform !== "macos" && architecture !== "x64")) throw new Error("Unsupported desktop architecture");
   try { await verifyEngine(engineFolder); console.log("Engine resources verified."); return; } catch { /* Rebuild incomplete or changed resources. */ }
   const source = manifest.engines[platform];
   const cache = path.join(root, ".cache/desktop"); await mkdir(cache, { recursive: true });
@@ -27,7 +26,7 @@ export async function prepareEngine() {
         await writeFile(cmake,(await readFile(cmake,"utf8")).replace("LANGUAGES C CXX)","LANGUAGES C CXX OBJC OBJCXX)"));
         await appendFile(cmake, '\ntarget_sources(ace-server PRIVATE desktop-sandbox.mm)\ntarget_link_libraries(ace-server PRIVATE "-framework Foundation")\n');
       }
-      const options = platform === "macos" ? ["-DGGML_METAL=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_NATIVE=OFF", "-DCMAKE_OSX_DEPLOYMENT_TARGET=26.0", "-DCMAKE_BUILD_RPATH=@loader_path", "-DCMAKE_INSTALL_RPATH=@loader_path"] : ["-DGGML_VULKAN=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DCMAKE_BUILD_RPATH=$ORIGIN", "-DCMAKE_INSTALL_RPATH=$ORIGIN"];
+      const options = platform === "macos" ? target.cmake : ["-DGGML_VULKAN=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DCMAKE_BUILD_RPATH=$ORIGIN", "-DCMAKE_INSTALL_RPATH=$ORIGIN"];
       await run("cmake", ["-S", sourceDir, "-B", built, "-DCMAKE_BUILD_TYPE=Release", ...options]);
       await run("cmake", ["--build", built, "--config", "Release", "-j", "2"]);
       for (const file of await files(sourceDir)) if (/^(LICENSE|COPYING)/i.test(path.basename(file))) await cp(file, path.join(built, `LICENSE-${path.relative(sourceDir,file).replaceAll(path.sep,"-")}`));
@@ -55,7 +54,7 @@ export async function prepareEngine() {
       }
     }
     if (platform === "windows") await copyWindowsCrt();
-    await recordHashes(engineFolder, { platform, arch: architecture, revision: source.revision, source: source.url || source.repository, source_revision: source.source_revision || source.revision, archive_sha256: source.sha256 || null, sandbox_patch_sha256: platform === "macos" ? await hash(path.join(root,"scripts/desktop/engine-sandbox.mm")) : null, recipe_sha256: await hash(path.join(root,"scripts/desktop/prepare-engine.mjs")) });
+    await recordHashes(engineFolder, { platform, arch: architecture, revision: source.revision, source: source.url || source.repository, source_revision: source.source_revision || source.revision, archive_sha256: source.sha256 || null, sandbox_patch_sha256: platform === "macos" ? await hash(path.join(root,"scripts/desktop/engine-sandbox.mm")) : null, recipe_sha256: await engineRecipeHash() });
     await verifyEngine(engineFolder);
     console.log(`Prepared ${platform} engine ${source.revision}.`);
   } finally { await rm(work, { recursive: true, force: true }); }
