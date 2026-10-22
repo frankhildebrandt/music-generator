@@ -10,6 +10,8 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 | Windows 10/11, x64 | ZIP mit EXE, Engine und WebView2 |
 | Linux, x64 | AppImage mit Vulkan/CPU-Engine |
 
+Intel-Macs werden vom Desktop-Bundle nicht unterstützt. Die Intel-/CPU-Hinweise des ursprünglichen Installers sind unter [docs/legacy/](docs/legacy/NOTICE.md) als historische Dokumentation erhalten.
+
 Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind möglich. Downloads werden unter [Releases](https://github.com/frankhildebrandt/music-generator/releases) veröffentlicht; lokal gebaute Pakete liegen in `release/`.
 
 - Bestehende Bedienung, zwölf Sprachen, Bibliothek, Favoriten, Ordner und Varianten.
