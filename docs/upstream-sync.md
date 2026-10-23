@@ -20,6 +20,8 @@ The `eb19a98` conflict resolution changes documentation only relative to desktop
 
 The timeout-message update is ported to Rust rather than restoring the removed Python backend. All twelve original song-list translations are retained, and existing stored timeout text is recognized without rewriting the database. A simulated engine timeout verifies cancellation plus persistence of the error and unchanged complete parameters across SQLite restart/retry. Synthesis timeout guidance is not replaced by a fresh memory diagnostic; user cancellation stays cancellation. The default remains 30 minutes per engine operation and no existing settings are overwritten. Published `v0.2.5-test.1` bundles remain the binaries from `11f13ea`; this follow-up does not publish or replace release assets.
 
+Saving settings updates only the validated timing fields of the existing engine client, preserving its synthesis-log path and diagnostics when raising the timeout. Explicit device changes still stop/recreate the engine as before.
+
 ## Sampling defaults follow-up — 2026-10-23
 
 Release 0.2.5 also includes the subsequent `0e64bc7` main commit. The new code limit changes only the outgoing synthesis metadata, never existing SQLite parameters. Engine contract tests cover actual LM overproduction, failed synth jobs, HTTP failures, missing audio and stale log errors. Log tests cover missing/truncated logs and length/memory precedence. UI checks include the 600-second maximum and warnings in all twelve languages. Real ten-minute inference, especially on Intel/8 GiB systems, remains manual acceptance.
