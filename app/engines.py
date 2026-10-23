@@ -71,6 +71,7 @@ class AceStepCpp:
         # Liegen mehrere Sprachmodelle im Ordner, nähme der Server sonst das erste (alphabetisch)
         self.lm_model = lm_model
         self._job: tuple[str, str] | None = None   # (Server, Job-ID) des gerade laufenden Auftrags
+        self._mark: dict | None = None             # Log-Größen zu Beginn der Synthese (für die Fehlerursache)
 
     async def cancel(self) -> None:
         """Laufenden Auftrag beim Modellserver abbrechen, damit er nicht weiterrechnet."""
@@ -113,7 +114,8 @@ class AceStepCpp:
                 res.raise_for_status()
                 return res
             if any(w in status for w in ("err", "fail", "cancel")):
-                raise EngineError(f"{label} fehlgeschlagen: {r.text}")
+                hint = _memory_hint(self._mark) if label == "Synthese" else ""
+                raise EngineError(hint or f"{label} fehlgeschlagen: {r.text}")
             elapsed = int(time.monotonic() - start)
             if elapsed > self.timeout:
                 await self.cancel()   # Modellserver nicht am alten Auftrag weiterrechnen lassen
@@ -140,10 +142,18 @@ class AceStepCpp:
                 enriched = enriched[0]
             if not enriched.get("audio_codes"):
                 raise EngineError("Sprachmodell hat keine Audio-Codes geliefert (LM auf Metal? LM-Server auf CPU nutzen)")
+            # Die Klangerzeugung schafft höchstens 3000 Codes (600 s bei 5 Codes je Sekunde, 15000 Latent-Frames). Das Sprachmodell
+            # liefert gelegentlich ein paar Codes mehr als angefragt; dann bräche die Synthese ab. Daher auf Länge × 5 kürzen.
+            want = float(params.get("duration") or enriched.get("duration") or 0)
+            limit = int(round(min(want if want > 0 else MAX_SECONDS, MAX_SECONDS) * 5))
+            codes = [c for c in str(enriched.get("audio_codes") or "").split(",") if c.strip()]
+            if len(codes) > limit:
+                enriched["audio_codes"] = ",".join(codes[:limit])
             enriched["output_format"] = req["output_format"]
             enriched["synth_model"] = req["synth_model"]
 
             # 2) Synthese
+            self._mark = _log_sizes()   # nur Log-Zeilen ab hier zählen für die Fehlerursache
             r = await c.post(f"{self.base}/synth", json=enriched)
             if r.status_code >= 400:
                 raise EngineError(f"/synth: HTTP {r.status_code} {r.text[:300]}")
@@ -151,7 +161,7 @@ class AceStepCpp:
             try:
                 audio, ext = _extract_audio(res)
             except EngineError:
-                hint = _memory_hint()
+                hint = _memory_hint(self._mark)
                 if hint:
                     raise EngineError(hint)
                 raise
@@ -170,17 +180,45 @@ class AceStepCpp:
             return data[0] if isinstance(data, list) else data
 
 
-def _memory_hint() -> str:
-    """Steht im Log des Synthese-Servers, dass der Grafikspeicher nicht reichte (typisch bei Intel-Macs und kleinen Karten)?"""
-    log = Path(__file__).resolve().parent.parent / "data" / "ace-server.log"
-    try:
-        with open(log, "rb") as f:
-            f.seek(0, 2)
-            f.seek(max(0, f.tell() - 12000))
-            tail = f.read().decode("utf-8", "replace").lower()
-    except OSError:
-        return ""
-    if "out of memory" in tail or "failed to allocate" in tail:
+MAX_SECONDS = 600   # Obergrenze der Klangerzeugung (15000 Latent-Frames)
+
+
+_LOGS = ("ace-server.log", "ace-server.err.log")   # unter Windows landen Fehler in der .err.log
+
+
+def _log_sizes() -> dict:
+    base = Path(__file__).resolve().parent.parent / "data"
+    out = {}
+    for name in _LOGS:
+        try:
+            out[name] = (base / name).stat().st_size
+        except OSError:
+            out[name] = 0
+    return out
+
+
+def _memory_hint(since: dict | None = None) -> str:
+    """Steht in den neuen Zeilen der Server-Logs (seit Beginn der Synthese), warum die Klangerzeugung scheiterte?
+    Liefert einen verständlichen Satz oder leer. Alte Zeilen aus früheren Läufen zählen nicht."""
+    base = Path(__file__).resolve().parent.parent / "data"
+    since = since or {}
+    tail = ""
+    for name in _LOGS:
+        try:
+            with open(base / name, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                start = since.get(name, max(0, size - 12000))
+                if start > size:      # Log wurde neu begonnen (Server neu gestartet)
+                    start = 0
+                f.seek(start)
+                tail += f.read(200000).decode("utf-8", "replace").lower()
+        except OSError:
+            continue
+    if "exceeds silence_latent" in tail:
+        return ("Der Song ist für die Klangerzeugung zu lang (über 10 Minuten). Bitte eine kürzere Länge wählen. "
+                "/ The song is too long for the synthesis (over 10 minutes). Please choose a shorter length.")
+    if "out of memory" in tail or "failed to allocate" in tail or "outofdevicememory" in tail:
         return ("Der Grafikspeicher reicht für diese Songlänge nicht (out of memory). Kürzeren Song wählen oder die Klangerzeugung "
                 "auf der CPU rechnen lassen. / The graphics memory is too small for this song length. Choose a shorter song or run on the CPU.")
     return ""
