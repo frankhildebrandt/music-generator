@@ -4,6 +4,7 @@ import { measureMelody, describeIdea, toWav } from "./melody";
 import { backend } from "./backend";
 import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
+import { samplingForSong } from "./song-sampling";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { notify as alert, askName } from "./dialogs";
@@ -172,8 +173,9 @@ function fillForm(s) {
   syncLyrics(); $("#lyricsBox").open = !form.instrumental.checked && !!(p.lyrics || "").trim();
   form.duration.value = p.duration || 90;
   form.bpm.value = p.bpm || form.bpm.min;
-  form.inference_steps.value = p.inference_steps || 50;
-  form.lm_temperature.value = p.lm_temperature ?? 0.85;   // ältere Songs liefen mit der Modell-Vorgabe
+  const sampling = samplingForSong(p);
+  form.inference_steps.value = sampling.inference_steps;
+  form.lm_temperature.value = sampling.lm_temperature;
   showDur();
   setSelect(form.keyscale, p.keyscale, true);
   setSelect(form.timesignature, p.timesignature);

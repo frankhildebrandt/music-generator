@@ -1,5 +1,7 @@
 # Desktop verification — 2026-10-21
 
+Upstream defaults follow-up (2026-10-23, `3374648`): fresh forms use 80 iterations and variance 1.2; saved song parameters and legacy model defaults remain unchanged. Ten frontend tests include explicit old/custom/new song reuse, omitted/sentinel fallback, fresh HTML values and all twelve localized tooltips while retaining desktop MP3/device messages. A new SQLite regression verifies complete parameter objects survive restart and a real error → retry → queued execution cycle alongside newly queued 80/1.2 songs. Backend request defaults, schema and storage code are unchanged. The previously published 0.2.4 test-release binaries are not replaced by this merge.
+
 Intel desktop follow-up (0.2.4, 2026-10-22):
 
 - Separate native x64 DMG/ZIP with a macOS 13.3 deployment target, CPU-only pinned engine, portable runtime-selected CPU variants, sandbox inheritance and native window controls. A `macos-15-intel` CI job builds/tests the Intel packages alongside the existing three platform jobs.
