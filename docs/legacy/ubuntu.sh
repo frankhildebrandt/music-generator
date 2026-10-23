@@ -41,7 +41,7 @@ fi
 [[ ${ID:-} == ubuntu || " ${ID_LIKE:-} " == *' ubuntu '* || " ${ID_LIKE:-} " == *' debian '* ]] || { echo "Ubuntu or Ubuntu-derived OS required: ${ID:-unknown}" >&2; exit 1; }
 command -v apt-get >/dev/null || { echo 'apt-get is missing.' >&2; exit 1; }
 [[ $(uname -m) == x86_64 ]] || { echo 'This installer supports x86_64 only.' >&2; exit 1; }
-export PATH="/usr/local/cuda/bin:$PATH"
+export PATH="/usr/local/cuda/bin:$PATH"   # das Standard-CUDA (Symlink /usr/local/cuda) hat Vorrang vor /usr/bin/nvcc
 if [[ $BACKEND == auto ]]; then
  if command -v nvcc >/dev/null 2>&1 && command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then BACKEND=cuda
  # Vulkan: a graphics adapter (lspci) plus an installed Vulkan driver (icd file) -> use it; otherwise CPU
@@ -61,7 +61,7 @@ if [[ $DRY == 1 ]]; then
  printf 'PLAN apt-get install: '; printf '%s ' "${packages[@]}"; echo
  echo 'PLAN uv sync --locked'
  echo "PLAN git checkout $ACESTEP_REV and git submodule update --init --recursive"
- if [[ $BACKEND == cuda ]]; then echo 'PLAN CMake: -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native -DGGML_CPU_ALL_VARIANTS=OFF'
+ if [[ $BACKEND == cuda ]]; then echo 'PLAN CMake: -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=<nvcc im PATH> -DCMAKE_CUDA_ARCHITECTURES=native -DGGML_CPU_ALL_VARIANTS=OFF'
  elif [[ $BACKEND == vulkan ]]; then echo 'PLAN CMake: -DGGML_VULKAN=ON -DGGML_CPU_ALL_VARIANTS=OFF'
  else echo 'PLAN CMake: -DGGML_CPU_ALL_VARIANTS=OFF'; fi
  echo "PLAN download + SHA256 verify: VAE, Qwen embedding, SFT, $LM_FILE $([[ $XL == 1 ]] && echo 'and XL' || true)"
@@ -99,11 +99,11 @@ if [[ -f "$ENGINE/build/CMakeCache.txt" ]]; then
 else BUILD=1; fi
 if [[ $BUILD == 1 ]]; then
  flags=(-DCMAKE_BUILD_TYPE=Release -DGGML_CPU_ALL_VARIANTS=OFF)
- if [[ $BACKEND == cuda ]]; then flags+=(-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native); fi
+ if [[ $BACKEND == cuda ]]; then flags+=(-DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER="$(command -v nvcc)" -DCMAKE_CUDA_ARCHITECTURES=native); fi
  if [[ $BACKEND == vulkan ]]; then flags+=(-DGGML_VULKAN=ON); fi
  build_engine() {
   local target=$1; local -a f=(-DCMAKE_BUILD_TYPE=Release -DGGML_CPU_ALL_VARIANTS=OFF)
-  if [[ $target == cuda ]]; then f+=(-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native); fi
+  if [[ $target == cuda ]]; then f+=(-DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER="$(command -v nvcc)" -DCMAKE_CUDA_ARCHITECTURES=native); fi   # den nvcc aus dem PATH nehmen: bei mehreren CUDA-Versionen sonst /usr/bin/nvcc
   if [[ $target == vulkan ]]; then f+=(-DGGML_VULKAN=ON); fi
   ( cd "$ENGINE"; rm -rf build; cmake -S . -B build "${f[@]}"; cmake --build build --config Release -j "${BUILD_JOBS:-4}" ) > "$DATA/build.log" 2>&1
  }

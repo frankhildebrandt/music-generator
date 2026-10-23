@@ -32,6 +32,9 @@ impl Database {
             if !columns.iter().any(|c| c == "folder_id") {
                 con.execute("ALTER TABLE songs ADD COLUMN folder_id TEXT", [])?;
             }
+            if !columns.iter().any(|c| c == "started_at") {
+                con.execute("ALTER TABLE songs ADD COLUMN started_at TEXT", [])?;
+            }
             con.execute(
                 "UPDATE songs SET status='queued', message=NULL WHERE status='running'",
                 [],
@@ -98,6 +101,7 @@ impl Database {
                     id: row.get("id")?,
                     group_id: row.get("group_id")?,
                     created_at: row.get("created_at")?,
+                    started_at: row.get("started_at")?,
                     finished_at: row.get("finished_at")?,
                     status: row.get("status")?,
                     message: row.get("message")?,
@@ -212,8 +216,8 @@ impl Database {
         };
         if let Some((sid, _)) = &next {
             tx.execute(
-                "UPDATE songs SET status='running',message='0:00' WHERE id=?1",
-                [sid],
+                "UPDATE songs SET status='running',message='0:00',started_at=?2 WHERE id=?1",
+                params![sid, now()],
             )?;
         }
         tx.commit()?;

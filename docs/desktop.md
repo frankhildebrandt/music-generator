@@ -61,6 +61,8 @@ Closing while work is pending asks for confirmation. Running jobs and pending jo
 
 If an engine job exceeds its time limit, the app cancels that job and reports the phase and elapsed minutes. For long songs, raise Timeout in Settings (gear); the existing default remains 30 minutes per engine operation. The song-list summary gives this guidance in all twelve languages, including for older stored German/English timeout messages. Retry retains the song's saved generation parameters; updating the app does not change them or overwrite your timeout setting.
 
+Since 0.2.6, the creation-time display measures each attempt from queue claim to completion, excluding waiting behind earlier variants. An additive nullable `started_at` column stores the start; old completed songs retain their previous display using the existing creation timestamp. Retry and restart recovery record a fresh start when the job is claimed. Existing generation parameters and timestamps are preserved during migration. Import supports both schema versions without changing the original library.
+
 ## Build
 
 Development needs Node.js 24+, stable Rust, and Tauri's native build prerequisites. End users do not need these tools.

@@ -25,11 +25,14 @@ fn import_copies_audio_metadata_and_wal_without_touching_the_source() {
     source
         .patch(&ids[0], &json!({"favorite":true,"title":"Original"}))
         .unwrap();
+    let original = source.song(&ids[0]).unwrap();
     let new = tempfile::tempdir().unwrap();
     let db = Database::open(new.path()).unwrap();
     assert_eq!(import_legacy(&db, old.path()).unwrap()["songs"], 1);
     assert_eq!(db.song(&ids[0]).unwrap().title.as_deref(), Some("Original"));
     assert!(db.song(&ids[0]).unwrap().favorite);
+    assert_eq!(db.song(&ids[0]).unwrap().started_at, original.started_at);
+    assert_eq!(db.song(&ids[0]).unwrap().params, original.params);
     assert_eq!(
         std::fs::read(new.path().join("songs/old.wav")).unwrap(),
         b"old audio"
@@ -39,6 +42,54 @@ fn import_copies_audio_metadata_and_wal_without_touching_the_source() {
         b"old audio"
     );
     assert!(import_legacy(&db, old.path()).is_err());
+}
+
+#[test]
+fn import_old_library_adds_start_time_only_to_the_copy() {
+    let old = tempfile::tempdir().unwrap();
+    let source = Database::open(old.path()).unwrap();
+    let id = source
+        .enqueue(&GenerateRequest {
+            prompt: "old library".into(),
+            inference_steps: 50,
+            lm_temperature: Some(1.0),
+            ..Default::default()
+        })
+        .unwrap()[0]
+        .clone();
+    source.claim_next().unwrap();
+    source.finish(&id, "old.wav", &json!({})).unwrap();
+    let original = source.song(&id).unwrap().params;
+    drop(source);
+    std::fs::create_dir_all(old.path().join("songs")).unwrap();
+    std::fs::write(old.path().join("songs/old.wav"), b"old audio").unwrap();
+    let con = rusqlite::Connection::open(old.path().join("music.db")).unwrap();
+    con.execute("ALTER TABLE songs DROP COLUMN started_at", [])
+        .unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let db = Database::open(target.path()).unwrap();
+    import_legacy(&db, old.path()).unwrap();
+    assert!(db.song(&id).unwrap().started_at.is_none());
+    assert_eq!(db.song(&id).unwrap().params, original);
+    let columns = con
+        .prepare("PRAGMA table_info(songs)")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(1))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert!(!columns.iter().any(|c| c == "started_at"));
+    let params: String = con
+        .query_row("SELECT params FROM songs WHERE id=?1", [&id], |r| r.get(0))
+        .unwrap();
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&params).unwrap(),
+        original
+    );
+    assert_eq!(
+        std::fs::read(old.path().join("songs/old.wav")).unwrap(),
+        b"old audio"
+    );
 }
 
 #[test]
