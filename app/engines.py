@@ -119,7 +119,11 @@ class AceStepCpp:
             elapsed = int(time.monotonic() - start)
             if elapsed > self.timeout:
                 await self.cancel()   # Modellserver nicht am alten Auftrag weiterrechnen lassen
-                raise EngineError(f"{label}: Zeitüberschreitung nach {elapsed}s")
+                mins = max(1, round(elapsed / 60))
+                de, en = ("Minute", "minute") if mins == 1 else ("Minuten", "minutes")
+                raise EngineError(f"{label}: Zeitüberschreitung nach {mins} {de}. In den Einstellungen (Zahnrad) die Timeout-Zeit erhöhen, "
+                                  f"besonders bei langen Songs. / Timeout after {mins} {en}. Raise the timeout in the settings (gear), "
+                                  f"especially for long songs.")
             await progress(_fmt_time(elapsed))
             await asyncio.sleep(self.poll)
 
