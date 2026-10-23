@@ -93,6 +93,43 @@ the preserved/generated takes. The local M5 Pro run passed real full-track and
 region. Desktop playback and mixer were inspected on macOS. Windows/Linux and
 signed release-bundle GUI testing remain separate platform validation.
 
+### Native UI workflow acceptance — 2026-10-23
+
+On the Tauri 0.2.6 base (`558fd1e`), a separate macOS preview profile was used
+to create a fresh 16-second, 120-BPM, A-minor project through the actual Pro UI.
+All four jobs used Base Q8, 50 steps, and seeds 2301–2304:
+
+- Drums: text2music without backing; bass: Lego with the activated drums;
+  Rhodes chords: Lego with activated drums and bass. Each take required explicit
+  activation and survived app restarts.
+- Playback and a repeating loop ran with moving transport and nonzero output
+  meters. Bass Solo, multiple Solos, Mute, and Mute overriding the only Solo
+  were exercised during playback.
+- Bass selection 6–10 seconds: generated with drums muted and bass soloed.
+  Its saved context still included drums and Rhodes, excluding the bass itself.
+  All 384,000 stereo channel samples inside the window changed; every sample
+  outside remained bit-identical in the new take. The result stayed inactive
+  until selected; activation, Undo and Redo were checked in the UI.
+- Native Save dialogs exported the solo bass, a silent muted-Solo mix, the
+  three-stem ZIP, and full mixes before and after the range edit. All stems
+  contain 768,000 stereo frames at 48 kHz, including muted tracks. The solo WAV
+  equals the bass stem byte-for-byte; the muted-Solo WAV contains only zeros.
+  The full mix matches the summed stems within `4.48e-8`; its peak is `0.6145`.
+  Outside the edited window the two mixes differ by at most `5.97e-8` from
+  Float32 summation order after take activation. The take samples themselves
+  remain exact. Original take hashes stayed unchanged throughout.
+
+This run exposed two fixes: start/pause playback directly from the user gesture,
+without waiting behind project edits, and only update the play button's label
+when it changes; export using the native Save dialog's session grant rather
+than attempting to persist a bookmark for a file that does not yet exist.
+Both were retested in the preview. Local evidence and listening files are in
+`.cache/pro-workflow-test-20261023/` (not committed).
+
+This verifies the application workflow and sample-level contracts. The meters
+and numeric checks do not establish perceptual instrument purity or musical
+quality; the before/after WAVs and individual stems are provided for listening.
+
 For a seeded development UI profile:
 
 ```sh
