@@ -83,8 +83,9 @@
       <div class="field"><span class="lbl" data-i18n="length">Länge</span>
         <div class="slider" data-fmt="dur">
           <div class="fill"></div><div class="knob"><span></span></div>
-          <input name="duration" type="range" min="10" max="300" step="5" value="90" aria-label="Länge" title="0:10 bis 5:00" data-i18n-aria="length" data-i18n-title="length_tip">
+          <input name="duration" type="range" min="10" max="600" step="5" value="90" aria-label="Länge" title="0:10 bis 10:00" data-i18n-aria="length" data-i18n-title="length_tip">
         </div>
+        <span class="small" id="lenHint" hidden aria-live="polite" data-i18n="len_long">Lange Songs brauchen viel Zeit und Speicher.</span>
       </div>
 
       <div class="field"><span class="lbl" title="Ganz links = Auto: Das Modell wählt das Tempo." data-i18n-title="bpm_tip">BPM</span>

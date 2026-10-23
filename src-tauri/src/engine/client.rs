@@ -1,7 +1,9 @@
+use super::diagnostics::SynthesisLog;
 use crate::error::{message, Error, Result};
 use serde_json::{json, Value};
 use std::{
     collections::HashSet,
+    path::PathBuf,
     time::{Duration, Instant},
 };
 use tokio_util::sync::CancellationToken;
@@ -13,6 +15,7 @@ pub struct EngineClient {
     pub lm: String,
     pub poll: Duration,
     pub timeout: Duration,
+    pub synth_log: Option<PathBuf>,
 }
 
 impl EngineClient {
@@ -26,6 +29,7 @@ impl EngineClient {
             lm,
             poll: Duration::from_secs_f64(poll),
             timeout: Duration::from_secs_f64(timeout * 60.0),
+            synth_log: None,
         })
     }
 
@@ -172,9 +176,14 @@ impl EngineClient {
                 "Language model returned no audio codes. Run the hardware test again.",
             ));
         }
+        // The synthesis model supports at most 600 seconds (3000 codes).
+        // Trim occasional LM overproduction only in this outgoing payload;
+        // saved song parameters remain unchanged.
+        limit_audio_codes(&mut enriched, params);
         enriched["output_format"] = json!("wav16");
         enriched["synth_model"] = json!(dit);
-        let (ctype, body) = self
+        let log = self.synth_log.as_deref().map(SynthesisLog::capture);
+        let result = self
             .operation(
                 &self.synth,
                 "synth",
@@ -184,8 +193,17 @@ impl EngineClient {
                 cancel,
                 |s| progress(format!("Synth · {s}")),
             )
-            .await?;
-        let (audio, extension) = extract_audio(&ctype, &body)?;
+            .await
+            .and_then(|(ctype, body)| extract_audio(&ctype, &body));
+        let (audio, extension) = result.map_err(|error| {
+            if matches!(error, Error::Cancelled) {
+                return error;
+            }
+            log.as_ref()
+                .and_then(|log| log.hint(&error.to_string()))
+                .map(message)
+                .unwrap_or(error)
+        })?;
         Ok((audio, extension, enriched))
     }
 
@@ -204,6 +222,29 @@ impl EngineClient {
             .operation(&self.lm, "understand", request, cancel, |_| {})
             .await?;
         extract_json(&ctype, &body)
+    }
+}
+
+pub fn limit_audio_codes(enriched: &mut Value, params: &Value) {
+    let seconds = params["duration"]
+        .as_f64()
+        .filter(|n| n.is_finite() && *n > 0.0)
+        .or_else(|| {
+            enriched["duration"]
+                .as_f64()
+                .filter(|n| n.is_finite() && *n > 0.0)
+        })
+        .unwrap_or(600.0)
+        .min(600.0);
+    let limit = (seconds * 5.0).round() as usize;
+    let codes: Vec<_> = enriched["audio_codes"]
+        .as_str()
+        .unwrap_or("")
+        .split(',')
+        .filter(|code| !code.trim().is_empty())
+        .collect();
+    if codes.len() > limit {
+        enriched["audio_codes"] = json!(codes[..limit].join(","));
     }
 }
 

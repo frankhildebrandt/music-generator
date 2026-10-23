@@ -41,6 +41,8 @@ Settings → Export selects lossless WAV or MP3 at 192 kbit/s for both individua
 
 ## Data and updates
 
+Songs can be 10 seconds to 10 minutes long. Above five minutes the form shows a localized time/memory warning. The language model may occasionally return extra audio codes; the outgoing synthesis payload is capped at the requested duration × 5 and at 3000 codes (600 seconds). This does not rewrite saved song parameters. Synthesis failures inspect only new lines in the combined stdout/stderr engine log; memory exhaustion and the model's maximum-length error get specific explanations. Earlier jobs' memory errors are ignored. Ten-minute generation remains untested on Intel Macs and 8 GiB machines; start with a short song on those systems.
+
 - macOS: `~/Library/Containers/de.alphatester.music-generator/Data/Library/Application Support/de.alphatester.music-generator/`
 - Windows: `%LOCALAPPDATA%\de.alphatester.music-generator\`
 - Linux: `$XDG_DATA_HOME/de.alphatester.music-generator/` (normally `~/.local/share/…`)

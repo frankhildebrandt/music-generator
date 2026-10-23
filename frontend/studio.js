@@ -83,6 +83,7 @@ function updateSlider(box) {
   span.classList.toggle("small", Array.isArray(out));
   inp.setAttribute("aria-valuetext", box.dataset.fmt === "dur" ? t("vt_dur", Math.floor(v / 60), v % 60)
     : box.dataset.fmt === "bpm" ? (v <= min ? t("vt_auto") : `${v} BPM`) : span.textContent);
+  if (inp.name === "duration") $("#lenHint").hidden = v <= 300;   // ab 5:00 ehrlicher Hinweis: dauert lange, braucht viel Speicher
   if (inp.name === "variants") $("#genBtn").textContent = v > 1 ? t("generate_n", v) : t("generate");
 }
 const showDur = () => document.querySelectorAll(".slider").forEach(updateSlider);
