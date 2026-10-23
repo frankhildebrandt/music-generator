@@ -81,7 +81,7 @@ async def worker():
             continue
         _wach.an()
         sid = job["id"]
-        db.execute("UPDATE songs SET status='running', message='0:00' WHERE id=?", (sid,))
+        db.execute("UPDATE songs SET status='running', message='0:00', started_at=? WHERE id=?", (now(), sid))
         engine = make_engine(db.get_settings())
 
         async def progress(msg: str):

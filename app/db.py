@@ -114,6 +114,9 @@ def init():
         # Ordner der Bibliothek (nur in der App; die Dateien bleiben, wo sie sind). NULL = unsortiert
         if "folder_id" not in [r["name"] for r in _con.execute("PRAGMA table_info(songs)")]:
             _con.execute("ALTER TABLE songs ADD COLUMN folder_id TEXT")
+        # Beginn der Berechnung (created_at ist der Zeitpunkt des Einreihens; wartende Songs würden sonst die Wartezeit mitzählen)
+        if "started_at" not in [r["name"] for r in _con.execute("PRAGMA table_info(songs)")]:
+            _con.execute("ALTER TABLE songs ADD COLUMN started_at TEXT")
         # Nach einem Absturz hängengebliebene Jobs wieder einreihen
         _con.execute("UPDATE songs SET status='queued', message=NULL WHERE status='running'")
         _con.commit()

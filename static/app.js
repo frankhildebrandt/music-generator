@@ -47,7 +47,8 @@ let editingId = null;   // id des Songs, dessen Titel gerade bearbeitet wird
 let played = new Set();
 try { played = new Set(JSON.parse(localStorage.getItem("played") || "[]")); } catch {}
 const markPlayed = (id) => { played.add(id); try { localStorage.setItem("played", JSON.stringify([...played])); } catch {} };
-const genTime = (s) => { const t = (Date.parse(s.finished_at) - Date.parse(s.created_at)) / 1000; return isFinite(t) && t >= 0 ? fmt(t) : null; };
+// started_at = Beginn der Berechnung (ohne Wartezeit in der Schlange); ältere Songs haben nur created_at
+const genTime = (s) => { const t = (Date.parse(s.finished_at) - Date.parse(s.started_at || s.created_at)) / 1000; return isFinite(t) && t >= 0 ? fmt(t) : null; };
 
 // Würfel: zufälliger Prompt. Sechs Bauformen von kurz bis lang, gespeist aus Stimmungen, Szenen, Besetzungen,
 // Produktion, Verlauf und ganzen Ideen; Gesang nur, wenn der Song nicht instrumental ist. Der Stil bleibt deine Wahl.
