@@ -106,16 +106,16 @@
 
       <details id="advBox">
         <summary data-i18n="advanced">Erweitert</summary>
-        <div class="field adv"><span class="lbl" title="Diffusionsschritte der Klangerzeugung. Mehr = langsamer, ab etwa 50 kaum noch hörbar besser (Modell-Vorgabe: 50)." data-i18n-title="iterations_tip" data-i18n="iterations">Iterationen</span>
+        <div class="field adv"><span class="lbl" title="Diffusionsschritte der Klangerzeugung. Mehr = langsamer, App-Standard: 80 (Modell-Vorgabe: 50)." data-i18n-title="iterations_tip" data-i18n="iterations">Iterationen</span>
           <div class="slider" data-fmt="int">
             <div class="fill"></div><div class="knob"><span></span></div>
-            <input name="inference_steps" type="range" min="10" max="100" step="5" value="50" aria-label="Iterationen" data-i18n-aria="iterations">
+            <input name="inference_steps" type="range" min="10" max="100" step="5" value="80" aria-label="Iterationen" data-i18n-aria="iterations">
           </div>
         </div>
-        <div class="field adv"><span class="lbl" title="Wie mutig das Sprachmodell den Song plant. Niedriger = vorhersehbar, höher = abwechslungsreicher, zu hoch = zerfahren (Modell-Vorgabe: 0.85)." data-i18n-title="variance_tip" data-i18n="variance">Varianz</span>
+        <div class="field adv"><span class="lbl" title="Wie mutig das Sprachmodell den Song plant. Niedriger = vorhersehbar, höher = abwechslungsreicher, zu hoch = zerfahren (App-Standard: 1.2; Modell-Vorgabe: 0.85)." data-i18n-title="variance_tip" data-i18n="variance">Varianz</span>
           <div class="slider" data-fmt="temp">
             <div class="fill"></div><div class="knob"><span></span></div>
-            <input name="lm_temperature" type="range" min="0.3" max="1.5" step="0.05" value="1" aria-label="Varianz" data-i18n-aria="variance">
+            <input name="lm_temperature" type="range" min="0.3" max="1.5" step="0.05" value="1.2" aria-label="Varianz" data-i18n-aria="variance">
           </div>
         </div>
         <div class="grid">
