@@ -1,9 +1,10 @@
-# Upstream synchronization — 2026-10-22
+# Upstream synchronization — 2026-10-23
 
-Base: rabbitfiremediacreation/music-generator `main` at `eb19a988e31ab9072e9d0f5f02e158cf710a7e0b` (2026-10-22). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes through `91440ee` are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
+Base: rabbitfiremediacreation/music-generator `main` at `3374648df96a6d4a43a21b0dabc1b1919db15bcc` (2026-10-23). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes through `91440ee` are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
 
 | Original changes | Desktop implementation |
 | --- | --- |
+| `3374648`: fresh-form defaults 80 iterations and variance 1.2, tooltips in twelve languages | New form uses 80/1.2; localized tooltips distinguish app defaults from model defaults (50/0.85). Existing stored parameters, retries and reuse keep their original values. Legacy requests with omitted/zero steps or null temperature retain the model-default interpretation. No database migration or rewrite of old songs; desktop MP3 errors and next-operation device hints retained during conflict resolution |
 | `0ef950d`: Automatic / CPU-only language model | SQLite `lm_device`, settings selector in twelve languages, separate CPU LM with accelerated synthesis, changes applied to the next operation |
 | `d49f4d7`: explicit CPU device on newer Windows engines | Bounded/cancellable CLI capability probe; add `--device CPU` when supported and retain `GGML_BACKEND=CPU` for older pinned engines |
 | `91440ee`: WAV / MP3 downloads and ZIP | Native dialogs, 192 kbit/s bundled converter, original WAV retained for playback, source-stamped cache and deletion cleanup, localized errors |
@@ -12,6 +13,10 @@ Base: rabbitfiremediacreation/music-generator `main` at `eb19a988e31ab9072e9d0f5
 | `eb19a98`: Intel-Mac CPU synthesis, installer GPU-test bypass and Python log-based memory hint | Initial merge `30929e2` kept the Python backend and root installer/start scripts deleted, preserving the updated original README/PDFs and guide sources. Experimental desktop Intel support follows separately in 0.2.4 (below); the Python log-tail error hint is not introduced |
 
 The `eb19a98` conflict resolution changes documentation only relative to desktop commit `0021f3c`. Application, engine, manifests and build configuration remain unchanged. The published `v0.2.3-test.1` artifacts still correspond to `0021f3c`; this documentation merge does not replace them.
+
+## Sampling defaults follow-up — 2026-10-23
+
+Only the fresh generation form changes to 80 iterations / 1.2 variance. Song reuse continues restoring saved values; legacy missing/zero iteration counts and null/missing temperatures retain the previous model-default fallback (50 / 0.85). Backend request defaults, database schema, stored song JSON and retry behavior are unchanged. Regression tests exercise fresh UI defaults, old/custom/new reuse values, legacy fallbacks, all twelve tooltips and SQLite restart/error/retry with unchanged complete parameter objects. Published `v0.2.4-test.1` artifacts remain the pre-merge binaries from `355746f`; merging this change does not replace release assets.
 
 ## Intel desktop follow-up — 0.2.4
 

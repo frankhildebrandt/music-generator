@@ -32,6 +32,47 @@ fn queue_is_fifo_and_keeps_variant_seeds() {
 }
 
 #[test]
+fn fresh_sampling_defaults_do_not_rewrite_stored_songs_on_restart_or_retry() {
+    let root = tempfile::tempdir().unwrap();
+    let db = Database::open(root.path()).unwrap();
+    let mut saved = Vec::new();
+    for (steps, temperature) in [(50, Some(1.0)), (75, Some(0.65)), (0, None)] {
+        let req = GenerateRequest {
+            inference_steps: steps,
+            lm_temperature: temperature,
+            ..request()
+        };
+        for id in db.enqueue(&req).unwrap() {
+            saved.push((id.clone(), db.song(&id).unwrap().params));
+        }
+    }
+    let fresh = GenerateRequest {
+        inference_steps: 80,
+        lm_temperature: Some(1.2),
+        ..request()
+    };
+    let fresh_id = db.enqueue(&fresh).unwrap()[0].clone();
+    drop(db);
+    let db = Database::open(root.path()).unwrap();
+    for (id, params) in saved {
+        assert_eq!(db.song(&id).unwrap().params, params);
+        assert_eq!(db.claim_next().unwrap().unwrap().0, id);
+        db.fail(&id, "retry fixture").unwrap();
+        assert_eq!(db.song(&id).unwrap().status, "error");
+        db.retry(&id).unwrap();
+        assert_eq!(db.song(&id).unwrap().status, "queued");
+        let (retried, queued_params) = db.claim_next().unwrap().unwrap();
+        assert_eq!(retried, id);
+        assert_eq!(queued_params, params);
+        assert!(db.finish(&id, "fixture.wav", &json!({})).unwrap());
+        assert_eq!(db.song(&id).unwrap().params, params);
+    }
+    let fresh_params = db.song(&fresh_id).unwrap().params;
+    assert_eq!(fresh_params["inference_steps"], 80);
+    assert_eq!(fresh_params["lm_temperature"], 1.2);
+}
+
+#[test]
 fn cancellation_cannot_be_overwritten_by_a_late_result() {
     let dir = tempfile::tempdir().unwrap();
     let db = Database::open(dir.path()).unwrap();
