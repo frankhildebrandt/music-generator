@@ -1,5 +1,6 @@
 pub mod client;
 pub mod device;
+mod diagnostics;
 pub mod process;
 use crate::{
     error::{message, Error, Result},
@@ -64,10 +65,10 @@ impl Engine {
         } else {
             synth.clone()
         };
-        Ok(Self {
-            processes,
-            client: EngineClient::new(synth, lm, settings.poll_interval, settings.timeout_minutes)?,
-        })
+        let mut client =
+            EngineClient::new(synth, lm, settings.poll_interval, settings.timeout_minutes)?;
+        client.synth_log = Some(logs.join("ace-server.log"));
+        Ok(Self { processes, client })
     }
 
     pub fn alive(&mut self) -> bool {

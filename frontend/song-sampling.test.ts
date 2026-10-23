@@ -8,6 +8,8 @@ it("uses the upstream defaults only for a fresh generation form", () => {
   const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
   expect(html.match(/<input name="inference_steps"[^>]*value="([^"]+)"/)?.[1]).toBe("80");
   expect(html.match(/<input name="lm_temperature"[^>]*value="([^"]+)"/)?.[1]).toBe("1.2");
+  expect(html.match(/<input name="duration"[^>]*max="([^"]+)"/)?.[1]).toBe("600");
+  expect(html).toContain('id="lenHint" hidden aria-live="polite"');
 });
 
 it("restores stored old, custom and new song values without mutating parameters", () => {
@@ -36,5 +38,7 @@ it("updates both tooltips in all twelve languages while retaining desktop messag
     expect(I18N[lang].variance_tip).toContain("0.85");
     expect(I18N[lang].mp3_failed).toBeTruthy();
     expect(I18N[lang].lm_dev_hint).not.toContain("OFF");
+    expect(I18N[lang].length_tip).toContain("10:00");
+    expect(I18N[lang].len_long).toBeTruthy();
   }
 });

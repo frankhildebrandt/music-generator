@@ -1,9 +1,10 @@
 # Upstream synchronization — 2026-10-23
 
-Base: rabbitfiremediacreation/music-generator `main` at `3374648df96a6d4a43a21b0dabc1b1919db15bcc` (2026-10-23). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes through `91440ee` are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
+Base: rabbitfiremediacreation/music-generator `main` at `0e64bc7346baae12fe8ee0c17e670efee7f8d524` (2026-10-23). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
 
 | Original changes | Desktop implementation |
 | --- | --- |
+| `0e64bc7`: ten-minute songs, bounded audio codes and current-synthesis memory/length diagnostics | Duration slider up to 600 seconds, localized warning above five minutes, outgoing synthesis codes capped at requested seconds × 5 / 3000. Rust captures the synthesis log offset before each request and inspects only fresh stdout/stderr lines on failure; cancellation remains cancellation. Saved song parameters are unchanged. Updated original PDFs/README retained under `docs/legacy/` |
 | `3374648`: fresh-form defaults 80 iterations and variance 1.2, tooltips in twelve languages | New form uses 80/1.2; localized tooltips distinguish app defaults from model defaults (50/0.85). Existing stored parameters, retries and reuse keep their original values. Legacy requests with omitted/zero steps or null temperature retain the model-default interpretation. No database migration or rewrite of old songs; desktop MP3 errors and next-operation device hints retained during conflict resolution |
 | `0ef950d`: Automatic / CPU-only language model | SQLite `lm_device`, settings selector in twelve languages, separate CPU LM with accelerated synthesis, changes applied to the next operation |
 | `d49f4d7`: explicit CPU device on newer Windows engines | Bounded/cancellable CLI capability probe; add `--device CPU` when supported and retain `GGML_BACKEND=CPU` for older pinned engines |
@@ -15,6 +16,8 @@ Base: rabbitfiremediacreation/music-generator `main` at `3374648df96a6d4a43a21b0
 The `eb19a98` conflict resolution changes documentation only relative to desktop commit `0021f3c`. Application, engine, manifests and build configuration remain unchanged. The published `v0.2.3-test.1` artifacts still correspond to `0021f3c`; this documentation merge does not replace them.
 
 ## Sampling defaults follow-up — 2026-10-23
+
+Release 0.2.5 also includes the subsequent `0e64bc7` main commit. The new code limit changes only the outgoing synthesis metadata, never existing SQLite parameters. Engine contract tests cover actual LM overproduction, failed synth jobs, HTTP failures, missing audio and stale log errors. Log tests cover missing/truncated logs and length/memory precedence. UI checks include the 600-second maximum and warnings in all twelve languages. Real ten-minute inference, especially on Intel/8 GiB systems, remains manual acceptance.
 
 Only the fresh generation form changes to 80 iterations / 1.2 variance. Song reuse continues restoring saved values; legacy missing/zero iteration counts and null/missing temperatures retain the previous model-default fallback (50 / 0.85). Backend request defaults, database schema, stored song JSON and retry behavior are unchanged. Regression tests exercise fresh UI defaults, old/custom/new reuse values, legacy fallbacks, all twelve tooltips and SQLite restart/error/retry with unchanged complete parameter objects. Published `v0.2.4-test.1` artifacts remain the pre-merge binaries from `355746f`; merging this change does not replace release assets.
 
