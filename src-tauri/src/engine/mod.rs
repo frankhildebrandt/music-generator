@@ -1,6 +1,5 @@
 pub mod client;
 pub mod device;
-mod diagnostics;
 pub mod process;
 use crate::{
     error::{message, Error, Result},

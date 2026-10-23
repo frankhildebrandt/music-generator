@@ -1,0 +1,8 @@
+diff --git a/IPlug/VST3/IPlugVST3_ProcessorBase.cpp b/IPlug/VST3/IPlugVST3_ProcessorBase.cpp
+index b02539a..c165daf 100644
+--- a/IPlug/VST3/IPlugVST3_ProcessorBase.cpp
++++ b/IPlug/VST3/IPlugVST3_ProcessorBase.cpp
+@@ -291 +291,2 @@ void IPlugVST3ProcessorBase::ProcessParameterChanges(ProcessData& data, IPlugQue
+-        if (paramQueue->getPoint(numPoints - 1,  offsetSamples, value) == kResultTrue)
++        for (int32 point = 0; point < numPoints; ++point)
++        if (paramQueue->getPoint(point, offsetSamples, value) == kResultTrue)

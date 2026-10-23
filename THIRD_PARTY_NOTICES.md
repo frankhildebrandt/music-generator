@@ -12,3 +12,15 @@ Music Generator is distributed under the MIT license; see LICENSE.
 The GGUF models are downloaded separately from the pinned Hugging Face revision in models/manifest.json. Model cards and license information: https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF. Models are not included in the application download.
 
 Linux AppImage media support includes the GStreamer base/good plugins supplied by the build distribution. Additional proprietary codecs and GStreamer ugly plugins are not deliberately bundled.
+
+## Native loop instrument
+
+- iPlug2 (zlib), including its bundled WDL, IGraphics and graphics dependencies: https://github.com/iPlug2/iPlug2. Full license notices are shipped in the plugin package.
+- CLAP and clap-helpers (MIT): https://github.com/free-audio/clap and https://github.com/free-audio/clap-helpers.
+- VST SDK 3.8 (MIT): https://github.com/steinbergmedia/vst3sdk. VST is a trademark of Steinberg Media Technologies GmbH.
+- Signalsmith Stretch and Linear (MIT): https://github.com/Signalsmith-Audio/signalsmith-stretch and https://github.com/Signalsmith-Audio/linear.
+- nlohmann JSON (MIT): https://github.com/nlohmann/json. Copyright Niels Lohmann and contributors; full license is included in the header and plugin package.
+- Roboto font (Apache-2.0): plugin/resources/Roboto-LICENSE.txt.
+- Rust helper dependencies, including Symphonia (MPL-2.0), retain their source licenses; exact versions are in crates/loops-service/Cargo.lock and crates/music-core/Cargo.lock. Symphonia source: https://github.com/pdeljanov/Symphonia; this project makes no modifications to it.
+
+Pinned source revisions and graphics archive checksums are in scripts/plugin/dependencies.json. The framework adapter has a documented local VST3 sample-offset patch in scripts/plugin/iplug-automation.patch. Output Arcade is a reference for the player layout only; no Output audio or graphics are distributed.

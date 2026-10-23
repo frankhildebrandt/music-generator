@@ -17,6 +17,7 @@ serde_json = "1"
 sha2 = "0.10"
 
 [dependencies]
+music-core = { path = "../crates/music-core" }
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"

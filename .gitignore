@@ -24,3 +24,6 @@ src-tauri/gen/
 src-tauri/resources/engine/*
 !src-tauri/resources/engine/.gitkeep
 src-tauri/resources/WebView2/
+
+crates/*/target/
+plugin/build*/

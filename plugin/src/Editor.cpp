@@ -1,0 +1,416 @@
+#include "Editor.h"
+namespace loops::ui {
+namespace {
+int keyPitch(const std::string &key) {
+  if (key.empty())
+    return -1;
+  const auto note =
+      std::string("C D EF G A B").find(char(std::toupper(key[0])));
+  if (note == std::string::npos || key[0] == ' ')
+    return -1;
+  int pitch = int(note);
+  if (key.size() > 1 && key[1] == '#')
+    ++pitch;
+  if (key.size() > 1 && key[1] == 'b')
+    --pitch;
+  return (pitch + 12) % 12;
+}
+} // namespace
+
+IText LoopEditor::text(float size, IColor color) const {
+  return IText(size, color, "Roboto", EAlign::Near, EVAlign::Middle);
+}
+void LoopEditor::label(IGraphics &g, const std::string &value, IRECT r,
+                       float size, IColor color) {
+  g.DrawText(text(size, color), value.c_str(), r);
+}
+void LoopEditor::button(IGraphics &g, IRECT r, const std::string &title,
+                        const std::string &action, bool active) {
+  g.FillRoundRect(active ? IColor(255, 34, 84, 75) : Panel, r, 5);
+  g.DrawRoundRect(active ? Mint : Line, r, 5);
+  label(g, title, r.GetPadded(-8), 12, active ? Mint : White);
+  hits.push_back({r, action});
+}
+void LoopEditor::input(IGraphics &g, IRECT r, const std::string &title,
+                       const std::string &value, const std::string &action) {
+  label(g, title, r.GetFromTop(18), 10, Muted);
+  button(g, r.GetReducedFromTop(20), value, action);
+}
+void LoopEditor::entry(const std::string &id, const std::string &value,
+                       IRECT r) {
+  field = id;
+  GetUI()->CreateTextEntry(*this, text(14), r, value.c_str());
+}
+void LoopEditor::importDialog() {
+  WDL_String file, path;
+  GetUI()->PromptForFile(file, path, EFileAction::Open, "wav mp3 zip",
+                         [this](const WDL_String &f, const WDL_String &) {
+                           if (f.GetLength())
+                             p.importFile(f.Get());
+                         });
+}
+void LoopEditor::bankDialog(bool save) {
+  WDL_String file, path;
+  GetUI()->PromptForFile(
+      file, path, save ? EFileAction::Save : EFileAction::Open, "mgloops",
+      [this, save](const WDL_String &f, const WDL_String &) {
+        if (f.GetLength()) {
+          if (save)
+            p.saveBankFile(f.Get());
+          else
+            p.openBankFile(f.Get());
+        }
+      });
+}
+LoopEditor::LoopEditor(MusicGeneratorLoops &plugin)
+    : IControl(IRECT(0, 0, 1120, 780)), p(plugin) {}
+void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
+  std::lock_guard<std::recursive_mutex> lock(p.stateMutex);
+  for (auto it = hits.rbegin(); it != hits.rend(); ++it) {
+    if (!it->rect.Contains(x, y))
+      continue;
+    auto id = it->action;
+    if (id.rfind("view", 0) == 0) {
+      view = std::stoi(id.substr(4));
+      SetDirty(false);
+      return;
+    }
+    if (id.size() > 3 && id.rfind("key", 0) == 0) {
+      int note = std::stoi(id.substr(3));
+      if (mod.R) {
+        p.context[note] = !p.context[note];
+      } else {
+        p.selected = note;
+        p.key = p.bank[note].key;
+        p.beats = p.bank[note].beats;
+        if (!mod.S) {
+          p.trigger(note, true);
+          held = note;
+        }
+      }
+      SetDirty(false);
+      return;
+    }
+    if (id == "scale") {
+      const float current = GetUI()->GetDrawScale();
+      GetUI()->Resize(PLUG_WIDTH, PLUG_HEIGHT,
+                      current > 0.9f   ? 0.75f
+                      : current > 0.6f ? 0.5f
+                                       : 1.f);
+      return;
+    }
+    if (id == "masterplay") {
+      double active = p.GetParam(p.selected * 8 + Active)->Value();
+      p.parameter(Active, active > 0.5 ? 0 : 1);
+      SetDirty(false);
+      return;
+    }
+    if (id.rfind("slot", 0) == 0) {
+      int n = std::stoi(id.substr(4));
+      if (mod.R)
+        p.context[n] = !p.context[n];
+      else {
+        p.selected = n;
+        p.bpm = p.bank[n].bpm;
+        p.beats = p.bank[n].beats;
+        p.key = p.bank[n].key;
+        p.zoom = 1;
+        p.viewStart = 0;
+      }
+      break;
+    }
+    auto &slot = p.bank[p.selected];
+    if (id == "wave" && slot.edited) {
+      double ratio =
+          std::clamp(p.viewStart + (x - 24) / 1072.0 / p.zoom, 0.0, 1.0);
+      if (mod.S) {
+        p.noiseStart = ratio * slot.edited->samples.size() / slot.edited->rate;
+        p.noiseEnd = p.noiseStart;
+        drag = 100;
+      } else {
+        double a = p.GetParam(p.selected * 8 + Start)->Value(),
+               b = p.GetParam(p.selected * 8 + End)->Value();
+        drag = std::abs(ratio - a) < std::abs(ratio - b) ? Start : End;
+        p.parameter(drag, ratio);
+      }
+      break;
+    }
+    if (id == "import")
+      importDialog();
+    else if (id == "open")
+      bankDialog(false);
+    else if (id == "save")
+      bankDialog(true);
+    else if (id == "models") {
+      WDL_String folder;
+      GetUI()->PromptForDirectory(
+          folder, [this](const WDL_String &f, const WDL_String &) {
+            if (f.GetLength()) {
+              p.setModels(f.Get());
+              p.install();
+            }
+          });
+
+    } else if (id == "prevpage")
+      p.page = (p.page + 7) % 8;
+    else if (id == "nextpage")
+      p.page = (p.page + 1) % 8;
+    else if (id == "play") {
+      p.audition();
+      held = p.selected;
+    } else if (id == "stop") {
+      p.stopPreview();
+      p.parameter(Active, 0);
+      p.publish(p.selected);
+    } else if (id == "original") {
+      p.audition(true);
+      held = p.selected;
+    } else if (id == "edited") {
+      p.audition(false);
+      held = p.selected;
+    } else if (id == "mode") {
+      slot.mode = Mode((int(slot.mode) + 1) % 3);
+      p.publish(p.selected);
+    } else if (id == "quantize") {
+      slot.quantize = slot.quantize == 0      ? 0.25
+                      : slot.quantize == 0.25 ? 1
+                      : slot.quantize == 1    ? p.barBeats
+                                              : 0;
+      p.publish(p.selected);
+    } else if (id == "bus") {
+      slot.bus = (slot.bus + 1) % 17;
+      p.publish(p.selected);
+    } else if (id == "choke") {
+      slot.choke = (slot.choke + 1) % 17;
+      p.publish(p.selected);
+    } else if (id.rfind("param", 0) == 0) {
+      drag = std::stoi(id.substr(5));
+      origin = y;
+      initial = p.GetParam(p.selected * 8 + drag)->Value();
+    } else if (id == "startsec" || id == "endsec") {
+      int param = id == "startsec" ? Start : End;
+      double duration =
+          slot.edited ? slot.edited->samples.size() / slot.edited->rate : 1;
+      entry(id,
+            number(p.GetParam(p.selected * 8 + param)->Value() * duration, 3),
+            it->rect);
+    } else if (id == "zero")
+      p.zero();
+    else if (id == "trim")
+      p.edit();
+    else if (id == "normalize")
+      p.edit(true);
+    else if (id == "denoise")
+      p.edit(false, true);
+    else if (id == "undo")
+      p.undo();
+    else if (id == "redo")
+      p.undo(true);
+    else if (id == "export") {
+      if (p.exportPath.empty())
+        p.exportWav();
+      else
+        GetUI()->InitiateExternalFileDragDrop(p.exportPath.c_str(), it->rect);
+    } else if (id == "savewav") {
+      if (p.exportPath.empty())
+        p.exportWav();
+      else {
+        WDL_String file, path;
+        auto source = p.exportPath;
+        GetUI()->PromptForFile(
+            file, path, EFileAction::Save, "wav",
+            [this, source](const WDL_String &f, const WDL_String &) {
+              if (f.GetLength()) {
+                try {
+                  std::filesystem::copy_file(
+                      std::filesystem::u8path(source),
+                      std::filesystem::u8path(f.Get()),
+                      std::filesystem::copy_options::overwrite_existing);
+                } catch (const std::exception &e) {
+                  p.status = e.what();
+                }
+              }
+            });
+      }
+    } else if (id == "zoomin")
+      p.zoom = std::min(64.0, p.zoom * 2);
+    else if (id == "zoomout") {
+      p.zoom = std::max(1.0, p.zoom / 2);
+      p.viewStart = std::min(p.viewStart, 1 - 1 / p.zoom);
+    } else if (id == "instrument") {
+      const std::array<std::string, 12> instruments = {
+          "drums",          "bass",    "keyboard",   "guitar",
+          "synth",          "strings", "percussion", "vocals",
+          "backing_vocals", "fx",      "brass",      "woodwinds"};
+      auto i = std::find(instruments.begin(), instruments.end(), p.instrument) -
+               instruments.begin();
+      p.instrument = instruments[(i + 1) % 12];
+    } else if (id == "key")
+      entry(id, p.key, it->rect);
+    else if (id == "prompt")
+      entry(id, p.prompt, it->rect);
+    else if (id == "noisedb")
+      entry(id, number(p.noiseDb), it->rect);
+    else if (id == "fade")
+      entry(id, number(p.crossfade), it->rect);
+    else if (id == "bpm")
+      entry(id, number(p.bpm), it->rect);
+    else if (id == "bars")
+      entry(id, number(p.beats / p.barBeats), it->rect);
+    else if (id == "steps")
+      entry(id, std::to_string(p.steps), it->rect);
+    else if (id == "variants")
+      entry(id, std::to_string(p.variants), it->rect);
+    else if (id == "seed")
+      entry(id, std::to_string(p.seed), it->rect);
+    else if (id == "host") {
+      p.followHostGeneration = true;
+      p.bpm = p.hostBpm;
+    } else if (id == "generate")
+      p.generate();
+    else if (id == "cancel")
+      p.cancel();
+    else if (id == "variant" && !p.candidates.empty())
+      p.variant = (p.variant + 1) % p.candidates.size();
+    else if (id == "accept")
+      p.accept();
+    else if (id == "candidate")
+      p.previewCandidate();
+    break;
+  }
+  SetDirty(false);
+}
+void LoopEditor::OnMouseDrag(float x, float y, float, float,
+                             const IMouseMod &mod) {
+  if (drag < 0)
+    return;
+  auto &slot = p.bank[p.selected];
+  if (drag == 100 && slot.edited) {
+    double ratio =
+        std::clamp(p.viewStart + (x - 24) / 1072.0 / p.zoom, 0.0, 1.0);
+    p.noiseEnd = ratio * slot.edited->samples.size() / slot.edited->rate;
+  } else if (drag == Start || drag == End) {
+    double ratio =
+        std::clamp(p.viewStart + (x - 24) / 1072.0 / p.zoom, 0.0, 1.0);
+    if (!mod.C && slot.edited && p.beats > 0)
+      ratio = std::round(ratio * p.beats * 4) / (p.beats * 4);
+    p.parameter(drag, ratio);
+  } else {
+    double scale = drag == Gain    ? 0.01
+                   : drag == Pan   ? 0.01
+                   : drag == Pitch ? 0.1
+                                   : 100;
+    p.parameter(drag, initial + (origin - y) * scale);
+  }
+  SetDirty(false);
+}
+void LoopEditor::OnMouseUp(float, float, const IMouseMod &) {
+  drag = -1;
+  if (held >= 0) {
+    p.trigger(held, false);
+    held = -1;
+  }
+}
+void LoopEditor::OnMouseDblClick(float x, float y, const IMouseMod &) {
+  for (const auto &h : hits)
+    if (h.rect.Contains(x, y) && h.action.rfind("slot", 0) == 0) {
+      held = std::stoi(h.action.substr(4));
+      p.trigger(held, true);
+      break;
+    }
+}
+void LoopEditor::OnMouseWheel(float, float, const IMouseMod &mod, float delta) {
+  if (mod.S)
+    p.viewStart = std::clamp(p.viewStart + double(delta) * 0.025 / p.zoom, 0.0,
+                             1 - 1 / p.zoom);
+  else
+    p.zoom = std::clamp(p.zoom * std::pow(1.2, double(delta)), 1.0, 64.0);
+  SetDirty(false);
+}
+void LoopEditor::OnDrop(const char *path) { p.importFile(path); }
+void LoopEditor::OnTextEntryCompletion(const char *value, int) {
+  try {
+    std::string s = value;
+    if (field == "key") {
+      p.key = s.substr(0, 80);
+      auto &slot = p.bank[p.selected];
+      if (view == 1 && slot.edited) {
+        const int oldRoot = keyPitch(slot.key), newRoot = keyPitch(p.key);
+        const bool unknown =
+            slot.metadata.contains("key") && slot.metadata["key"].is_null();
+        if (unknown) {
+          slot.key = p.key;
+          slot.metadata["key"] = p.key;
+        } else if (oldRoot >= 0 && newRoot >= 0 &&
+                   (slot.key.find("minor") != std::string::npos) ==
+                       (p.key.find("minor") != std::string::npos)) {
+          const int delta = (newRoot - oldRoot + 18) % 12 - 6;
+          p.parameter(Pitch,
+                      p.GetParam(p.selected * 8 + Pitch)->Value() + delta);
+          slot.key = p.key;
+        } else
+          p.status = "Generate a new take to change between major and minor";
+      }
+    } else if (field == "prompt")
+      p.prompt = s.substr(0, 8000);
+    else {
+      double n = std::stod(s);
+      if (!std::isfinite(n))
+        return;
+      if (field == "noisedb")
+        p.noiseDb = std::clamp(n, 0.0, 30.0);
+      else if (field == "fade")
+        p.crossfade = std::clamp(n, 0.0, 1000.0);
+      else if (field == "bpm") {
+        p.followHostGeneration = false;
+        p.bpm = std::clamp(n, 30.0, 300.0);
+        if (view == 1) {
+          auto &slot = p.bank[p.selected];
+          slot.bpm = p.bpm;
+          if (slot.edited)
+            slot.beats = p.beats =
+                slot.edited->samples.size() / slot.edited->rate * p.bpm / 60;
+          p.publish(p.selected);
+        }
+      } else if (field == "bars") {
+        p.beats = std::clamp(n * p.barBeats, 0.25, 600 * p.bpm / 60);
+        if (view == 1) {
+          p.bank[p.selected].beats = p.beats;
+          p.publish(p.selected);
+        }
+      } else if (field == "steps")
+        p.steps = std::clamp(int(n), 1, 100);
+      else if (field == "variants")
+        p.variants = std::clamp(int(n), 1, 8);
+      else if (field == "seed")
+        p.seed = int64_t(std::clamp(n, -1.0, 2147483647.0));
+      else if (field == "startsec" || field == "endsec") {
+        auto a = p.bank[p.selected].edited;
+        if (a)
+          p.parameter(field == "startsec" ? Start : End,
+                      n * a->rate / a->samples.size());
+      }
+    }
+  } catch (...) {
+    p.status = "Enter a valid number";
+  }
+  SetDirty(false);
+}
+} // namespace loops::ui
+
+using namespace iplug::igraphics;
+void MusicGeneratorLoops::layout(IGraphics *g) {
+  g->LoadFont("Roboto", "Roboto-Regular.ttf");
+  g->EnableMouseOver(true);
+  g->AttachControl(new loops::ui::LoopEditor(*this));
+  g->AttachCornerResizer(EUIResizerMode::Scale, false);
+}
+
+void MusicGeneratorLoops::OnParentWindowResize(int width, int height) {
+  if (auto *graphics = GetUI()) {
+    const float platform = graphics->GetPlatformWindowScale();
+    const float scale = std::min(width / platform / PLUG_WIDTH,
+                                 height / platform / PLUG_HEIGHT);
+    graphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, scale, false);
+  }
+}

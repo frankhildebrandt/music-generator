@@ -4,6 +4,9 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 
 **Herunterladen, entpacken, öffnen.** Keine Installer und keine Python-/Node-Installation beim Anwender. Der Startassistent lädt die benötigten Modelle und prüft die Hardware. Danach funktioniert die Musikgenerierung offline.
 
+
+Das Instrument **Music Generator Loops** von **Alphatester x KRGSH** ergänzt die App als VST3/CLAP mit MIDI-Loopplayer, ACE-Step-Einzelspuren und WAV-Dragging. [Plugin-Anleitung und Entwicklungsstand](docs/loop-plugin.md).
+
 | Plattform | Bundle |
 | --- | --- |
 | macOS 26+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
