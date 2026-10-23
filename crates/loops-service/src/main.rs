@@ -1,6 +1,7 @@
 mod engine;
 mod imports;
 mod jobs;
+mod models;
 mod transport;
 #[cfg(windows)]
 mod windows_pipe;
@@ -37,42 +38,6 @@ fn root() -> PathBuf {
             .join("Library/Application Support/MusicGeneratorLoops")
     }
 }
-fn app_models() -> Option<PathBuf> {
-    #[cfg(windows)]
-    let folders =
-        vec![PathBuf::from(std::env::var_os("LOCALAPPDATA")?).join("de.alphatester.music-generator")];
-    #[cfg(not(windows))]
-    let folders = {
-        let home = PathBuf::from(std::env::var_os("HOME")?);
-        vec![
-            home.join("Library/Containers/de.alphatester.music-generator/Data/Library/Application Support/de.alphatester.music-generator"),
-            home.join("Library/Application Support/de.alphatester.music-generator"),
-        ]
-    };
-    for app in folders {
-        if let Ok(db) = rusqlite::Connection::open_with_flags(
-            app.join("music.db"),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        ) {
-            if let Ok(value) = db.query_row(
-                "SELECT value FROM settings WHERE key='models_dir'",
-                [],
-                |r| r.get::<_, String>(0),
-            ) {
-                let value = serde_json::from_str::<String>(&value).unwrap_or(value);
-                let path = PathBuf::from(value);
-                if path.is_absolute() && path.is_dir() {
-                    return Some(path);
-                }
-            }
-        }
-        let path = app.join("models");
-        if path.is_dir() {
-            return Some(path);
-        }
-    }
-    None
-}
 fn seconds() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -103,12 +68,7 @@ async fn main() -> Result<()> {
                 .ok_or_else(|| message("Missing service directory"))?
                 .join("resources"),
         );
-    let models = std::fs::read(root.join("settings.json"))
-        .ok()
-        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-        .and_then(|v| v["models"].as_str().map(PathBuf::from))
-        .or_else(app_models)
-        .unwrap_or(root.join("models"));
+    let models = models::resolve_from(&models::app_roots()?);
     let service = Arc::new(Service {
         root,
         resources,
@@ -133,7 +93,11 @@ async fn dispatch(service: Arc<Service>, req: Value) -> Result<Value> {
         .ok_or_else(|| message("Missing instance ID"))?
         .to_owned();
     let data = &req["data"];
-    match req["action"].as_str().unwrap_or("") {
+    let action = req["action"].as_str().unwrap_or("");
+    if ["status", "models", "install", "generate"].contains(&action) {
+        models::refresh(&service).await?;
+    }
+    match action {
         "status" => Ok(
             json!({"version":1,"models":service.models.lock().await.to_string_lossy(),"root":service.root}),
         ),
@@ -142,27 +106,6 @@ async fn dispatch(service: Arc<Service>, req: Value) -> Result<Value> {
             Ok(
                 json!({"folder":folder,"models":music_core::manifest::manifest().models.into_iter().filter(|m|["pro"].contains(&m.kind.as_str()) || ["vae-BF16.gguf","Qwen3-Embedding-0.6B-Q8_0.gguf"].contains(&m.file.as_str())).map(|m|json!({"file":m.file,"bytes":m.estimated_bytes,"present":folder.join(&m.file).is_file()})).collect::<Vec<_>>()}),
             )
-        }
-        "set_models" => {
-            let path = PathBuf::from(
-                data["path"]
-                    .as_str()
-                    .ok_or_else(|| message("Missing folder"))?,
-            );
-            if !path.is_absolute() {
-                return Err(message("Select an absolute model folder"));
-            }
-            let _permit = service
-                .serial
-                .try_acquire()
-                .map_err(|_| message("Wait for active jobs before changing models"))?;
-            service.engine.lock().await.take();
-            let settings = json!({"models":path});
-            let temp = service.root.join("settings.part");
-            std::fs::write(&temp, serde_json::to_vec(&settings)?)?;
-            std::fs::rename(temp, service.root.join("settings.json"))?;
-            *service.models.lock().await = path;
-            Ok(settings)
         }
         "install" => jobs::enqueue_install(service, instance).await,
         "generate" => {

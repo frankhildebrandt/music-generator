@@ -60,7 +60,11 @@ void MusicGeneratorLoops::processReply(const Json &r) {
   }
   if (type == "enqueued") {
     job = r.at("data").at("id");
-    status = "Queued";
+    if (r.contains("models")) {
+      models = r.at("models");
+      status = "Checking shared app models: " + models;
+    } else
+      status = "Queued";
     return;
   }
   if (type == "job") {
@@ -147,12 +151,6 @@ void MusicGeneratorLoops::processReply(const Json &r) {
     exportPath = r.at("path");
     status = "WAV ready — drag the WAV button into REAPER";
     busy = false;
-    return;
-  }
-  if (type == "models") {
-    models = r.at("data").value("folder",
-                                r.at("data").value("models", std::string()));
-    status = "Model folder selected. Install/check downloads when ready.";
     return;
   }
 }
@@ -259,8 +257,12 @@ void MusicGeneratorLoops::install() {
   if (busy)
     return;
   busy = true;
+  status = "Checking models in the app data folder...";
   enqueue([this]() {
-    return Json{{"type", "enqueued"}, {"data", service.request("install")}};
+    auto location = service.request("models");
+    return Json{{"type", "enqueued"},
+                {"data", service.request("install")},
+                {"models", location.at("folder")}};
   });
 }
 void MusicGeneratorLoops::cancel() {
@@ -273,12 +275,6 @@ void MusicGeneratorLoops::cancel() {
                 {"data",
                  {{"status", "cancelled"},
                   {"message", "Cancelled; current loop preserved"}}}};
-  });
-}
-void MusicGeneratorLoops::setModels(const std::string &path) {
-  enqueue([this, path]() {
-    return Json{{"type", "models"},
-                {"data", service.request("set_models", {{"path", path}})}};
   });
 }
 void MusicGeneratorLoops::importFile(const std::string &path) {

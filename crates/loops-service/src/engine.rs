@@ -40,7 +40,7 @@ impl Engine {
                     .await?
                     == Verification::Invalid
             {
-                return Err(message(format!("Install or repair model {}", model.file)));
+                return Err(message(format!("Missing or invalid model {} in {}. Click Check models to install or repair it.", model.file, models.display())));
             }
         }
         let listener = std::net::TcpListener::bind("127.0.0.1:0")?;

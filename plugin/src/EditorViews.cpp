@@ -9,7 +9,7 @@ void LoopEditor::DrawDetail(IGraphics &g) {
   button(g, {650, 22, 760, 55}, "Import audio", "import");
   button(g, {770, 22, 865, 55}, "Open bank", "open");
   button(g, {875, 22, 970, 55}, "Save bank", "save");
-  button(g, {980, 22, 1095, 55}, "Models", "models");
+  button(g, {980, 22, 1095, 55}, "Check models", "models");
   g.DrawLine(Line, 24, 74, 1096, 74);
   label(g, "MIDI MAP", {24, 84, 190, 110}, 12, Muted);
   button(g, {209, 83, 247, 110}, "<", "prevpage");
@@ -344,7 +344,7 @@ void LoopEditor::Draw(IGraphics &g) {
          "scale");
   button(g, {760, 23, 860, 58}, "Open bank", "open");
   button(g, {870, 23, 970, 58}, "Save bank", "save");
-  button(g, {980, 23, 1084, 58}, "Models", "models");
+  button(g, {980, 23, 1084, 58}, "Check models", "models");
   g.DrawLine(Line, 36, 82, 1084, 82);
   if (view == 0)
     performance(g);

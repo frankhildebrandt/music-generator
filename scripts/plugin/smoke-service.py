@@ -5,6 +5,7 @@ import math
 import os
 from pathlib import Path
 import socket
+import sqlite3
 import struct
 import subprocess
 import tempfile
@@ -23,10 +24,14 @@ if not hasattr(socket, "AF_UNIX") or os.name == "nt":
 
 with tempfile.TemporaryDirectory(prefix="mgl-", dir="/tmp") as temporary:
     profile = Path(temporary)
+    app_profile = profile / "app-data"
+    app_profile.mkdir()
     if args.models:
-        (profile / "settings.json").write_text(json.dumps({"models": str(args.models.resolve())}))
+        with sqlite3.connect(app_profile / "music.db") as db:
+            db.execute("CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT)")
+            db.execute("INSERT INTO settings VALUES('models_dir', ?)", (json.dumps(str(args.models.resolve())),))
     log = (args.output / "service.log").open("w")
-    service = subprocess.Popen([str(args.service.resolve())], env={**os.environ, "MUSIC_LOOPS_PROFILE": temporary}, stdout=log, stderr=log)
+    service = subprocess.Popen([str(args.service.resolve())], env={**os.environ, "MUSIC_LOOPS_PROFILE": temporary, "MUSIC_GENERATOR_PROFILE": str(app_profile)}, stdout=log, stderr=log)
 
     def call(action, data=None, instance="smoke", expect_ok=True):
         request = json.dumps({"version": 1, "instance": instance, "action": action, "data": data or {}}).encode()
@@ -67,7 +72,16 @@ with tempfile.TemporaryDirectory(prefix="mgl-", dir="/tmp") as temporary:
             assert service.poll() is None, "Service exited at startup"
             time.sleep(0.1)
         assert (profile / "service.sock").stat().st_mode & 0o777 == 0o600
-        call("status")
+        expected_models = args.models.resolve() if args.models else app_profile / "models"
+        assert Path(call("status")["models"]) == expected_models
+        assert Path(call("models")["folder"]) == expected_models
+        if not args.models:
+            with sqlite3.connect(app_profile / "music.db") as db:
+                db.execute("CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT)")
+                relocated = profile / "relocated-models"
+                relocated.mkdir()
+                db.execute("INSERT INTO settings VALUES('models_dir', ?)", (json.dumps(str(relocated)),))
+            assert Path(call("models")["folder"]) == relocated
         source = profile / "source.wav"
         with wave.open(str(source), "wb") as audio:
             audio.setparams((2, 2, 48000, 0, "NONE", "not compressed"))

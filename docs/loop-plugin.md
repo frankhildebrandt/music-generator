@@ -24,13 +24,13 @@ macOS-Pakete sind lokal ad-hoc signiert, nicht notarisiert. Für öffentliche Ve
 
 ## Generieren und Modelle übernehmen
 
-Unter Models den bestehenden Modellordner der App auswählen. Der Dienst erkennt bekannte App-Profile automatisch; bei einem eigenen App-Modellordner kann dieser manuell ausgewählt werden. Erforderlich sind Base (`acestep-v15-base-Q8_0.gguf`), Qwen-Textencoder und VAE. Der fortsetzbare Downloader und die SHA256-Prüfung stammen aus demselben Rust-Kern wie die App. Dateisperren koordinieren parallele Downloads.
+Das Plugin verwendet automatisch die Modelle aus dem Datenverzeichnis der App: unter Windows `%LOCALAPPDATA%\de.alphatester.music-generator\models`, unter macOS aus dem App-Container beziehungsweise `~/Library/Application Support/de.alphatester.music-generator/models`. Ein in der App gespeicherter eigener Modellordner wird ebenfalls erkannt. Vorhandene Downloads werden gegenüber leeren Profilordnern bevorzugt; ein Dateiauswahldialog ist nicht erforderlich. „Check models“ prüft die Modelle und lädt fehlende Dateien direkt in den gemeinsam genutzten Modellordner. Alte manuelle Plugin-Ordnerangaben werden nicht mehr verwendet. Erforderlich sind Base (`acestep-v15-base-Q8_0.gguf`), Qwen-Textencoder und VAE. Der fortsetzbare Downloader und die SHA256-Prüfung stammen aus demselben Rust-Kern wie die App. Dateisperren koordinieren parallele Downloads.
 
 In GENERATE Instrument, Beschreibung, Tonart (z. B. `A minor` oder `C major`), BPM, Taktlänge, Seed und Varianten einstellen. Standard sind vier Takte bei Hosttempo. Für weitere Instrumente andere Slots per Rechtsklick als Kontext auswählen. Ein WAV kann zunächst in einen anderen Slot importiert und als Kontext markiert werden. Der Zielslot ist ausgeschlossen. Jeder Auftrag speichert seinen Kontext vor dem Einreihen unveränderlich.
 
 Ohne Kontext verwendet die Engine Textgenerierung, mit Kontext `lego`. Kurze Loops entstehen aus mindestens zehn Sekunden Rohmaterial und werden auf die exakte musikalische Framezahl aufbereitet. Mit „Audition take“ vorhören und erst mit „Accept take“ übernehmen. Dur-/Mollwechsel erfordern eine neue Generierung; Tune transponiert Halbtonschritte unabhängig vom Tempo. Mehrere Plugininstanzen teilen eine serielle Warteschlange pro Benutzer. Ein Dienstfehler unterbricht geladene Loops nicht.
 
-Die erste Generierung lädt große Modelle in den Speicher und kann entsprechend dauern. Models startet erforderliche Downloads nur auf ausdrückliche Bedienung. Ein Plugin-Scan lädt keine Modelle.
+Die erste Generierung lädt große Modelle in den Speicher und kann entsprechend dauern. „Check models“ startet erforderliche Downloads nur auf ausdrückliche Bedienung. Ein Plugin-Scan lädt keine Modelle.
 
 ## App-Importe und Bearbeitung
 

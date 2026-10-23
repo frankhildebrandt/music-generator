@@ -56,7 +56,7 @@ pub async fn enqueue_install(service: Arc<Service>, instance: String) -> Result<
                     if let Ok(mut jobs)=service.jobs.try_lock(){if let Some(j)=jobs.get_mut(&jid){if !j.cancel.is_cancelled(){j.value=json!({"id":jid,"status":"running","message":format!("{} {}: {} / {} MiB",p.phase,p.file,p.downloaded/1048576,p.total/1048576)});}}}
                 }).await?;
             }
-            Ok::<_,music_core::error::Error>(json!({"id":jid,"status":"done","message":"Models ready","results":[]}))
+            Ok::<_,music_core::error::Error>(json!({"id":jid,"status":"done","message":format!("Models ready · {}",root.display()),"results":[]}))
         }.await;
         finish(&service, &jid, outcome).await;
     });

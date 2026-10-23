@@ -142,15 +142,7 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
     else if (id == "save")
       bankDialog(true);
     else if (id == "models") {
-      WDL_String folder;
-      GetUI()->PromptForDirectory(
-          folder, [this](const WDL_String &f, const WDL_String &) {
-            if (f.GetLength()) {
-              p.setModels(f.Get());
-              p.install();
-            }
-          });
-
+      p.install();
     } else if (id == "prevpage")
       p.page = (p.page + 7) % 8;
     else if (id == "nextpage")

@@ -39,7 +39,6 @@ public:
   void exportWav();
   void saveBankFile(const std::string &);
   void openBankFile(const std::string &);
-  void setModels(const std::string &);
   void layout(iplug::igraphics::IGraphics *);
   loops::Bank bank;
   int selected = 36, page = 2, variant = 0, previewSlot = -1;
