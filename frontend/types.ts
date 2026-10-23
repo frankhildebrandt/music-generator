@@ -14,6 +14,7 @@ export interface Generation {
 }
 export interface Song {
   id: string; group_id: string; created_at: string; finished_at: string | null;
+  started_at?: string | null;
   status: "queued" | "running" | "done" | "error" | "cancelled"; message: string | null;
   title: string | null; caption: string; lyrics: string | null; seed: number;
   params: Generation; result_meta: Record<string, unknown> | null; file: string | null;

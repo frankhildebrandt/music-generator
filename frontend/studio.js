@@ -6,6 +6,7 @@ import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
 import { samplingForSong } from "./song-sampling";
 import { songErrorKey } from "./song-errors";
+import { generationSeconds } from "./song-timing";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { notify as alert, askName } from "./dialogs";
@@ -36,7 +37,7 @@ let editingId = null;   // id des Songs, dessen Titel gerade bearbeitet wird
 let played = new Set();
 try { played = new Set(JSON.parse(localStorage.getItem("played") || "[]")); } catch {}
 const markPlayed = (id) => { played.add(id); try { localStorage.setItem("played", JSON.stringify([...played])); } catch {} };
-const genTime = (s) => { const t = (Date.parse(s.finished_at) - Date.parse(s.created_at)) / 1000; return isFinite(t) && t >= 0 ? fmt(t) : null; };
+const genTime = (s) => { const seconds = generationSeconds(s); return seconds === null ? null : fmt(seconds); };
 
 // Würfel: zufälliger Prompt. Sechs Bauformen von kurz bis lang, gespeist aus Stimmungen, Szenen, Besetzungen,
 // Produktion, Verlauf und ganzen Ideen; Gesang nur, wenn der Song nicht instrumental ist. Der Stil bleibt deine Wahl.
