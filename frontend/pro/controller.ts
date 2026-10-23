@@ -111,13 +111,20 @@ export async function initializePro(host: HTMLElement): Promise<{ pause: () => v
     const control = target?.closest<HTMLButtonElement>("[data-action]");
     if (!control || control.disabled) return;
     const action = control.dataset.action!; const id = control.dataset.id;
+    // WebKit needs resume() in the user gesture, before entering the async edit queue.
+    if (action === "play") {
+      if (state.project) {
+        if (audio.isPlaying) audio.pause();
+        else void audio.play(state.project).catch((error) => message(String(error)));
+      }
+      return;
+    }
+    if (action === "stop") { audio.stop(); return; }
     if (action === "install") { void install(); return; }
     if (action === "cancel-download") { void backend.cancelSetup(); return; }
     run(async () => {
       if (action === "new") { const name = await askName(text("Projektname", "Project name"), "New session"); if (name?.trim()) await reopen((await proApi.create(name, 120, "A minor", RATE * 16)).id); return; }
       const p = state.project; if (!p) return;
-      if (action === "play") { if (audio.isPlaying) audio.pause(); else await audio.play(p); }
-      if (action === "stop") audio.stop();
       if (action === "seek") { const rect = control.getBoundingClientRect(); const frame = Math.min(p.duration, Math.max(0, (event.clientX - rect.left) / state.zoom * RATE)); if (audio.isPlaying) await audio.play(p, frame); else audio.seek(frame); }
       if (action === "undo" || action === "redo") { state.project = await proApi.history(p.id, action === "redo"); audio.pause(); render(); }
       if (action === "select-track") { rememberDraft(); state.track = id!; state.clip = null; render(); }
@@ -192,7 +199,7 @@ export async function initializePro(host: HTMLElement): Promise<{ pause: () => v
   document.addEventListener("langchange", () => render());
   document.addEventListener("keydown", (event) => {
     if (host.hidden || (event.target as HTMLElement).closest('input,textarea,select,button,dialog')) return;
-    if (event.code === "Space") { event.preventDefault(); run(async () => { if (audio.isPlaying) audio.pause(); else if (state.project) await audio.play(state.project); }); }
+    if (event.code === "Space") { event.preventDefault(); if (audio.isPlaying) audio.pause(); else if (state.project) void audio.play(state.project).catch((error) => message(String(error))); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { event.preventDefault(); run(async () => { if (state.project) { audio.pause(); state.project = await proApi.history(state.project.id, event.shiftKey); render(); } }); }
     const clip = state.project?.clips.find((c) => c.id === (event.target as HTMLElement).dataset.clip);
     if (clip && event.code === "Enter") select(clip);
@@ -202,7 +209,8 @@ export async function initializePro(host: HTMLElement): Promise<{ pause: () => v
     const time = host.querySelector("#proTime"); const play = host.querySelector("#proPlay"); const head = host.querySelector<HTMLElement>("#proPlayhead"); const meter = host.querySelector<HTMLElement>("#proMeter");
     const frame = audio.frame; const seconds = Math.max(0, frame / RATE);
     if (time) time.textContent = `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
-    if (play) play.textContent = audio.isPlaying ? "❚❚" : "▶";
+    const playLabel = audio.isPlaying ? "❚❚" : "▶";
+    if (play && play.textContent !== playLabel) play.textContent = playLabel;
     if (head) head.style.left = `calc(230px + ${frame / RATE * state.zoom}px)`;
     if (meter) { const peak = audio.peak; meter.textContent = peak > 0.00001 ? `${(20 * Math.log10(peak)).toFixed(1)} dB` : "−∞ dB"; meter.classList.toggle("clipping", peak >= 1); }
   }, 40);

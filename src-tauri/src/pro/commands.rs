@@ -101,7 +101,10 @@ pub async fn pro_request(
             }
             "export" => {
                 let destination = PathBuf::from(field(&payload, "path")?);
-                crate::sandbox::remember(&destination)?;
+                if !destination.is_absolute() {
+                    return Err(message("Select an absolute destination"));
+                }
+                // The Save dialog grants session access; a new file cannot be bookmarked yet.
                 let project = db.pro_project(field(&payload, "id")?)?;
                 let resolved = destination
                     .canonicalize()
