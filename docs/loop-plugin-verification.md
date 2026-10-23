@@ -20,7 +20,7 @@ Both formats scan/load on Apple Silicon. CLAP displays the new PLAY interface, i
 ## Remaining release acceptance
 
 - Confirm native WAV drag-out in an ordinary REAPER session.
-- Native Windows x64 and Intel-Mac builds and DAW acceptance; CI definitions are provided but have not run in this local session.
+- Practical Windows x64 and Intel-Mac DAW acceptance; the first plugin CI run passed Windows x64 and macOS arm64. Intel encountered a Git-cache copy race; the dependency installer now moves completed checkouts atomically. The updated CI run remains to be checked.
 - Full manual REAPER matrix for all MIDI modes, automation, extra output routing, offline DAW bounce, tempo/transport changes and restoration on a second machine with no source files/models.
 - Human listening for generated tonality, stem separation, seamless transitions and noise-reduction quality across diverse material.
 - Stress/soak testing of cancellation, parallel app/plugin model installation, service failure recovery, multiple plugin instances, large banks, malformed archives and long sessions.
@@ -31,3 +31,7 @@ Both formats scan/load on Apple Silicon. CLAP displays the new PLAY interface, i
 128 fixed slots, one voice per slot, 32 concurrent voices, 512 MiB per embedded bank, 600 seconds per audio asset and bounded ZIP/import sizes. Outputs are assigned exclusively to one bus. Pending jobs are not resumed after restarting the service. Tonality changes between major and minor require regeneration. Highpass/lowpass are live player parameters; spectral noise reduction is an offline edit with an explicitly selected profile.
 
 Profiles, model selection and generated/exported files persist outside the plugin bundles. Export cleanup is manual because DAW projects may reference these files. Playback of embedded audio remains independent of IPC/model availability.
+
+## App model discovery update — 2026-10-24
+
+The model-folder picker was removed. The service reads the app's existing data profiles and model-folder setting, prefers existing downloads over empty profiles, and uses the app's default model directory for missing downloads. Stale plugin-local folder settings no longer override the shared app directory. Four resolver tests and the IPC smoke test pass, including updating the app model setting without restarting the service. On the local Mac, discovery finds the existing VAE and textencoder in `~/Library/Application Support/de.alphatester.music-generator/models`; Base is still missing there. Download/repair remains an explicit Check models action.

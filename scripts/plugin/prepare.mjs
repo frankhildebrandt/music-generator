@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { download, exists, hash, root, run } from "../desktop/common.mjs";
@@ -37,8 +37,8 @@ async function checkout(repository, revision, destination) {
       );
     await rm(destination, { recursive: true, force: true });
   }
-  await cp(temporary, destination, { recursive: true });
-  await rm(temporary, { recursive: true, force: true });
+  // Keep Git object maintenance atomic with respect to the cache directory.
+  await rename(temporary, destination);
   await writeFile(stamp, revision + "\n");
 }
 export async function preparePlugin() {
