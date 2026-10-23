@@ -5,6 +5,7 @@ import { backend } from "./backend";
 import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
 import { samplingForSong } from "./song-sampling";
+import { songErrorKey } from "./song-errors";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { notify as alert, askName } from "./dialogs";
@@ -419,10 +420,7 @@ function render() {
     .forEach((el) => el.setAttribute("aria-label", el.title));
 }
 function shortErr(msg = "") {
-  if (/nicht erreichbar/i.test(msg)) return t("err_offline");
-  if (/Codes/i.test(msg)) return t("err_codes");
-  if (/Zeitüberschreitung/i.test(msg)) return t("err_timeout");
-  return t("err_details");
+  return t(songErrorKey(msg));
 }
 
 $("#library").addEventListener("click", async (e) => {

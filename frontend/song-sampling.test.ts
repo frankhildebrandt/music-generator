@@ -40,5 +40,6 @@ it("updates both tooltips in all twelve languages while retaining desktop messag
     expect(I18N[lang].lm_dev_hint).not.toContain("OFF");
     expect(I18N[lang].length_tip).toContain("10:00");
     expect(I18N[lang].len_long).toBeTruthy();
+    expect(I18N[lang].err_timeout.split("–")[1]?.trim()).toBeTruthy();
   }
 });

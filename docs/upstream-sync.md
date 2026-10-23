@@ -1,9 +1,10 @@
 # Upstream synchronization — 2026-10-23
 
-Base: rabbitfiremediacreation/music-generator `main` at `0e64bc7346baae12fe8ee0c17e670efee7f8d524` (2026-10-23). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
+Base: rabbitfiremediacreation/music-generator `main` at `b5b1670a2959abaa1b055b127119f713bd02b405` (2026-10-23). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
 
 | Original changes | Desktop implementation |
 | --- | --- |
+| `b5b1670`: actionable timeout messages in twelve languages; Ubuntu/Mint Vulkan installer | Rust job timeout reports the phase, rounded elapsed minutes and settings guidance in German/English; the localized song-list summary also recognizes older German/English timeout messages. Timeout still cancels the engine job and remains distinct from user cancellation and memory errors. Updated Ubuntu script and original README are historical sources under `docs/legacy/`; Linux AppImage already bundles Vulkan/CPU. No changes to saved song parameters, schema or timeout settings/defaults |
 | `0e64bc7`: ten-minute songs, bounded audio codes and current-synthesis memory/length diagnostics | Duration slider up to 600 seconds, localized warning above five minutes, outgoing synthesis codes capped at requested seconds × 5 / 3000. Rust captures the synthesis log offset before each request and inspects only fresh stdout/stderr lines on failure; cancellation remains cancellation. Saved song parameters are unchanged. Updated original PDFs/README retained under `docs/legacy/` |
 | `3374648`: fresh-form defaults 80 iterations and variance 1.2, tooltips in twelve languages | New form uses 80/1.2; localized tooltips distinguish app defaults from model defaults (50/0.85). Existing stored parameters, retries and reuse keep their original values. Legacy requests with omitted/zero steps or null temperature retain the model-default interpretation. No database migration or rewrite of old songs; desktop MP3 errors and next-operation device hints retained during conflict resolution |
 | `0ef950d`: Automatic / CPU-only language model | SQLite `lm_device`, settings selector in twelve languages, separate CPU LM with accelerated synthesis, changes applied to the next operation |
@@ -14,6 +15,10 @@ Base: rabbitfiremediacreation/music-generator `main` at `0e64bc7346baae12fe8ee0c
 | `eb19a98`: Intel-Mac CPU synthesis, installer GPU-test bypass and Python log-based memory hint | Initial merge `30929e2` kept the Python backend and root installer/start scripts deleted, preserving the updated original README/PDFs and guide sources. Experimental desktop Intel support follows separately in 0.2.4 (below); the Python log-tail error hint is not introduced |
 
 The `eb19a98` conflict resolution changes documentation only relative to desktop commit `0021f3c`. Application, engine, manifests and build configuration remain unchanged. The published `v0.2.3-test.1` artifacts still correspond to `0021f3c`; this documentation merge does not replace them.
+
+## Timeout follow-up — 2026-10-23
+
+The timeout-message update is ported to Rust rather than restoring the removed Python backend. All twelve original song-list translations are retained, and existing stored timeout text is recognized without rewriting the database. A simulated engine timeout verifies cancellation plus persistence of the error and unchanged complete parameters across SQLite restart/retry. Synthesis timeout guidance is not replaced by a fresh memory diagnostic; user cancellation stays cancellation. The default remains 30 minutes per engine operation and no existing settings are overwritten. Published `v0.2.5-test.1` bundles remain the binaries from `11f13ea`; this follow-up does not publish or replace release assets.
 
 ## Sampling defaults follow-up — 2026-10-23
 

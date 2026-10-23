@@ -59,6 +59,8 @@ The app does not write into the program bundle. Replace the complete app/bundle 
 
 Closing while work is pending asks for confirmation. Running jobs and pending jobs are resumed on the next start. Cancelling a song explicitly leaves it cancelled until Retry. A control-pipe supervisor terminates the owned engine when the GUI exits, including an unexpected GUI crash. Other programs/processes are never stopped based on a port number.
 
+If an engine job exceeds its time limit, the app cancels that job and reports the phase and elapsed minutes. For long songs, raise Timeout in Settings (gear); the existing default remains 30 minutes per engine operation. The song-list summary gives this guidance in all twelve languages, including for older stored German/English timeout messages. Retry retains the song's saved generation parameters; updating the app does not change them or overwrite your timeout setting.
+
 ## Build
 
 Development needs Node.js 24+, stable Rust, and Tauri's native build prerequisites. End users do not need these tools.
