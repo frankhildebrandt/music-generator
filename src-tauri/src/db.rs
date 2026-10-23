@@ -25,6 +25,7 @@ impl Database {
             let con = db.lock();
             con.busy_timeout(std::time::Duration::from_secs(5))?;
             con.execute_batch(include_str!("schema.sql"))?;
+            con.execute("UPDATE pro_jobs SET status='queued',message='Resuming after restart' WHERE status='running'", [])?;
             let mut statement = con.prepare("PRAGMA table_info(songs)")?;
             let columns = statement
                 .query_map([], |r| r.get::<_, String>(1))?
@@ -226,7 +227,7 @@ impl Database {
 
     pub fn busy(&self) -> Result<bool> {
         Ok(self.lock().query_row(
-            "SELECT COUNT(*) FROM songs WHERE status IN ('running','queued')",
+            "SELECT (SELECT COUNT(*) FROM songs WHERE status IN ('running','queued')) + (SELECT COUNT(*) FROM pro_jobs WHERE status IN ('running','queued'))",
             [],
             |r| r.get::<_, u32>(0),
         )? > 0)

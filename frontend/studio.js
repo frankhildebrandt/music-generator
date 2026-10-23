@@ -580,6 +580,7 @@ $("#onlyFav").addEventListener("click", (e) => {
 
 // ---------------------------------------------------------------- Player
 let ws = null;
+document.addEventListener("studio-mode", () => ws?.pause());
 function initPlayer() {
   const css = getComputedStyle(document.documentElement);
   ws = WaveSurfer.create({
@@ -595,7 +596,7 @@ function initPlayer() {
   $("#playBtn").onclick = () => ws.playPause();
   initVolume();
   document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && !e.target.closest?.('input, textarea, select, button, [role="button"]') && currentId) { e.preventDefault(); ws.playPause(); }
+    if (document.body.dataset.mode !== "pro" && e.code === "Space" && !e.target.closest?.('input, textarea, select, button, [role="button"]') && currentId) { e.preventDefault(); ws.playPause(); }
   });
 }
 // Lautstärke: Regler klappt beim Zeigen auf den Lautsprecher aus; Klick auf den Lautsprecher = stumm

@@ -10,6 +10,7 @@ pub mod import;
 pub mod library;
 pub mod manifest;
 pub mod power;
+pub mod pro;
 pub mod sandbox;
 pub mod setup;
 pub mod state;
@@ -46,7 +47,14 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             let root = sandbox::data_root();
             #[cfg(not(target_os = "macos"))]
-            let root = app.path().app_local_data_dir()?;
+            let root = if cfg!(debug_assertions) {
+                std::env::var_os("MUSIC_GENERATOR_PROFILE")
+                    .map(std::path::PathBuf::from)
+                    .filter(|p| p.is_absolute())
+                    .unwrap_or(app.path().app_local_data_dir()?)
+            } else {
+                app.path().app_local_data_dir()?
+            };
             std::fs::create_dir_all(root.join("logs"))?;
             let log = std::fs::OpenOptions::new()
                 .create(true)
@@ -58,7 +66,12 @@ pub fn run() {
                 .try_init();
             sandbox::initialize(&root)?;
             let resources = if cfg!(debug_assertions) {
-                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources")
+                std::env::var_os("MUSIC_GENERATOR_ENGINE_RESOURCES")
+                    .map(std::path::PathBuf::from)
+                    .filter(|p| p.is_absolute())
+                    .unwrap_or_else(|| {
+                        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources")
+                    })
             } else {
                 app.path().resource_dir()?
             };
@@ -90,7 +103,8 @@ pub fn run() {
             commands::export_file,
             commands::check_update,
             commands::exit_app,
-            commands::remember_folder
+            commands::remember_folder,
+            pro::commands::pro_request
         ])
         .build(tauri::generate_context!())
         .expect("Unable to start Music Generator");

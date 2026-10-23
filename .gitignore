@@ -15,7 +15,7 @@ __pycache__/
 274_Alphatester_Schrift.png
 
 # Desktop build output and downloaded runtime resources
-node_modules/
+node_modules
 dist/
 release/
 .cache/

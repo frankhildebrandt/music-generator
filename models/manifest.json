@@ -3,6 +3,12 @@
   "base_url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a",
   "models": [
     {
+      "file": "acestep-v15-base-Q8_0.gguf",
+      "estimated_bytes": 2549527936,
+      "sha256": "10329f321010cedc3571c24b6371d002ce49238f48be47def4a1c76bf27ee150",
+      "kind": "pro"
+    },
+    {
       "file": "vae-BF16.gguf",
       "estimated_bytes": 356515840,
       "sha256": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8",

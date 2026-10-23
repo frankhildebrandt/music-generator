@@ -206,6 +206,55 @@ async fn synthesis_errors_use_new_logs_for_failed_jobs_http_and_missing_audio() 
 }
 
 #[tokio::test]
+async fn stem_generation_uploads_context_and_skips_the_language_model() {
+    let app = Router::new()
+        .route(
+            "/synth",
+            post(|body: axum::body::Bytes| async move {
+                let text = String::from_utf8_lossy(&body);
+                assert!(text.contains("name=\"audio\""));
+                assert!(text.contains("\"task_type\":\"lego\""));
+                assert!(text.contains("\"track\":\"bass\""));
+                assert!(text.contains("\"synth_model\":\"base.gguf\""));
+                Json(json!({"id":"stem"}))
+            }),
+        )
+        .route(
+            "/job",
+            get(
+                |Query(query): Query<std::collections::HashMap<String, String>>| async move {
+                    if query.contains_key("result") {
+                        ([(CONTENT_TYPE, "audio/wav")], b"RIFFstem".to_vec())
+                    } else {
+                        (
+                            [(CONTENT_TYPE, "application/json")],
+                            serde_json::to_vec(&json!({"status":"done"})).unwrap(),
+                        )
+                    }
+                },
+            ),
+        );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let client = EngineClient::new(base.clone(), base, 0.01, 1.0).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("context.wav");
+    std::fs::write(&source, b"RIFFcontext").unwrap();
+    let output = client
+        .generate_stem(
+            &json!({"task_type":"lego","track":"bass","synth_model":"base.gguf"}),
+            Some(&source),
+            &CancellationToken::new(),
+            |_| {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(output, b"RIFFstem");
+    task.abort();
+}
+
+#[tokio::test]
 async fn generation_chains_lm_and_synthesis_and_preserves_parameters() {
     let app = Router::new()
         .route(

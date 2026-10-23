@@ -10,3 +10,14 @@ CREATE INDEX IF NOT EXISTS idx_songs_status ON songs(status);
 CREATE INDEX IF NOT EXISTS idx_songs_group ON songs(group_id);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS folders (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS pro_projects (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, document TEXT NOT NULL,
+    undo TEXT NOT NULL DEFAULT '[]', redo TEXT NOT NULL DEFAULT '[]', updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pro_takes (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, document TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_pro_takes_project ON pro_takes(project_id);
+CREATE TABLE IF NOT EXISTS pro_jobs (
+    id TEXT PRIMARY KEY, project_id TEXT NOT NULL, status TEXT NOT NULL, message TEXT NOT NULL,
+    take_id TEXT, request TEXT NOT NULL, snapshot TEXT NOT NULL, source_revision INTEGER NOT NULL, created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pro_jobs_status ON pro_jobs(status);

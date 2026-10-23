@@ -1,5 +1,5 @@
 use crate::{
-    db::{safe_song_path, Database},
+    db::Database,
     error::{message, Result},
     types::{id, now},
 };
@@ -40,7 +40,22 @@ impl Database {
         let dir = self.settings()?.songs_dir;
         let con = self.lock();
         let mut stmt = con.prepare("SELECT id,status,message,caption FROM songs WHERE status IN ('queued','running') ORDER BY created_at,rowid")?;
-        let rows = stmt.query_map([], |r| Ok(json!({"id":r.get::<_,String>(0)?,"status":r.get::<_,String>(1)?,"message":r.get::<_,Option<String>>(2)?,"caption":r.get::<_,String>(3)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
+        let mut rows = stmt.query_map([], |r| Ok(json!({"id":r.get::<_,String>(0)?,"status":r.get::<_,String>(1)?,"message":r.get::<_,Option<String>>(2)?,"caption":r.get::<_,String>(3)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
+        let mut pro=con.prepare("SELECT id,status,message,request FROM pro_jobs WHERE status IN ('queued','running') ORDER BY rowid")?;
+        for row in pro.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+            ))
+        })? {
+            let (id, status, message, request) = row?;
+            let request: Value = serde_json::from_str(&request)?;
+            rows.push(
+                json!({"id":id,"status":status,"message":message,"caption":request["prompt"]}),
+            );
+        }
         let bytes: u64 = std::fs::read_dir(dir)
             .into_iter()
             .flatten()
@@ -75,20 +90,22 @@ impl Database {
         }
         let con = self.lock();
         let mut stmt = con.prepare("SELECT file FROM songs WHERE file IS NOT NULL")?;
-        let files = stmt
+        let mut files = stmt
             .query_map([], |r| r.get::<_, String>(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         drop(stmt);
         drop(con);
+        files.extend(self.pro_asset_names()?);
         let mut copied = Vec::new();
         let result = (|| -> Result<()> {
             for name in &files {
-                let src = safe_song_path(&old, name)?;
-                let dest = safe_song_path(new, name)?;
+                let src = crate::pro::assets::library_path(&old, name)?;
+                let dest = crate::pro::assets::library_path(new, name)?;
                 if dest.exists() {
                     return Err(message(format!("Destination already contains {name}")));
                 }
                 if src.is_file() {
+                    std::fs::create_dir_all(dest.parent().unwrap())?;
                     std::fs::copy(&src, &dest)?;
                     copied.push(dest);
                 }
@@ -104,7 +121,7 @@ impl Database {
             }
         } else {
             for name in files {
-                if let Ok(path) = safe_song_path(&old, &name) {
+                if let Ok(path) = crate::pro::assets::library_path(&old, &name) {
                     let _ = std::fs::remove_file(path);
                 }
             }
