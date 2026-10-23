@@ -15,6 +15,9 @@ void MusicGeneratorLoops::enqueue(Task task) {
 void MusicGeneratorLoops::OnIdle() {
   std::lock_guard<std::recursive_mutex> lock(stateMutex);
   player.collect();
+#ifdef APP_API
+  audioBpm.store(bpm);
+#endif
   hostBpm = audioBpm.load();
   if (followHostGeneration)
     bpm = hostBpm;
@@ -41,9 +44,14 @@ void MusicGeneratorLoops::OnIdle() {
     pollPending = true;
     lastPoll = std::chrono::steady_clock::now();
     auto jid = job;
-    enqueue([this, jid]() {
-      return Json{{"type", "job"},
-                  {"data", service.request("job", {{"id", jid}})}};
+    const double rate = hostRate, tempo = hostBpm;
+    const bool preparingTakes = generationJob;
+    enqueue([this, jid, rate, tempo, preparingTakes]() {
+      auto data = service.request("job", {{"id", jid}});
+      if (preparingTakes && data.contains("results"))
+        for (auto &result : data["results"])
+          result = prepareTake(result, rate, tempo);
+      return Json{{"type", "job"}, {"data", data}};
     });
   }
   if (GetUI())
@@ -56,6 +64,10 @@ void MusicGeneratorLoops::processReply(const Json &r) {
     pollPending = false;
     busy = false;
     job.clear();
+    if (generationJob) {
+      updateTakes({{"status", "error"}, {"message", status}});
+      generationJob = false;
+    }
     return;
   }
   if (type == "enqueued") {
@@ -65,6 +77,8 @@ void MusicGeneratorLoops::processReply(const Json &r) {
       status = "Checking shared app models: " + models;
     } else
       status = "Queued";
+    if (cancelRequested)
+      cancel();
     return;
   }
   if (type == "job") {
@@ -72,13 +86,17 @@ void MusicGeneratorLoops::processReply(const Json &r) {
     auto data = r.at("data");
     status = data.value("message", "");
     const auto state = data.value("status", "");
+    if (generationJob)
+      updateTakes(data);
     if (state == "done" || state == "error" || state == "cancelled") {
       job.clear();
       busy = false;
-      if (data.contains("results")) {
+      if (generationJob && data.contains("results") &&
+          !data["results"].empty()) {
         candidates = data["results"];
         variant = 0;
       }
+      generationJob = false;
     }
     return;
   }
@@ -201,6 +219,21 @@ void MusicGeneratorLoops::generate() {
     return;
   busy = true;
   jobSlot = selected;
+  stopPreview();
+  generationJob = true;
+  cancelRequested = false;
+  if (takes.size() + variants > 128)
+    takes.erase(takes.begin(), takes.begin() + (takes.size() + variants - 128));
+  generationStart = takes.size();
+  for (int n = 0; n < variants; ++n) {
+    GeneratedTake take;
+    take.title = instrument + " · Take " + std::to_string(n + 1);
+    take.phase = n == 0 ? "Preparing context" : "Waiting for previous take";
+    take.bpm = bpm;
+    take.progress = 0;
+    take.bars = beats / barBeats;
+    takes.push_back(std::move(take));
+  }
   candidates = Json::array();
   status = "Preparing immutable context";
   Json request = {{"slot", selected},
@@ -226,6 +259,7 @@ void MusicGeneratorLoops::generate() {
       params.push_back(p);
     }
   enqueue([this, request, sources, params]() mutable {
+    takeCache.clear();
     auto dir = profileRoot() / "input";
     std::filesystem::create_directories(dir);
     std::vector<std::filesystem::path> paths;
@@ -257,6 +291,8 @@ void MusicGeneratorLoops::install() {
   if (busy)
     return;
   busy = true;
+  generationJob = false;
+  cancelRequested = false;
   status = "Checking models in the app data folder...";
   enqueue([this]() {
     auto location = service.request("models");
@@ -266,6 +302,7 @@ void MusicGeneratorLoops::install() {
   });
 }
 void MusicGeneratorLoops::cancel() {
+  cancelRequested = true;
   if (job.empty())
     return;
   auto id = job;
@@ -313,7 +350,7 @@ void MusicGeneratorLoops::audition(bool original) {
   trigger(selected, true);
   status = original ? "Audition original" : "Audition edited loop";
 }
-void MusicGeneratorLoops::edit(bool normalize, bool noise) {
+void MusicGeneratorLoops::edit(bool normalize, bool noise, bool fit) {
   auto s = bank[selected];
   if (busy || !s.original)
     return;
@@ -335,7 +372,8 @@ void MusicGeneratorLoops::edit(bool normalize, bool noise) {
   }
   auto original = s.edited;
   auto previous = s.recipe;
-  enqueue([this, slot, recipe, original, previous]() {
+  const double barFrames = barBeats * 60.0 / bpm * 48000;
+  enqueue([this, slot, recipe, original, previous, fit, barFrames]() {
     auto path =
         profileRoot() / "input" /
         ("edit-" +
@@ -345,13 +383,17 @@ void MusicGeneratorLoops::edit(bool normalize, bool noise) {
     std::filesystem::create_directories(path.parent_path());
     writeWav(path, *original);
     try {
-      auto result = service.request(
-          "edit", {{"path", path.u8string()}, {"recipe", recipe}});
+      auto result = service.request("edit", {{"path", path.u8string()},
+                                             {"recipe", recipe},
+                                             {"fit", fit},
+                                             {"bar_frames", barFrames}});
       std::filesystem::remove(path);
-      return Json{{"type", "edit"},
-                  {"slot", slot},
-                  {"recipe", {{"previous", previous}, {"stage", recipe}}},
-                  {"data", result}};
+      return Json{
+          {"type", "edit"},
+          {"slot", slot},
+          {"recipe",
+           {{"previous", previous}, {"stage", result.value("recipe", recipe)}}},
+          {"data", result}};
     } catch (...) {
       std::filesystem::remove(path);
       throw;
@@ -453,6 +495,9 @@ void MusicGeneratorLoops::openBankFile(const std::string &path) {
     }
     history.clear();
     future.clear();
+    bpm = bank[selected].bpm;
+    beats = bank[selected].beats;
+    key = bank[selected].key;
     status = "Portable loop bank loaded";
     changed();
   } catch (const std::exception &e) {
@@ -461,29 +506,30 @@ void MusicGeneratorLoops::openBankFile(const std::string &path) {
 }
 
 void MusicGeneratorLoops::previewCandidate() {
-  if (candidates.empty() || jobSlot < 0)
-    return;
+  if (!candidates.empty() && jobSlot >= 0)
+    auditionResult(candidates.at(variant), jobSlot);
+}
+
+void MusicGeneratorLoops::auditionResult(const Json &r, int slot) {
   try {
     stopPreview();
-    const auto &r = candidates.at(variant);
-    auto audio = std::make_shared<Audio>(
-        readWav(std::filesystem::u8path(r.at("path").get<std::string>())));
     auto c = std::make_unique<Clip>();
-    c->audio = audio;
+    c->audio = std::make_shared<Audio>(
+        readWav(std::filesystem::u8path(r.at("path").get<std::string>())));
     c->bpm = r.value("bpm", 120.0);
     c->beats = r.value("beats", 16.0);
     c->mode = Mode::Toggle;
-    previewSlot = jobSlot;
-    player.publish(jobSlot, std::move(c));
-    trigger(jobSlot, true);
-    status = "Auditioning candidate. Accept to retain it; Stop restores the "
-             "current loop.";
+    previewSlot = slot;
+    player.publish(slot, std::move(c));
+    trigger(slot, true);
+    status = "Auditioning take. Stop restores the assigned loop.";
   } catch (const std::exception &e) {
     status = e.what();
   }
 }
 
 void MusicGeneratorLoops::stopPreview() {
+  auditionTake = -1;
   if (previewSlot < 0)
     return;
   player.uiParameter(previewSlot * ParamsPerSlot + Active, 0);

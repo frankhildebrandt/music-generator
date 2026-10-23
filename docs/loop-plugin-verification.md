@@ -1,6 +1,6 @@
-# Loop plugin verification — 2026-10-23
+# Loop plugin verification — 2026-10-24
 
-Development version 0.1.0, manufacturer Alphatester x KRGSH. Checked on macOS Apple Silicon with REAPER 7.82. This is an engineering record, not a completed release acceptance certificate.
+Development version 0.1.2, manufacturer Alphatester x KRGSH. Checked on macOS Apple Silicon with REAPER 7.82. This is an engineering record, not a completed release acceptance certificate.
 
 ## Automated checks performed
 
@@ -20,7 +20,7 @@ Both formats scan/load on Apple Silicon. CLAP displays the new PLAY interface, i
 ## Remaining release acceptance
 
 - Confirm native WAV drag-out in an ordinary REAPER session.
-- Practical Windows x64 and Intel-Mac DAW acceptance; the first plugin CI run passed Windows x64 and macOS arm64. Intel encountered a Git-cache copy race; the dependency installer now moves completed checkouts atomically. The updated CI run remains to be checked.
+- Practical Windows x64 and Intel-Mac DAW acceptance; the preceding plugin-only CI run passed Windows x64, macOS arm64 and Intel after the atomic checkout fix. The standalone/XL update needs a fresh matrix run.
 - Full manual REAPER matrix for all MIDI modes, automation, extra output routing, offline DAW bounce, tempo/transport changes and restoration on a second machine with no source files/models.
 - Human listening for generated tonality, stem separation, seamless transitions and noise-reduction quality across diverse material.
 - Stress/soak testing of cancellation, parallel app/plugin model installation, service failure recovery, multiple plugin instances, large banks, malformed archives and long sessions.
@@ -35,3 +35,27 @@ Profiles, model selection and generated/exported files persist outside the plugi
 ## App model discovery update — 2026-10-24
 
 The model-folder picker was removed. The service reads the app's existing data profiles and model-folder setting, prefers existing downloads over empty profiles, and uses the app's default model directory for missing downloads. Stale plugin-local folder settings no longer override the shared app directory. Four resolver tests and the IPC smoke test pass, including updating the app model setting without restarting the service. On the local Mac, discovery finds the existing VAE and textencoder in `~/Library/Application Support/de.alphatester.music-generator/models`; Base is still missing there. Download/repair remains an explicit Check models action.
+
+## Standalone, musical length and XL update — 2026-10-24
+
+The same instrument now builds as a native macOS app and Windows executable using iPlug2's RtAudio/RtMidi host. Standalone audio is output-only stereo; portable bus assignments remain stored and are monitored through the master. Its manual BPM controls playback and export. The macOS package was launched independently of REAPER; the existing generated drum bank was saved before updating it. Windows and Intel practical standalone audio/MIDI checks remain open.
+
+Generated material includes two extra bars, with a minimum of ten seconds. A bar-aligned region is checked for long leading/trailing silence before acceptance; missing usable material fails instead of padding with silence. Explicit Fit loop repair may repeat a shorter complete phrase; musical duration and originals remain preserved. Synthetic regressions cover eight bars, silent endings, stereo-only activity, preserved internal rests, fractional frame bar lengths, and model DC offsets that would otherwise hide a silent ending. Native export tests cover eight bars at 120 and 137 BPM without inserted silent blocks.
+
+A real 8-bar/120-BPM test export contained roughly two seconds of trailing near-silence. The packaged service's Fit loop returned exactly 768,000 frames at 48 kHz, using four complete bars repeated twice. Last-second RMS increased from 0.0000032 to 0.0594. A separate portable test bank retains original and repaired audio. This validates removal of the unwanted tail; human listening remains required for artistic phrasing and seam quality.
+
+New text2music and Lego requests explicitly select `acestep-v15-xl-sft-Q8_0.gguf`. A shared list controls status, download, verification and AppData profile scoring: XL, Qwen textencoder, VAE. A request-contract regression checks both task types and ensures Base is not demanded by model setup. Historical Base inference checks above do not constitute XL inference acceptance.
+
+Local checks: all shared-core/service and desktop regression tests, Clippy, three native DSP suites, VST3 validator 47/47, CLAP contract host, package checksums and ad-hoc bundle signatures pass. The initial desktop test run was sandbox-blocked from binding local test HTTP servers; it passed with local socket access enabled.
+
+## Split generation workspace and progress
+
+GENERATE now has independent settings and take-list scrolling. It immediately allocates visible draft cards for each requested variant, renders real waveforms only after audio arrives, and shows engine DiT step counts scoped to the current log offset. The service publishes each completed variant before later variants finish. Worker-side waveform reduction and WAV rendering keep preparation away from the audio thread. Cards support persistent WAV drag-out, internal drag-to-key assignment, explicit assignment and Play/Stop. Completed takes remain available across subsequent jobs in the current editor session; banks persist accepted loops.
+
+The progress parser regression checks current-generation offsets and rejects invalid/zero step totals. Cancellation/failure stops draft indicators and retains completed takes and assigned bank audio. Additional macOS visual checks are recorded after the local package run.
+
+## Playheads and instrument selection
+
+Instrument selection uses a native dropdown with the twelve supported instrument IDs and a single current-selection checkmark. The audio player publishes normalized per-slot positions through atomics once per block. The UI reads them for take preview, assigned takes, the trim editor and the PLAY position marker. Positions account for stretch output latency, wrap with the musical cycle and disappear when the voice stops. A timing regression checks phase advancement and stopped visibility; existing no-allocation tests cover the additional publication path.
+
+Actual XL text2music at 155 BPM produced an exact eight-bar loop in the standalone package. Its draft appeared immediately, the finished waveform rendered, Play/Stop toggled and internal waveform drag assigned the result to note 38 while preserving the prior note-36 audio. XL Lego with selected note-38 context returned variants incrementally, with real 50-step progress visible while further variants were still running. Native WAV drop to REAPER remains subject to the manual acceptance item above.

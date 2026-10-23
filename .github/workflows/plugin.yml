@@ -74,7 +74,7 @@ jobs:
       - run: cargo clippy --manifest-path crates/music-core/Cargo.toml --locked --all-targets -- -D warnings
       - run: cargo clippy --manifest-path crates/loops-service/Cargo.toml --locked --all-targets -- -D warnings
       - run: cargo test --manifest-path crates/loops-service/Cargo.toml --locked
-      - name: Build VST3, CLAP, service and engine packages
+      - name: Build standalone, VST3, CLAP, service and engine packages
         run: npm run plugin:build
       - name: Run native plugin validators
         run: npm run plugin:validate

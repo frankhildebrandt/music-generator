@@ -1,11 +1,18 @@
 mod edit;
 mod import;
+mod window;
 use crate::error::{message, Result};
 pub use edit::{edit, seam_score, zero_start};
 pub use import::import_audio;
 use serde::{Deserialize, Serialize};
+pub use window::loop_region;
 
-pub const BASE_MODEL: &str = "acestep-v15-base-Q8_0.gguf";
+pub const DEFAULT_MODEL: &str = "acestep-v15-xl-sft-Q8_0.gguf";
+pub const REQUIRED_MODELS: [&str; 3] = [
+    DEFAULT_MODEL,
+    "Qwen3-Embedding-0.6B-Q8_0.gguf",
+    "vae-BF16.gguf",
+];
 pub const INSTRUMENTS: &[&str] = &[
     "drums",
     "bass",

@@ -1,7 +1,7 @@
 use super::*;
 use music_core::{
     audio::{Audio, RATE},
-    loops::{EditRecipe, GenerationRequest, BASE_MODEL},
+    loops::{EditRecipe, GenerationRequest, DEFAULT_MODEL, REQUIRED_MODELS},
     types::id,
 };
 pub struct Job {
@@ -46,12 +46,12 @@ async fn update(service: &Service, jid: &str, value: Value) {
 pub async fn enqueue_install(service: Arc<Service>, instance: String) -> Result<Value> {
     let (jid, cancel) = create(&service, instance).await?;
     let result = json!({"id":jid});
-    tokio::spawn(async move {
+    let task = async move {
         let outcome=async {
             let _permit=tokio::select!{_=cancel.cancelled()=>return Err(music_core::error::Error::Cancelled),p=service.serial.acquire()=>p.map_err(|e|message(e.to_string()))?};
             update(&service,&jid,json!({"id":jid,"status":"running","message":"Checking models"})).await;
             let root=service.models.lock().await.clone();let mut verifier=music_core::verification::ModelVerifier::open(&service.root);let client=reqwest::Client::new();let manifest=music_core::manifest::manifest();
-            for model in manifest.models.into_iter().filter(|m|m.kind=="pro"||["vae-BF16.gguf","Qwen3-Embedding-0.6B-Q8_0.gguf"].contains(&m.file.as_str())) {
+            for model in manifest.models.into_iter().filter(|m|REQUIRED_MODELS.contains(&m.file.as_str())) {
                 music_core::download::download_model(&client,&format!("{}/{}",manifest.base_url,model.file),&root,&model,&mut verifier,&cancel,|p|{
                     if let Ok(mut jobs)=service.jobs.try_lock(){if let Some(j)=jobs.get_mut(&jid){if !j.cancel.is_cancelled(){j.value=json!({"id":jid,"status":"running","message":format!("{} {}: {} / {} MiB",p.phase,p.file,p.downloaded/1048576,p.total/1048576)});}}}
                 }).await?;
@@ -59,7 +59,8 @@ pub async fn enqueue_install(service: Arc<Service>, instance: String) -> Result<
             Ok::<_,music_core::error::Error>(json!({"id":jid,"status":"done","message":format!("Models ready · {}",root.display()),"results":[]}))
         }.await;
         finish(&service, &jid, outcome).await;
-    });
+    };
+    tokio::spawn(task);
     Ok(result)
 }
 pub async fn enqueue_generation(
@@ -85,7 +86,7 @@ pub async fn enqueue_generation(
         snapshot.join("request.json"),
         serde_json::to_vec_pretty(&request)?,
     )?;
-    tokio::spawn(async move {
+    let task = async move {
         let outcome=async {
             let _permit=tokio::select!{_=cancel.cancelled()=>return Err(music_core::error::Error::Cancelled),p=service.serial.acquire()=>p.map_err(|e|message(e.to_string()))?};
             update(&service,&jid,json!({"id":jid,"status":"running","message":"Starting ACE-Step"})).await;
@@ -93,7 +94,9 @@ pub async fn enqueue_generation(
             if guard.as_mut().is_some_and(|e|!e.alive()){guard.take();}
             if guard.is_none(){*guard=Some(engine::Engine::start(&service,&cancel).await?);}
             let engine=guard.as_ref().unwrap();
-            let duration=request.seconds();let generated_duration=duration*(10.0/duration).ceil().max(1.0);
+            let duration=request.seconds();
+            let bar_seconds=request.numerator as f64*4.0/request.denominator as f64*60.0/request.bpm;
+            let generated_duration=(duration+2.0*bar_seconds).clamp(10.0,600.0);
             let frames=(generated_duration*RATE as f64).round() as usize;
             let sources=request.context.clone();
             let context=tokio::task::spawn_blocking(move||->Result<Audio>{
@@ -111,22 +114,34 @@ pub async fn enqueue_generation(
             for variant in 0..request.variants {
                 if cancel.is_cancelled(){return Err(music_core::error::Error::Cancelled);}
                 let seed=if request.seed<0 {seconds() as i64+variant as i64}else{request.seed+variant as i64};
-                let params=json!({"task_type":if source.is_some(){"lego"}else{"text2music"},"track":request.instrument,"caption":format!("Isolated {} loop. {}",request.instrument,request.prompt),"lyrics":"[Instrumental]","bpm":request.bpm,"duration":generated_duration,"keyscale":request.key,"timesignature":request.numerator.to_string(),"seed":seed,"inference_steps":request.steps,"guidance_scale":1.0,"shift":1.0,"output_format":"wav32","synth_model":BASE_MODEL});
+                let params=synthesis_params(&request,generated_duration,seed,source.is_some());
+                let log_path=service.root.join("engine.log");
+                let log_offset=log_path.metadata().map(|m|m.len()).unwrap_or(0);
+                update(&service,&jid,json!({"id":jid,"status":"running","message":"Loading XL / encoding context","variant":variant,"variants":request.variants,"progress":null,"results":results})).await;
                 let bytes=engine.client.generate_stem(&params,source.as_deref(),&cancel,|text|{
-                    if let Ok(mut jobs)=service.jobs.try_lock(){if let Some(j)=jobs.get_mut(&jid){if !j.cancel.is_cancelled(){j.value["message"]=json!(format!("Variant {} / {} · {text}",variant+1,request.variants));}}}
+                    if let Ok(mut jobs)=service.jobs.try_lock(){if let Some(j)=jobs.get_mut(&jid){if !j.cancel.is_cancelled(){let step=crate::progress::synthesis_step(&log_path,log_offset);
+                    j.value["message"]=json!(match step {Some((n,total))=>format!("XL · step {n}/{total} · {text}"),None=>format!("Loading XL / encoding context · {text}")});
+                    j.value["progress"]=step.map(|(n,total)|json!(n as f64/total as f64*0.9)).unwrap_or(Value::Null);
+                    j.value["step"]=step.map(|(n,_)|json!(n)).unwrap_or(Value::Null);
+                    j.value["steps"]=step.map(|(_,total)|json!(total)).unwrap_or(Value::Null);}}}
                 }).await?;
+                update(&service,&jid,json!({"id":jid,"status":"running","message":"Preparing exact loop / waveform","variant":variant,"variants":request.variants,"progress":0.95,"results":results})).await;
                 let audio=Audio::decode(&bytes)?;let target_frames=(duration*RATE as f64).round() as u64;
                 if (audio.samples.len() as u64)<target_frames{return Err(message("Engine returned too little audio; existing loop preserved"));}
                 let dir=service.root.join("assets");std::fs::create_dir_all(&dir)?;let original=dir.join(format!("{}-original.wav",id()));audio.write(&original)?;
-                let edited=music_core::loops::edit(&audio,&EditRecipe{end:target_frames,frames:target_frames,crossfade_ms:5.0,..Default::default()})?;
+                let (start,end)=music_core::loops::loop_region(&audio,target_frames,bar_seconds*RATE as f64,false)?;
+                let recipe=EditRecipe{start,end,frames:target_frames,crossfade_ms:5.0,..Default::default()};
+                let edited=music_core::loops::edit(&audio,&recipe)?;
                 let path=dir.join(format!("{}.wav",id()));edited.write(&path)?;
-                results.push(json!({"path":path,"original":original,"frames":target_frames,"bpm":request.bpm,"beats":request.beats,"key":request.key,"name":request.instrument,"seed":seed,"recipe":{"start":0,"end":target_frames,"frames":target_frames,"crossfade_ms":5.0}}));
+                results.push(json!({"path":path,"original":original,"frames":target_frames,"bpm":request.bpm,"beats":request.beats,"bars":request.beats/(request.numerator as f64*4.0/request.denominator as f64),"key":request.key,"name":request.instrument,"seed":seed,"recipe":recipe}));
+                update(&service,&jid,json!({"id":jid,"status":"running","message":"Loop ready","variant":variant,"variants":request.variants,"progress":1.0,"results":results})).await;
             }
             Ok(json!({"id":jid,"status":"done","message":"Ready to audition — choose a variant","results":results}))
         }.await;
         finish(&service, &jid, outcome).await;
         let _ = std::fs::remove_dir_all(snapshot);
-    });
+    };
+    tokio::spawn(task);
     Ok(result)
 }
 async fn finish(service: &Service, jid: &str, outcome: Result<Value>) {
@@ -135,4 +150,54 @@ async fn finish(service: &Service, jid: &str, outcome: Result<Value>) {
         Err(e) => json!({"id":jid,"status":"error","message":e.to_string(),"results":[]}),
     };
     update(service, jid, value).await;
+}
+
+fn synthesis_params(request: &GenerationRequest, duration: f64, seed: i64, context: bool) -> Value {
+    json!({
+        "task_type": if context { "lego" } else { "text2music" },
+        "track": request.instrument,
+        "caption": format!("Continuous isolated {} loop, steady groove, no intro, no outro, no fade-out. {}", request.instrument, request.prompt),
+        "lyrics": "[Instrumental]",
+        "bpm": request.bpm,
+        "duration": duration,
+        "keyscale": request.key,
+        "timesignature": request.numerator.to_string(),
+        "seed": seed,
+        "inference_steps": request.steps,
+        "guidance_scale": 1.0,
+        "shift": 1.0,
+        "output_format": "wav32",
+        "synth_model": DEFAULT_MODEL
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn xl_is_used_for_text_and_context_requests_and_model_setup() {
+        let request: GenerationRequest = serde_json::from_value(json!({
+            "slot":36,"instrument":"drums","prompt":"Dry groove", "key":"A minor",
+            "bpm":155,"beats":32,"seed":42
+        }))
+        .unwrap();
+        for context in [false, true] {
+            let params = synthesis_params(&request, 16.0, 42, context);
+            assert_eq!(params["synth_model"], "acestep-v15-xl-sft-Q8_0.gguf");
+            assert_eq!(
+                params["task_type"],
+                if context { "lego" } else { "text2music" }
+            );
+            assert_eq!(params["bpm"], 155.0);
+            assert_eq!(params["seed"], 42);
+        }
+        let required: Vec<_> = music_core::manifest::manifest()
+            .models
+            .into_iter()
+            .filter(|m| REQUIRED_MODELS.contains(&m.file.as_str()))
+            .collect();
+        assert_eq!(required.len(), 3);
+        assert!(required.iter().any(|m| m.file == DEFAULT_MODEL));
+        assert!(required.iter().all(|m| m.kind != "pro"));
+    }
 }

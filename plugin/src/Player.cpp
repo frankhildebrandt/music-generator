@@ -10,6 +10,8 @@ double valid(double n, double fallback) {
 }
 } // namespace
 Player::Player() {
+  for (auto &position : playheads)
+    position.store(-1);
   for (auto &p : pending)
     p.store(nullptr);
   for (auto &v : uiValues)
@@ -25,6 +27,8 @@ Player::~Player() {
   collect();
 }
 void Player::prepare(double sampleRate) {
+  for (auto &position : playheads)
+    position.store(-1);
   rate = std::clamp(valid(sampleRate, 48000), 8000.0, 192000.0);
   for (auto &v : voices) {
     v.slot = -1;
@@ -247,6 +251,7 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
                                     : 1;
           v.read =
               std::fmod(std::max(0.0, clock.ppq), c->beats) / c->beats * length;
+          v.played = std::fmod(std::max(0.0, clock.ppq), c->beats);
           v.stretch.reset();
         }
       }
@@ -334,6 +339,17 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
       }
     }
   }
+  std::array<double, Slots> positions;
+  positions.fill(-1);
+  for (const auto &voice : voices)
+    if (voice.slot >= 0 && !voice.pending && clips[voice.slot]) {
+      const auto *clip = clips[voice.slot];
+      const double heard =
+          std::max(0.0, voice.played - latency * clock.bpm / (60 * rate));
+      positions[voice.slot] = std::fmod(heard, clip->beats) / clip->beats;
+    }
+  for (int slot = 0; slot < Slots; ++slot)
+    playheads[slot].store(positions[slot], std::memory_order_relaxed);
   // Carry events only when a host splits a block after supplying its events.
   size_t remain = 0;
   for (; next < count; ++next) {

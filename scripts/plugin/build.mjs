@@ -59,7 +59,7 @@ await run("ctest", [
   "Release",
   "--output-on-failure",
 ]);
-const packageName = `Music-Generator-Loops-0.1.0-${platform}-${architecture}`;
+const packageName = `Music-Generator-Loops-0.1.2-${platform}-${architecture}`;
 const folder = path.join(root, "release", packageName);
 await rm(folder, { recursive: true, force: true });
 await mkdir(folder, { recursive: true });
@@ -70,11 +70,17 @@ for (const format of ["vst3", "clap"]) {
     dereference: true,
   });
 }
+const standaloneName = `MusicGeneratorLoops.${platform === "macos" ? "app" : "exe"}`;
+await cp(path.join(build, "out", standaloneName), path.join(folder, standaloneName), {
+  recursive: true,
+  dereference: true,
+});
 const resourceDirectories =
   platform === "macos"
     ? [
         "MusicGeneratorLoops.vst3/Contents/Resources",
         "MusicGeneratorLoops.clap/Contents/Resources",
+        "MusicGeneratorLoops.app/Contents/Resources",
       ]
     : [
         "MusicGeneratorLoops.vst3/Contents/x86_64-win/MusicGeneratorLoops.resources",
@@ -108,7 +114,7 @@ for (const directory of resourceDirectories) {
     }
 }
 if (platform === "macos")
-  for (const format of ["vst3", "clap"]) {
+  for (const format of ["vst3", "clap", "app"]) {
     const bundle = path.join(folder, `MusicGeneratorLoops.${format}`);
     await run("codesign", ["--force", "--deep", "--sign", "-", bundle]);
     await run("codesign", ["--verify", "--deep", "--strict", bundle]);
@@ -135,6 +141,8 @@ const notices = [
   ["iplug2/WDL/libpng/LICENSE", "libpng.txt"],
   ["iplug2/Dependencies/IPlug/CLAP_HELPERS/LICENSE", "CLAP-helpers.txt"],
   ["iplug2/LICENSE.txt", "iPlug2.txt"],
+  ["iplug2/Dependencies/IPlug/RTAudio/LICENSE", "RtAudio.txt"],
+  ["iplug2/Dependencies/IPlug/RTMidi/RtMidi.h", "RtMidi-header.txt"],
   ["iplug2/Dependencies/IPlug/VST3_SDK/LICENSE.txt", "VST3.txt"],
   ["iplug2/Dependencies/IPlug/CLAP_SDK/LICENSE", "CLAP.txt"],
   ["signalsmith-stretch/LICENSE.txt", "Signalsmith-Stretch.txt"],
@@ -159,7 +167,8 @@ await writeFile(
   JSON.stringify(
     {
       manufacturer: "Alphatester x KRGSH",
-      version: "0.1.0",
+      version: "0.1.2",
+      formats: ["VST3", "CLAP", "Standalone"],
       platform,
       architecture,
       minimumSystemVersion: target.minimumSystemVersion ?? "Windows 10",

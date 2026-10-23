@@ -28,11 +28,7 @@ impl Engine {
         for model in music_core::manifest::manifest()
             .models
             .into_iter()
-            .filter(|m| {
-                m.kind == "pro"
-                    || ["vae-BF16.gguf", "Qwen3-Embedding-0.6B-Q8_0.gguf"]
-                        .contains(&m.file.as_str())
-            })
+            .filter(|m| music_core::loops::REQUIRED_MODELS.contains(&m.file.as_str()))
         {
             if !models.join(&model.file).is_file()
                 || verifier

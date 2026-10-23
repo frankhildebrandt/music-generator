@@ -15,6 +15,9 @@ inline std::string number(double n, int digits = 2) {
   s << std::fixed << std::setprecision(digits) << n;
   return s.str();
 }
+inline constexpr std::array<const char *, 12> Instruments{
+    "drums",      "bass",   "keyboard",       "guitar", "synth", "strings",
+    "percussion", "vocals", "backing_vocals", "fx",     "brass", "woodwinds"};
 class LoopEditor final : public IControl {
   MusicGeneratorLoops &p;
   std::string field;
@@ -23,6 +26,12 @@ class LoopEditor final : public IControl {
   double initial = 0;
   int held = -1;
   int view = 0;
+  double settingsScroll = 0, takeScroll = 0;
+  int takeDrag = -1;
+  float dragX = 0, dragY = 0, takeOriginX = 0, takeOriginY = 0;
+  bool takeMoved = false;
+  int scrollDrag = -1;
+  IPopupMenu instrumentMenu{"Instruments"};
   struct Hit {
     IRECT rect;
     std::string action;
@@ -46,6 +55,8 @@ public:
   void keyboard(IGraphics &g);
   void performance(IGraphics &g);
   void generation(IGraphics &g);
+  void scrollBar(IGraphics &g, IRECT viewport, double scroll, double content,
+                 const std::string &id);
   void Draw(IGraphics &g) override;
   void OnMouseDown(float x, float y, const IMouseMod &mod) override;
   void OnMouseDrag(float x, float y, float, float,
@@ -55,5 +66,6 @@ public:
   void OnMouseWheel(float, float, const IMouseMod &mod, float delta) override;
   void OnDrop(const char *path) override;
   void OnTextEntryCompletion(const char *value, int) override;
+  void OnPopupMenuSelection(IPopupMenu *menu, int) override;
 };
 } // namespace loops::ui

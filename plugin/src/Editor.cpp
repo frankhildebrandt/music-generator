@@ -63,13 +63,46 @@ void LoopEditor::bankDialog(bool save) {
       });
 }
 LoopEditor::LoopEditor(MusicGeneratorLoops &plugin)
-    : IControl(IRECT(0, 0, 1120, 780)), p(plugin) {}
+    : IControl(IRECT(0, 0, 1120, 780)), p(plugin) {
+  for (const char *instrument : Instruments)
+    instrumentMenu.AddItem(instrument);
+}
 void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
   std::lock_guard<std::recursive_mutex> lock(p.stateMutex);
   for (auto it = hits.rbegin(); it != hits.rend(); ++it) {
     if (!it->rect.Contains(x, y))
       continue;
     auto id = it->action;
+    if (id == "settingsScroll" || id == "takeScroll") {
+      scrollDrag = id == "settingsScroll" ? 0 : 1;
+      origin = y;
+      initial = scrollDrag == 0 ? settingsScroll : takeScroll;
+      SetDirty(false);
+      return;
+    }
+    if (id.rfind("takeDrag", 0) == 0) {
+      takeDrag = std::stoi(id.substr(8));
+      takeOriginX = dragX = x;
+      takeOriginY = dragY = y;
+      takeMoved = false;
+      return;
+    }
+    if (id.rfind("takePlay", 0) == 0) {
+      p.previewTake(std::stoi(id.substr(8)));
+      SetDirty(false);
+      return;
+    }
+    if (id.rfind("takeAssign", 0) == 0) {
+      p.assignTake(std::stoi(id.substr(10)), p.selected);
+      SetDirty(false);
+      return;
+    }
+    if (id.rfind("takeWav", 0) == 0) {
+      const auto &result = p.takes.at(std::stoi(id.substr(7))).result;
+      GetUI()->InitiateExternalFileDragDrop(
+          result.at("export_path").get<std::string>().c_str(), it->rect);
+      return;
+    }
     if (id.rfind("view", 0) == 0) {
       view = std::stoi(id.substr(4));
       SetDirty(false);
@@ -170,8 +203,10 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
                                               : 0;
       p.publish(p.selected);
     } else if (id == "bus") {
+#ifndef APP_API
       slot.bus = (slot.bus + 1) % 17;
       p.publish(p.selected);
+#endif
     } else if (id == "choke") {
       slot.choke = (slot.choke + 1) % 17;
       p.publish(p.selected);
@@ -192,6 +227,8 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
       p.edit();
     else if (id == "normalize")
       p.edit(true);
+    else if (id == "fit")
+      p.edit(false, false, true);
     else if (id == "denoise")
       p.edit(false, true);
     else if (id == "undo")
@@ -230,13 +267,11 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
       p.zoom = std::max(1.0, p.zoom / 2);
       p.viewStart = std::min(p.viewStart, 1 - 1 / p.zoom);
     } else if (id == "instrument") {
-      const std::array<std::string, 12> instruments = {
-          "drums",          "bass",    "keyboard",   "guitar",
-          "synth",          "strings", "percussion", "vocals",
-          "backing_vocals", "fx",      "brass",      "woodwinds"};
-      auto i = std::find(instruments.begin(), instruments.end(), p.instrument) -
-               instruments.begin();
-      p.instrument = instruments[(i + 1) % 12];
+      const auto selected =
+          std::find(Instruments.begin(), Instruments.end(), p.instrument);
+      if (selected != Instruments.end())
+        instrumentMenu.CheckItemAlone(int(selected - Instruments.begin()));
+      GetUI()->CreatePopupMenu(*this, instrumentMenu, it->rect);
     } else if (id == "key")
       entry(id, p.key, it->rect);
     else if (id == "prompt")
@@ -258,9 +293,12 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
     else if (id == "host") {
       p.followHostGeneration = true;
       p.bpm = p.hostBpm;
-    } else if (id == "generate")
+    } else if (id == "generate") {
+      const auto previous = p.takes.size();
       p.generate();
-    else if (id == "cancel")
+      if (p.takes.size() > previous)
+        takeScroll = previous * 174.0;
+    } else if (id == "cancel")
       p.cancel();
     else if (id == "variant" && !p.candidates.empty())
       p.variant = (p.variant + 1) % p.candidates.size();
@@ -274,6 +312,32 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
 }
 void LoopEditor::OnMouseDrag(float x, float y, float, float,
                              const IMouseMod &mod) {
+  if (scrollDrag >= 0) {
+    if (scrollDrag == 0)
+      settingsScroll =
+          std::clamp(initial + (y - origin) * 460.0 / 356.0, 0.0, 104.0);
+    else {
+      const double content = std::max(415.0, p.takes.size() * 174.0);
+      takeScroll = std::clamp(initial + (y - origin) * content / 415.0, 0.0,
+                              content - 415.0);
+    }
+    SetDirty(false);
+    return;
+  }
+  if (takeDrag >= 0) {
+    dragX = x;
+    dragY = y;
+    takeMoved = takeMoved || std::hypot(x - takeOriginX, y - takeOriginY) > 4;
+    if (takeMoved && !mRECT.Contains(x, y)) {
+      const auto path =
+          p.takes.at(takeDrag).result.at("export_path").get<std::string>();
+      takeDrag = -1;
+      GetUI()->InitiateExternalFileDragDrop(path.c_str(),
+                                            IRECT(x - 8, y - 8, x + 8, y + 8));
+    }
+    SetDirty(false);
+    return;
+  }
   if (drag < 0)
     return;
   auto &slot = p.bank[p.selected];
@@ -296,7 +360,20 @@ void LoopEditor::OnMouseDrag(float x, float y, float, float,
   }
   SetDirty(false);
 }
-void LoopEditor::OnMouseUp(float, float, const IMouseMod &) {
+void LoopEditor::OnMouseUp(float x, float y, const IMouseMod &) {
+  scrollDrag = -1;
+  if (takeDrag >= 0) {
+    if (!takeMoved)
+      p.previewTake(takeDrag);
+    else
+      for (auto it = hits.rbegin(); it != hits.rend(); ++it)
+        if (it->action.rfind("key", 0) == 0 && it->rect.Contains(x, y)) {
+          p.assignTake(takeDrag, std::stoi(it->action.substr(3)));
+          break;
+        }
+    takeDrag = -1;
+    SetDirty(false);
+  }
   drag = -1;
   if (held >= 0) {
     p.trigger(held, false);
@@ -311,7 +388,19 @@ void LoopEditor::OnMouseDblClick(float x, float y, const IMouseMod &) {
       break;
     }
 }
-void LoopEditor::OnMouseWheel(float, float, const IMouseMod &mod, float delta) {
+void LoopEditor::OnMouseWheel(float x, float y, const IMouseMod &mod,
+                              float delta) {
+  if (view == 2) {
+    if (y >= 124 && y <= 539) {
+      if (x < 438)
+        settingsScroll = std::clamp(settingsScroll - delta * 40.0, 0.0, 104.0);
+      else
+        takeScroll = std::clamp(takeScroll - delta * 40.0, 0.0,
+                                std::max(0.0, p.takes.size() * 174.0 - 415));
+    }
+    SetDirty(false);
+    return;
+  }
   if (mod.S)
     p.viewStart = std::clamp(p.viewStart + double(delta) * 0.025 / p.zoom, 0.0,
                              1 - 1 / p.zoom);
@@ -320,6 +409,14 @@ void LoopEditor::OnMouseWheel(float, float, const IMouseMod &mod, float delta) {
   SetDirty(false);
 }
 void LoopEditor::OnDrop(const char *path) { p.importFile(path); }
+void LoopEditor::OnPopupMenuSelection(IPopupMenu *menu, int) {
+  if (menu != &instrumentMenu || menu->GetChosenItemIdx() < 0 ||
+      menu->GetChosenItemIdx() >= int(Instruments.size()))
+    return;
+  std::lock_guard<std::recursive_mutex> lock(p.stateMutex);
+  p.instrument = Instruments[menu->GetChosenItemIdx()];
+  SetDirty(false);
+}
 void LoopEditor::OnTextEntryCompletion(const char *value, int) {
   try {
     std::string s = value;

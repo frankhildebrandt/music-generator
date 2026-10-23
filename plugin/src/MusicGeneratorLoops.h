@@ -29,11 +29,15 @@ public:
   void install();
   void cancel();
   void importFile(const std::string &path);
-  void edit(bool normalize = false, bool noise = false);
+  void edit(bool normalize = false, bool noise = false, bool fit = false);
   void zero();
   void undo(bool redo = false);
   void accept();
   void previewCandidate();
+  void previewTake(int index);
+  void assignTake(int index, int note);
+  double takePosition(int index) const;
+  double playPosition() const { return player.position(selected); }
   void stopPreview();
   void audition(bool original = false);
   void exportWav();
@@ -56,6 +60,14 @@ public:
   int numerator = 4, denominator = 4;
   std::string exportPath;
   loops::Json candidates = loops::Json::array();
+  struct GeneratedTake {
+    loops::Json result = loops::Json::object();
+    std::string title, phase = "Queued";
+    double progress = -1, bpm = 120, bars = 4;
+    bool pending = true;
+  };
+  std::vector<GeneratedTake> takes;
+  int auditionTake = -1;
   mutable std::recursive_mutex stateMutex;
 
 private:
@@ -73,6 +85,9 @@ private:
   std::string job;
   int jobSlot = -1;
   bool pollPending = false;
+  bool generationJob = false, cancelRequested = false;
+  size_t generationStart = 0;
+  loops::Json takeCache = loops::Json::object();
   std::chrono::steady_clock::time_point lastPoll{};
   struct History {
     int slot;
@@ -84,4 +99,7 @@ private:
   void remember(int slot);
   void loadResult(int slot, const loops::Json &result);
   void changed();
+  loops::Json prepareTake(const loops::Json &, double rate, double tempo);
+  void auditionResult(const loops::Json &, int slot);
+  void updateTakes(const loops::Json &);
 };

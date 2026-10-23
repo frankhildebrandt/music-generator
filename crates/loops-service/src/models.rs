@@ -2,11 +2,7 @@ use music_core::error::{message, Result};
 use std::path::{Path, PathBuf};
 
 const APP_ID: &str = "de.alphatester.music-generator";
-const REQUIRED: [&str; 3] = [
-    music_core::loops::BASE_MODEL,
-    "Qwen3-Embedding-0.6B-Q8_0.gguf",
-    "vae-BF16.gguf",
-];
+use music_core::loops::REQUIRED_MODELS as REQUIRED;
 
 pub fn app_roots() -> Result<Vec<PathBuf>> {
     if let Some(profile) = std::env::var_os("MUSIC_GENERATOR_PROFILE")

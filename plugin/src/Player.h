@@ -72,6 +72,7 @@ class Player {
   uint64_t age = 0;
   std::array<Voice, Voices> voices;
   std::array<Clip *, Slots> clips{};
+  std::array<std::atomic<double>, Slots> playheads;
   std::array<std::atomic<Clip *>, Slots> pending{};
   Queue<Clip *, 512> retired;
   std::array<std::array<double, ParamsPerSlot>, Slots> parameters{};
@@ -90,6 +91,11 @@ public:
   Player &operator=(const Player &) = delete;
   void prepare(double sampleRate);
   int latencySamples() const { return latency; }
+  double position(int slot) const {
+    return slot >= 0 && slot < Slots
+               ? playheads[slot].load(std::memory_order_relaxed)
+               : -1;
+  }
   void publish(int slot, std::unique_ptr<Clip> clip);
   void collect();
   void uiParameter(int id, double value);

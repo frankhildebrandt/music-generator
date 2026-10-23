@@ -25,6 +25,9 @@ MusicGeneratorLoops::MusicGeneratorLoops(const InstanceInfo &info)
   }
 
   player.prepare(48000);
+#ifdef APP_API
+  followHostGeneration = false;
+#endif
   mMakeGraphicsFunc = [this]() {
     return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS,
                         GetScaleForScreen(PLUG_WIDTH, PLUG_HEIGHT));
@@ -71,6 +74,9 @@ MusicGeneratorLoops::~MusicGeneratorLoops() {
 void MusicGeneratorLoops::ProcessBlock(sample **, sample **outputs,
                                        int frames) {
   double tempo = mTimeInfo.mTempo;
+#ifdef APP_API
+  tempo = audioBpm.load();
+#endif
   audioBpm.store(std::isfinite(tempo) && tempo >= 30 && tempo <= 300
                      ? tempo
                      : audioBpm.load());
@@ -128,7 +134,12 @@ void MusicGeneratorLoops::trigger(int note, bool on) {
   SendMidiMsgFromUI(msg);
 }
 void MusicGeneratorLoops::publish(int slot) {
-  player.publish(slot, std::make_unique<loops::Clip>(bank[slot].clip()));
+  auto clip = std::make_unique<loops::Clip>(bank[slot].clip());
+#ifdef APP_API
+  // Preserve portable bus assignments while monitoring all slots in stereo.
+  clip->bus = 0;
+#endif
+  player.publish(slot, std::move(clip));
 }
 void MusicGeneratorLoops::changed() {
   exportPath.clear();
@@ -180,6 +191,9 @@ int MusicGeneratorLoops::UnserializeState(const IByteChunk &chunk, int pos) {
 }
 void MusicGeneratorLoops::OnRestoreState() {
   iplug::Plugin::OnRestoreState();
+  bpm = bank[selected].bpm;
+  beats = bank[selected].beats;
+  key = bank[selected].key;
   for (int id = 0; id < NumParams; ++id)
     player.uiParameter(id, GetParam(id)->Value());
   if (GetUI())

@@ -16,6 +16,7 @@ Linux AppImage media support includes the GStreamer base/good plugins supplied b
 ## Native loop instrument
 
 - iPlug2 (zlib), including its bundled WDL, IGraphics and graphics dependencies: https://github.com/iPlug2/iPlug2. Full license notices are shipped in the plugin package.
+- The standalone host uses iPlug2's pinned RtAudio and RtMidi sources (MIT-style licenses); their license texts are included in the package.
 - CLAP and clap-helpers (MIT): https://github.com/free-audio/clap and https://github.com/free-audio/clap-helpers.
 - VST SDK 3.8 (MIT): https://github.com/steinbergmedia/vst3sdk. VST is a trademark of Steinberg Media Technologies GmbH.
 - Signalsmith Stretch and Linear (MIT): https://github.com/Signalsmith-Audio/signalsmith-stretch and https://github.com/Signalsmith-Audio/linear.

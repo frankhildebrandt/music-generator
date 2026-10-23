@@ -45,6 +45,29 @@ int main() {
     auto faster = renderCycle(clip, bank[36].params, 150, 44100);
     require(faster.samples.size() == 17640,
             "Tempo conversion length incorrect");
+    for (double tempo : {120.0, 137.0}) {
+      auto continuous = std::make_shared<Audio>();
+      continuous->rate = 8000;
+      const auto frames = size_t(std::llround(32 * 60.0 / tempo * 8000));
+      continuous->samples.resize(frames);
+      for (size_t n = 0; n < frames; ++n) {
+        const float value =
+            float(0.3 * std::sin(2 * 3.141592653589793 * 200 * n / 8000));
+        continuous->samples[n] = {value, value};
+      }
+      auto eightBars = clip;
+      eightBars.audio = continuous;
+      eightBars.beats = 32;
+      auto cycle = renderCycle(eightBars, bank[36].params, tempo, 8000);
+      require(cycle.samples.size() == frames,
+              "Eight-bar export length incorrect");
+      for (size_t start = 0; start + 160 <= frames; start += 160) {
+        double energy = 0;
+        for (size_t n = start; n < start + 160; ++n)
+          energy += cycle.samples[n][0] * cycle.samples[n][0];
+        require(energy / 160 > 0.001, "Silence inserted in eight-bar cycle");
+      }
+    }
     writeWav("test-loop.wav", a);
     auto wav = readWav("test-loop.wav");
     require(wav.samples == a.samples, "WAV changed samples");

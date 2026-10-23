@@ -2,6 +2,7 @@ mod engine;
 mod imports;
 mod jobs;
 mod models;
+mod progress;
 mod transport;
 #[cfg(windows)]
 mod windows_pipe;
@@ -104,7 +105,7 @@ async fn dispatch(service: Arc<Service>, req: Value) -> Result<Value> {
         "models" => {
             let folder = service.models.lock().await.clone();
             Ok(
-                json!({"folder":folder,"models":music_core::manifest::manifest().models.into_iter().filter(|m|["pro"].contains(&m.kind.as_str()) || ["vae-BF16.gguf","Qwen3-Embedding-0.6B-Q8_0.gguf"].contains(&m.file.as_str())).map(|m|json!({"file":m.file,"bytes":m.estimated_bytes,"present":folder.join(&m.file).is_file()})).collect::<Vec<_>>()}),
+                json!({"folder":folder,"default_model":music_core::loops::DEFAULT_MODEL,"models":music_core::manifest::manifest().models.into_iter().filter(|m|music_core::loops::REQUIRED_MODELS.contains(&m.file.as_str())).map(|m|json!({"file":m.file,"bytes":m.estimated_bytes,"present":folder.join(&m.file).is_file()})).collect::<Vec<_>>()}),
             )
         }
         "install" => jobs::enqueue_install(service, instance).await,
@@ -167,15 +168,20 @@ async fn dispatch(service: Arc<Service>, req: Value) -> Result<Value> {
                     let score = music_core::loops::seam_score(&audio, cut, frames);
                     return Ok(json!({"start":cut,"score":score}));
                 }
-                let recipe: music_core::loops::EditRecipe =
+                let mut recipe: music_core::loops::EditRecipe =
                     serde_json::from_value(data["recipe"].clone())?;
+                if data["fit"].as_bool().unwrap_or(false) {
+                    let bar_frames = data["bar_frames"].as_f64().unwrap_or(0.0);
+                    (recipe.start, recipe.end) =
+                        music_core::loops::loop_region(&audio, recipe.frames, bar_frames, true)?;
+                }
                 let edited = music_core::loops::edit(&audio, &recipe)?;
                 let path = root
                     .join("assets")
                     .join(format!("{}.wav", music_core::types::id()));
                 std::fs::create_dir_all(path.parent().unwrap())?;
                 edited.write(&path)?;
-                Ok(json!({"path":path}))
+                Ok(json!({"path":path,"recipe":recipe}))
             })
             .await
             .map_err(|e| message(e.to_string()))?

@@ -70,6 +70,18 @@ void LoopEditor::DrawDetail(IGraphics &g) {
               Gold);
       }
     }
+    const double position = p.playPosition();
+    if (position >= 0) {
+      const double start = p.GetParam(p.selected * 8 + Start)->Value();
+      const double end = p.GetParam(p.selected * 8 + End)->Value();
+      const float x =
+          24 +
+          float((start + position * (end - start) - from) / visible) * 1072;
+      if (x >= wave.L && x <= wave.R) {
+        g.DrawLine(White, x, wave.T, x, wave.B, nullptr, 1.5f);
+        g.FillTriangle(White, x - 4, wave.T, x + 4, wave.T, x, wave.T + 6);
+      }
+    }
     label(g,
           number(size / a.rate, 3) + " s · " + number(slot.beats / p.barBeats) +
               " bars · " + slot.key,
@@ -92,7 +104,11 @@ void LoopEditor::DrawDetail(IGraphics &g) {
                                 : "Bar",
         "quantize");
   input(g, {248, 452, 350, 505}, "OUTPUT",
+#ifdef APP_API
+        "Stereo", "bus");
+#else
         slot.bus ? "Bus " + std::to_string(slot.bus) : "Master", "bus");
+#endif
   input(g, {360, 452, 462, 505}, "CHOKE",
         slot.choke ? std::to_string(slot.choke) : "Off", "choke");
   const char *names[] = {"GAIN", "PAN", "PITCH", "HIGH PASS", "LOW PASS"};
@@ -134,7 +150,8 @@ void LoopEditor::DrawDetail(IGraphics &g) {
   button(g, {760, 574, 870, 596}, "Zoom −", "zoomout");
   button(g, {880, 574, 1096, 596}, "Save WAV as…", "savewav");
   g.DrawLine(Line, 24, 606, 1096, 606);
-  input(g, {24, 616, 154, 669}, "INSTRUMENT", p.instrument, "instrument");
+  input(g, {24, 616, 154, 669}, "INSTRUMENT", p.instrument + "  ▾",
+        "instrument");
   input(g, {164, 616, 294, 669}, "KEY", p.key, "key");
   input(g, {304, 616, 394, 669}, "BPM", number(p.bpm, 1), "bpm");
   input(g, {404, 616, 494, 669}, "LENGTH / BARS", number(p.beats / p.barBeats),
@@ -143,7 +160,7 @@ void LoopEditor::DrawDetail(IGraphics &g) {
   input(g, {594, 616, 674, 669}, "VARIANTS", std::to_string(p.variants),
         "variants");
   input(g, {684, 616, 804, 669}, "SEED", std::to_string(p.seed), "seed");
-  button(g, {814, 636, 934, 669}, "Use host tempo", "host");
+  button(g, {814, 636, 934, 669}, "Fit loop", "fit");
   button(g, {944, 636, 1096, 669}, p.busy ? "Cancel job" : "Generate stem",
          p.busy ? "cancel" : "generate", true);
   input(g, {24, 678, 735, 731}, "DESCRIPTION", p.prompt, "prompt");
@@ -251,6 +268,14 @@ void LoopEditor::performance(IGraphics &g) {
     }
   }
   g.FillCircle(Mint, cx, cy, 32);
+  const double position = p.playPosition();
+  if (position >= 0) {
+    const double angle = position * 6.28318530718 - 1.57079632679;
+    const float x = cx + 150 * std::cos(angle), y = cy + 108 * std::sin(angle);
+    g.DrawLine(Mint, cx + 40 * std::cos(angle), cy + 29 * std::sin(angle), x, y,
+               nullptr, 1.5f);
+    g.FillCircle(White, x, y, 3);
+  }
   g.FillTriangle(Background, cx - 6, cy - 11, cx - 6, cy + 11, cx + 12, cy);
   hits.push_back({{cx - 32, cy - 32, cx + 32, cy + 32}, "masterplay"});
   const int ids[] = {Gain, Lowpass, Pitch, Pan};
@@ -288,45 +313,16 @@ void LoopEditor::performance(IGraphics &g) {
                                  : "BAR GRID",
          "quantize");
   button(g, {275, 505, 390, 542},
+#ifdef APP_API
+         "STEREO OUT", "bus");
+#else
          slot.bus ? "OUTPUT " + std::to_string(slot.bus) : "MASTER OUT", "bus");
+#endif
   button(g, {705, 505, 820, 542}, "Edit loop", "view1");
   button(g, {830, 505, 945, 542}, "Import sound", "import");
   button(g, {955, 505, 1084, 542},
          p.exportPath.empty() ? "Render WAV" : "Drag WAV", "export",
          !p.exportPath.empty());
-}
-void LoopEditor::generation(IGraphics &g) {
-  label(g, "MAKE ROOM FOR A NEW IDEA.", {120, 105, 1010, 130}, 10, Muted);
-  label(g, "Build your next layer.", {120, 143, 1010, 194}, 36);
-  input(g, {120, 215, 325, 275}, "INSTRUMENT", p.instrument, "instrument");
-  input(g, {340, 215, 545, 275}, "TONALITY", p.key, "key");
-  input(g, {560, 215, 725, 275}, "TEMPO / BPM", number(p.bpm, 1), "bpm");
-  input(g, {740, 215, 995, 275}, "LENGTH / BARS", number(p.beats / p.barBeats),
-        "bars");
-  input(g, {120, 294, 995, 356}, "DESCRIBE THE SOUND", p.prompt, "prompt");
-  input(g, {120, 373, 255, 433}, "STEPS", std::to_string(p.steps), "steps");
-  input(g, {270, 373, 405, 433}, "VARIANTS", std::to_string(p.variants),
-        "variants");
-  input(g, {420, 373, 585, 433}, "SEED", std::to_string(p.seed), "seed");
-  button(g, {600, 393, 745, 433}, "Use host tempo", "host");
-  button(g, {760, 393, 995, 433},
-         p.busy ? "Cancel generation" : "Generate a loop",
-         p.busy ? "cancel" : "generate", true);
-  int context = 0;
-  for (int n = 0; n < 128; ++n)
-    if (p.context[n] && n != p.selected && p.bank[n].edited)
-      ++context;
-  label(g,
-        std::to_string(context) + " context loops selected · target note " +
-            std::to_string(p.selected),
-        {120, 449, 995, 474}, 11, Muted);
-  button(g, {120, 495, 310, 534},
-         "Variant " + std::to_string(p.variant + 1) + " / " +
-             std::to_string(p.candidates.size()),
-         "variant");
-  button(g, {325, 495, 525, 534}, "Audition candidate", "candidate");
-  button(g, {540, 495, 740, 534}, "Accept candidate", "accept");
-  label(g, "Your current loop stays saved.", {760, 495, 1030, 534}, 11, Muted);
 }
 void LoopEditor::Draw(IGraphics &g) {
   std::lock_guard<std::recursive_mutex> lock(p.stateMutex);
@@ -352,6 +348,14 @@ void LoopEditor::Draw(IGraphics &g) {
     generation(g);
   g.DrawLine(Line, 36, 558, 1084, 558);
   keyboard(g);
+  if (takeDrag >= 0 && takeMoved) {
+    const IRECT ghost(std::clamp(dragX, 36.f, 864.f),
+                      std::clamp(dragY - 40, 90.f, 710.f),
+                      std::clamp(dragX, 36.f, 864.f) + 220,
+                      std::clamp(dragY - 40, 90.f, 710.f) + 32);
+    g.FillRoundRect(Mint, ghost, 5);
+    label(g, "Drop take on a key", ghost.GetPadded(-8), 12, Background);
+  }
   label(g, p.status, {36, 746, 1084, 774}, 11, p.busy ? Gold : Muted);
 }
 } // namespace loops::ui

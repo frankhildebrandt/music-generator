@@ -52,9 +52,16 @@ int main() {
     process(2400 * 100 - 219);
     require(std::abs(PlayerProbe::sourcePosition(player, 0) - 240000) < 1e-6,
             "One hundred cycles accumulated source drift");
+    const auto position = player.position(0);
+    require(position >= 0 && position < 1, "Active playhead outside cycle");
+    process(600);
+    const auto advanced = player.position(0);
+    require(std::abs(std::fmod(advanced - position + 1, 1) - 0.25) < 0.001,
+            "Playhead does not follow loop phase");
     player.event({0, 0, -1, 0});
     process(player.latencySamples() + 241);
     require(!PlayerProbe::active(player, 0), "Gate ignored note-off");
+    require(player.position(0) == -1, "Stopped playhead remains visible");
     player.event({0, 1, -1, 1});
     process(256);
     player.event({0, 1, -1, 0});
