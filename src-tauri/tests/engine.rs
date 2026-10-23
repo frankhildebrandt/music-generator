@@ -147,7 +147,7 @@ async fn generation_trims_lm_overproduction_before_synthesis() {
 #[tokio::test]
 async fn synthesis_errors_use_new_logs_for_failed_jobs_http_and_missing_audio() {
     use std::io::Write;
-    for mode in ["job", "http", "audio", "stale"] {
+    for mode in ["job", "http", "audio", "stale", "timeout"] {
         let dir = tempfile::tempdir().unwrap();
         let log = dir.path().join("ace-server.log");
         std::fs::write(&log, "old: out of memory\n").unwrap();
@@ -165,7 +165,7 @@ async fn synthesis_errors_use_new_logs_for_failed_jobs_http_and_missing_audio() 
             }))
             .route("/job",get(move |Query(query): Query<std::collections::HashMap<String,String>>| async move {
                 if !query.contains_key("result") {
-                    Json(json!({"status":if query["id"]=="synth" && mode!="audio" {"failed"}else{"done"}}))
+                    Json(json!({"status":if query["id"]=="synth" && mode=="timeout" {"running"}else if query["id"]=="synth" && mode!="audio" {"failed"}else{"done"}}))
                 }else if query["id"]=="lm" {
                     Json(json!({"audio_codes":"1,2,3"}))
                 }else {Json(json!({"error":"empty audio"}))}
@@ -175,7 +175,10 @@ async fn synthesis_errors_use_new_logs_for_failed_jobs_http_and_missing_audio() 
         let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
         let mut client = EngineClient::new(base.clone(), base, 0.01, 1.0).unwrap();
         client.synth_log = Some(log);
-        let error = client
+        if mode == "timeout" {
+            client.timeout = Duration::from_millis(80);
+        }
+        let failure = client
             .generate(
                 &json!({}),
                 "lm.gguf",
@@ -184,11 +187,18 @@ async fn synthesis_errors_use_new_logs_for_failed_jobs_http_and_missing_audio() 
                 |_| {},
             )
             .await
-            .unwrap_err()
-            .to_string();
+            .unwrap_err();
+        let error = failure.to_string();
+        if mode == "timeout" {
+            assert!(matches!(
+                failure,
+                music_generator::error::Error::EngineTimeout { .. }
+            ));
+            assert!(error.contains("Raise the timeout in the settings"));
+        }
         assert_eq!(
             error.contains("Not enough memory"),
-            mode != "stale",
+            mode != "stale" && mode != "timeout",
             "{mode}: {error}"
         );
         task.abort();
@@ -289,13 +299,39 @@ async fn pending_server() -> (EngineClient, Arc<AtomicU32>, tokio::task::JoinHan
 
 #[tokio::test]
 async fn timeout_cancels_the_engine_job() {
+    use music_generator::{db::Database, error::Error, types::GenerateRequest};
     let (mut client, count, task) = pending_server().await;
     client.timeout = Duration::from_millis(80);
-    assert!(client
-        .language_model(&json!({}), &CancellationToken::new(), |_| {})
+    let root = tempfile::tempdir().unwrap();
+    let db = Database::open(root.path()).unwrap();
+    let request = GenerateRequest {
+        prompt: "saved piano song".into(),
+        duration: 90.0,
+        inference_steps: 75,
+        lm_temperature: Some(0.65),
+        seed: 42,
+        ..Default::default()
+    };
+    let id = db.enqueue(&request).unwrap()[0].clone();
+    let (claimed, params) = db.claim_next().unwrap().unwrap();
+    assert_eq!(claimed, id);
+    let error = client
+        .language_model(&params, &CancellationToken::new(), |_| {})
         .await
-        .is_err());
+        .unwrap_err();
+    assert!(matches!(error, Error::EngineTimeout { .. }));
+    let text = error.to_string();
+    assert!(text.contains("Timeout-Zeit erhöhen"));
+    assert!(text.contains("Raise the timeout in the settings"));
     assert_eq!(count.load(Ordering::SeqCst), 1);
+    db.fail(&id, &text).unwrap();
+    drop(db);
+    let db = Database::open(root.path()).unwrap();
+    let saved = db.song(&id).unwrap();
+    assert_eq!(saved.params, params);
+    assert_eq!(saved.message.as_deref(), Some(text.as_str()));
+    db.retry(&id).unwrap();
+    assert_eq!(db.claim_next().unwrap().unwrap(), (id, params));
     task.abort();
 }
 
@@ -308,10 +344,13 @@ async fn user_cancellation_cancels_the_engine_job() {
         tokio::time::sleep(Duration::from_millis(80)).await;
         signal.cancel();
     });
-    assert!(client
-        .language_model(&json!({}), &cancel, |_| {})
-        .await
-        .is_err());
+    assert!(matches!(
+        client
+            .language_model(&json!({}), &cancel, |_| {})
+            .await
+            .unwrap_err(),
+        music_generator::error::Error::Cancelled
+    ));
     assert_eq!(count.load(Ordering::SeqCst), 1);
     task.abort();
 }

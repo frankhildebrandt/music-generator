@@ -48,9 +48,10 @@ impl EngineClient {
             Value::Number(n) => n.to_string(),
             _ => return Err(message("Engine returned no job ID")),
         };
+        let started = Instant::now();
         let outcome = tokio::select! {
             _ = cancel.cancelled() => Err(Error::Cancelled),
-            r = tokio::time::timeout(self.timeout, self.wait(base, &jid, &progress)) => r.unwrap_or_else(|_| Err(message(format!("{endpoint}: time limit exceeded")))),
+            r = tokio::time::timeout(self.timeout, self.wait(base, &jid, &progress)) => r.unwrap_or_else(|_| Err(timeout_error(endpoint, started.elapsed()))),
         };
         if outcome.is_err() {
             let _ = self
@@ -196,7 +197,7 @@ impl EngineClient {
             .await
             .and_then(|(ctype, body)| extract_audio(&ctype, &body));
         let (audio, extension) = result.map_err(|error| {
-            if matches!(error, Error::Cancelled) {
+            if matches!(error, Error::Cancelled | Error::EngineTimeout { .. }) {
                 return error;
             }
             log.as_ref()
@@ -222,6 +223,19 @@ impl EngineClient {
             .operation(&self.lm, "understand", request, cancel, |_| {})
             .await?;
         extract_json(&ctype, &body)
+    }
+}
+
+fn timeout_error(endpoint: &str, elapsed: Duration) -> Error {
+    Error::EngineTimeout {
+        operation: match endpoint {
+            "lm" => "LM",
+            "synth" => "Synthese / Synthesis",
+            "understand" => "Analyse / Analysis",
+            other => other,
+        }
+        .to_owned(),
+        minutes: (elapsed.as_secs_f64() / 60.0).round().max(1.0) as u64,
     }
 }
 
@@ -334,4 +348,29 @@ pub fn selftest_ok(result: &Value) -> bool {
         && !result["keyscale"].as_str().unwrap_or("").is_empty()
         && (30..=70).contains(&codes.len())
         && distinct.len() as f64 / codes.len().max(1) as f64 > 0.3
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timeout_includes_stage_rounded_minutes_and_settings_guidance() {
+        for (seconds, minutes) in [(0.08, 1), (60.0, 1), (90.0, 2), (1800.0, 30)] {
+            for (endpoint, stage) in [
+                ("lm", "LM"),
+                ("synth", "Synthese"),
+                ("understand", "Analyse"),
+            ] {
+                let error = timeout_error(endpoint, Duration::from_secs_f64(seconds));
+                assert!(matches!(error, Error::EngineTimeout { minutes: n, .. } if n == minutes));
+                let text = error.to_string();
+                assert!(text.contains(stage));
+                assert!(text.contains(&format!("nach {minutes} Min.")));
+                assert!(text.contains("Timeout-Zeit erhöhen"));
+                assert!(text.contains("Raise the timeout in the settings"));
+                assert_eq!(serde_json::to_value(&error).unwrap(), json!(text));
+            }
+        }
+    }
 }
