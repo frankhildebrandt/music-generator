@@ -148,7 +148,8 @@ schritt "Model server acestep.cpp (${ACESTEP_REV:0:7})"
 mkdir -p "$ENGINE/build" "$MODELS"
 # Schon vorhanden (--help zeigt den kurzen Hash)? Mit --build werden fertige Programmdateien durch einen eigenen Build ersetzt.
 if "$ENGINE/build/ace-server" --help 2>&1 | head -1 | grep -q "${ACESTEP_REV:0:7}" \
-   && { [ "$BUILD" = 0 ] || ! grep -q '^PREBUILT=' "$ENGINE/build/VERSION.txt" 2>/dev/null; }; then
+   && { [ "$BUILD" = 0 ] || ! grep -q '^PREBUILT=' "$ENGINE/build/VERSION.txt" 2>/dev/null; } \
+   && { [ "$PREBUILT" = 0 ] || [ -x "$ENGINE/build/mp3-codec" ]; }; then   # erste Ausgabe der fertigen Dateien hatte keinen mp3-codec (MP3-Export)
   echo "  already installed"
 elif [ "$PREBUILT" = 1 ]; then
   # Fertige Programmdateien aus der Veröffentlichung des Projekts, per SHA-256 geprüft
