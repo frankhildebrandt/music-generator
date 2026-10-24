@@ -131,6 +131,9 @@ class AceStepCpp:
         req = {k: v for k, v in params.items() if k in ACE_FIELDS and v not in (None, "")}
         req.setdefault("use_cot_caption", False)  # Prompt wörtlich übernehmen
         req["output_format"] = "wav16"            # 48 kHz / 16 Bit, verlustfrei
+        # ace-server normalisiert sonst auf das 99,999. Perzentil (peak_clip=10) und schneidet alles darüber hart ab (Knacken in lauten
+        # Stellen). Mit 0 wird auf die echte Spitze normalisiert, nichts wird abgeschnitten. Hinweis aus der Community (JUKA0920).
+        req["peak_clip"] = 0
         req["synth_model"] = self.dit_model
         if self.lm_model:
             req["lm_model"] = self.lm_model
@@ -154,6 +157,7 @@ class AceStepCpp:
             if len(codes) > limit:
                 enriched["audio_codes"] = ",".join(codes[:limit])
             enriched["output_format"] = req["output_format"]
+            enriched["peak_clip"] = req["peak_clip"]
             enriched["synth_model"] = req["synth_model"]
 
             # 2) Synthese
