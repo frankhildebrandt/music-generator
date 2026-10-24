@@ -59,7 +59,7 @@ await run("ctest", [
   "Release",
   "--output-on-failure",
 ]);
-const packageName = `Music-Generator-Loops-0.1.2-${platform}-${architecture}`;
+const packageName = `Music-Generator-Loops-0.2.0-${platform}-${architecture}`;
 const folder = path.join(root, "release", packageName);
 await rm(folder, { recursive: true, force: true });
 await mkdir(folder, { recursive: true });
@@ -167,7 +167,7 @@ await writeFile(
   JSON.stringify(
     {
       manufacturer: "Alphatester x KRGSH",
-      version: "0.1.2",
+      version: "0.2.0",
       formats: ["VST3", "CLAP", "Standalone"],
       platform,
       architecture,

@@ -100,7 +100,7 @@ async fn dispatch(service: Arc<Service>, req: Value) -> Result<Value> {
     }
     match action {
         "status" => Ok(
-            json!({"version":1,"models":service.models.lock().await.to_string_lossy(),"root":service.root}),
+            json!({"version":1,"dc_removal":true,"sound_idea":true,"models":service.models.lock().await.to_string_lossy(),"root":service.root}),
         ),
         "models" => {
             let folder = service.models.lock().await.clone();

@@ -38,6 +38,16 @@ int main() {
   std::array<double *, 34> ptr{};
   for (int ch = 0; ch < 34; ++ch)
     ptr[ch] = data[ch].data();
+  Player grouped;
+  grouped.prepare(48000);
+  for (int slot = 0; slot < 4; ++slot) {
+    auto clip = std::make_unique<Clip>();
+    clip->audio = audio;
+    clip->beats = slot % 2 ? .5 : 1;
+    clip->mode = Mode::Toggle;
+    clip->group = slot / 2 + 1;
+    grouped.publish(slot, std::move(clip));
+  }
   auditing = true;
   for (int i = 0; i < 33; ++i)
     player.event({i * 3, i, -1, 1});
@@ -50,6 +60,11 @@ int main() {
     }
     player.process(ptr.data(), 34, 256,
                    {120 + block * .1, block * 256 * 120.0 / 2880000, true, 4});
+  }
+  for (int block = 0; block < 80; ++block) {
+    if (block % 5 == 0)
+      grouped.event({37, (block / 5) % 4, -1, 1});
+    grouped.process(ptr.data(), 34, 256, {120, 0, false, 4, true});
   }
   auditing = false;
   if (allocations) {

@@ -14,12 +14,14 @@ struct Clip {
   double bpm = 120, beats = 16;
   Mode mode = Mode::Gate;
   double quantize = 0;
-  int choke = 0, bus = 0;
+  int choke = 0, bus = 0, group = 0;
+  bool retrigger = true;
 };
 struct Clock {
   double bpm = 120, ppq = 0;
   bool running = false;
   double barBeats = 4;
+  bool internal = false;
 };
 struct Event {
   int offset = 0, slot = 0, param = -1;
@@ -73,6 +75,9 @@ class Player {
   std::array<Voice, Voices> voices;
   std::array<Clip *, Slots> clips{};
   std::array<std::atomic<double>, Slots> playheads;
+  std::array<std::atomic<bool>, Slots> queued{};
+  double internalPpq = 0;
+  std::atomic<double> publishedPpq{0};
   std::array<std::atomic<Clip *>, Slots> pending{};
   Queue<Clip *, 512> retired;
   std::array<std::array<double, ParamsPerSlot>, Slots> parameters{};
@@ -82,6 +87,7 @@ class Player {
   int latency = 0;
   void note(int slot, double velocity, const Clock &clock, double ppq);
   void stop(int slot);
+  void activate(Voice &, const Clock &, double ppq);
   std::array<float, 2> tick(Voice &voice, const Clock &clock, double ppq);
 
 public:
@@ -96,6 +102,10 @@ public:
                ? playheads[slot].load(std::memory_order_relaxed)
                : -1;
   }
+  bool isQueued(int slot) const {
+    return slot >= 0 && slot < Slots && queued[slot].load();
+  }
+  double transportPosition() const { return publishedPpq.load(); }
   void publish(int slot, std::unique_ptr<Clip> clip);
   void collect();
   void uiParameter(int id, double value);

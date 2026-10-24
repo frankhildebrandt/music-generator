@@ -7,9 +7,9 @@
 namespace loops::ui {
 using namespace iplug;
 using namespace iplug::igraphics;
-inline const IColor Background{255, 16, 17, 20}, Panel{255, 28, 29, 34},
-    Line{255, 55, 56, 63}, White{255, 241, 239, 230}, Muted{255, 148, 148, 154},
-    Mint{255, 205, 230, 138}, Gold{255, 255, 201, 112};
+inline const IColor Background{255, 20, 27, 30}, Panel{255, 28, 36, 39},
+    Line{255, 61, 73, 77}, White{255, 238, 242, 244}, Muted{255, 168, 184, 195},
+    Mint{255, 211, 250, 116}, Gold{255, 255, 177, 43}, Teal{255, 127, 230, 205};
 inline std::string number(double n, int digits = 2) {
   std::ostringstream s;
   s << std::fixed << std::setprecision(digits) << n;
@@ -26,10 +26,24 @@ class LoopEditor final : public IControl {
   double initial = 0;
   int held = -1;
   int view = 0;
-  double settingsScroll = 0, takeScroll = 0;
+  bool coverView = false, templateOpen = false, templateInstrument = false,
+       fullPromptOpen = false;
+  bool mappingOpen = false;
+  int templateSelected = 0, groupSelected = 0;
+  std::string templateSearch, menuAction, artKey;
+  IPopupMenu choiceMenu{"Choose"};
+  std::vector<int> menuValues;
+  IBitmap artwork;
+  const char *artPointer = nullptr;
+  size_t artSize = 0;
+  IRECT waveBounds{24, 188, 820, 374};
+  std::shared_ptr<const Audio> waveAudio;
+  std::array<std::array<float, 4>, 2048> waveBins{};
+  double settingsScroll = 0, takeScroll = 0, groupScroll = 0,
+         templateScroll = 0;
   int takeDrag = -1;
   float dragX = 0, dragY = 0, takeOriginX = 0, takeOriginY = 0;
-  bool takeMoved = false;
+  bool takeMoved = false, boundaryDrag = false;
   int scrollDrag = -1;
   IPopupMenu instrumentMenu{"Instruments"};
   struct Hit {
@@ -50,6 +64,19 @@ public:
   void importDialog();
   void bankDialog(bool save);
   explicit LoopEditor(MusicGeneratorLoops &plugin);
+  void chrome(IGraphics &g);
+  void soundIdea(IGraphics &g);
+  void stereoWave(IGraphics &g, IRECT bounds, bool editing);
+  void knobs(IGraphics &g, IRECT bounds, bool vertical);
+  void groups(IGraphics &g);
+  void templatesPanel(IGraphics &g);
+  void choose(const std::string &id, const std::vector<std::string> &labels,
+              const std::vector<int> &values, IRECT bounds);
+  bool forgeAction(const std::string &id, IRECT bounds);
+  bool forgeEntry(const std::string &id, const std::string &value);
+  IColor groupColor(int id) const;
+  std::string groupName(int id) const;
+  std::string timing() const;
   void DrawDetail(IGraphics &g);
   void navigation(IGraphics &g);
   void keyboard(IGraphics &g);

@@ -36,6 +36,9 @@ void Player::prepare(double sampleRate) {
   }
   latency = voices[0].stretch.outputLatency();
   count = 0;
+  internalPpq = 0;
+  for (auto &value : queued)
+    value.store(false);
 }
 void Player::publish(int slot, std::unique_ptr<Clip> clip) {
   if (slot < 0 || slot >= Slots)
@@ -81,6 +84,15 @@ void Player::note(int slot, double velocity, const Clock &clock, double ppq) {
         return;
       }
   }
+  if (!clip->retrigger)
+    for (const auto &v : voices)
+      if (v.slot == slot && !v.releasing)
+        return;
+  if (clip->group > 0)
+    for (auto &v : voices)
+      if (v.pending && v.slot >= 0 && clips[v.slot] &&
+          clips[v.slot]->group == clip->group)
+        v.slot = -1;
   Voice *target = nullptr;
   for (auto &v : voices)
     if (v.slot == slot) {
@@ -133,6 +145,27 @@ void Player::note(int slot, double velocity, const Clock &clock, double ppq) {
   v.pitch = p[Pitch];
   v.hp = p[Highpass];
   v.lp = p[Lowpass];
+  if (!v.pending)
+    activate(v, clock, ppq);
+}
+void Player::activate(Voice &v, const Clock &clock, double) {
+  const auto *clip = clips[v.slot];
+  const auto &p = parameters[v.slot];
+  if (clip->group > 0) {
+    double phase = 0;
+    for (auto &other : voices)
+      if (&other != &v && other.slot >= 0 && !other.pending &&
+          clips[other.slot] && clips[other.slot]->group == clip->group &&
+          !other.releasing && other.releaseIn < 0) {
+        phase = other.played;
+        stop(other.slot);
+      }
+    v.played = phase;
+    const double heard =
+        std::max(0.0, phase - latency * clock.bpm / (60 * rate));
+    v.read = std::fmod(heard, clip->beats) / clip->beats *
+             clip->audio->samples.size() * std::max(0.00001, p[End] - p[Start]);
+  }
   // Feed wrapped pre-roll so the stretcher's processing time starts at the
   // note.
   const int pre = v.stretch.inputLatency();
@@ -142,7 +175,10 @@ void Player::note(int slot, double velocity, const Clock &clock, double ppq) {
   const double length = double(audio.samples.size());
   for (int i = 0; i < std::min(pre, 32768); ++i) {
     double pos = std::fmod(
-        std::fmod((i - pre) * audio.rate / rate, length) + length, length);
+        std::fmod(v.read + p[Start] * length + (i - pre) * audio.rate / rate,
+                  length) +
+            length,
+        length);
     size_t n = size_t(pos);
     for (int ch = 0; ch < 2; ++ch)
       input[ch][i] = audio.samples[n][ch];
@@ -161,6 +197,7 @@ std::array<float, 2> Player::tick(Voice &v, const Clock &clock, double ppq) {
     if (ppq + 1e-9 < v.due)
       return {};
     v.pending = false;
+    activate(v, clock, ppq);
   }
   auto &audio = *clip->audio;
   auto &p = parameters[v.slot];
@@ -235,6 +272,12 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
   clock.bpm = std::clamp(valid(clock.bpm, lastBpm), 30.0, 300.0);
   lastBpm = clock.bpm;
   clock.ppq = valid(clock.ppq, 0);
+  if (clock.internal) {
+    clock.ppq = internalPpq;
+    clock.running = true;
+    internalPpq += frames * clock.bpm / (60 * rate);
+  }
+  publishedPpq.store(clock.ppq);
   if (wasRunning &&
       (!clock.running || std::abs(clock.ppq - previousPpq) > 0.1)) {
     for (auto &v : voices) {
@@ -251,7 +294,9 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
                                     : 1;
           v.read =
               std::fmod(std::max(0.0, clock.ppq), c->beats) / c->beats * length;
-          v.played = std::fmod(std::max(0.0, clock.ppq), c->beats);
+          v.played = c->group > 0
+                         ? std::max(0.0, clock.ppq)
+                         : std::fmod(std::max(0.0, clock.ppq), c->beats);
           v.stretch.reset();
         }
       }
@@ -348,8 +393,14 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
           std::max(0.0, voice.played - latency * clock.bpm / (60 * rate));
       positions[voice.slot] = std::fmod(heard, clip->beats) / clip->beats;
     }
-  for (int slot = 0; slot < Slots; ++slot)
+  for (int slot = 0; slot < Slots; ++slot) {
     playheads[slot].store(positions[slot], std::memory_order_relaxed);
+    bool waiting = false;
+    for (const auto &voice : voices)
+      if (voice.slot == slot && voice.pending)
+        waiting = true;
+    queued[slot].store(waiting, std::memory_order_relaxed);
+  }
   // Carry events only when a host splits a block after supplying its events.
   size_t remain = 0;
   for (; next < count; ++next) {
@@ -368,6 +419,7 @@ Audio renderCycle(const Clip &clip,
   copy->bus = 0;
   copy->mode = Mode::Toggle;
   copy->quantize = 0;
+  copy->group = 0;
   player.publish(0, std::move(copy));
   for (int p = 1; p < ParamsPerSlot; ++p)
     player.uiParameter(p, params[p]);

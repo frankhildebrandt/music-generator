@@ -2,6 +2,7 @@
 #include "Bank.h"
 #include "IControls.h"
 #include "IPlug_include_in_plug_hdr.h"
+#include "Library.h"
 #include "Service.h"
 #include <condition_variable>
 #include <deque>
@@ -43,6 +44,23 @@ public:
   void exportWav();
   void saveBankFile(const std::string &);
   void openBankFile(const std::string &);
+  void stopAll();
+  void republish();
+  void storeWorkspace(loops::Bank &) const;
+  void restoreWorkspace();
+  void markChanged() { changed(); }
+  double position(int slot) const { return player.position(slot); }
+  bool queued(int slot) const { return player.isQueued(slot); }
+  double transportPosition() const { return player.transportPosition(); }
+  void loadTemplates();
+  void saveTemplate(bool idea);
+  void applyTemplate(const loops::Json &value);
+  void setIdea(const std::string &value);
+  void importArtwork(const std::string &path);
+  loops::Json templates = loops::Json::array();
+  std::array<std::atomic<float>, 2> meters{};
+  bool hostSync = true;
+  int snap = 4;
   void layout(iplug::igraphics::IGraphics *);
   loops::Bank bank;
   int selected = 36, page = 2, variant = 0, previewSlot = -1;
@@ -65,6 +83,7 @@ public:
     std::string title, phase = "Queued";
     double progress = -1, bpm = 120, bars = 4;
     bool pending = true;
+    loops::Json idea = loops::Json::object();
   };
   std::vector<GeneratedTake> takes;
   int auditionTake = -1;
@@ -73,6 +92,7 @@ public:
 private:
   loops::Player player;
   loops::Service service;
+  std::atomic<bool> audioHostSync{true};
   std::atomic<double> audioBpm{120}, audioRate{48000}, audioBarBeats{4};
   std::atomic<int> audioNumerator{4}, audioDenominator{4};
   std::thread worker;

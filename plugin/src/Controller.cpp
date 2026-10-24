@@ -15,6 +15,9 @@ void MusicGeneratorLoops::enqueue(Task task) {
 void MusicGeneratorLoops::OnIdle() {
   std::lock_guard<std::recursive_mutex> lock(stateMutex);
   player.collect();
+  audioHostSync.store(hostSync);
+  if (!hostSync)
+    audioBpm.store(bpm);
 #ifdef APP_API
   audioBpm.store(bpm);
 #endif
@@ -22,7 +25,10 @@ void MusicGeneratorLoops::OnIdle() {
   if (followHostGeneration)
     bpm = hostBpm;
   hostRate = audioRate.load();
+  const auto previousBar = barBeats;
   barBeats = audioBarBeats.load();
+  if (previousBar != barBeats)
+    republish();
   numerator = audioNumerator.load();
   denominator = audioDenominator.load();
   std::deque<Json> ready;
@@ -229,6 +235,10 @@ void MusicGeneratorLoops::generate() {
     GeneratedTake take;
     take.title = instrument + " · Take " + std::to_string(n + 1);
     take.phase = n == 0 ? "Preparing context" : "Waiting for previous take";
+    take.idea = {{"name", bank.document.value("idea_name", "Sound idea")},
+                 {"prompt", bank.document.value("idea", "")},
+                 {"revision", bank.document.value("revision", 1)},
+                 {"instrument_prompt", prompt}};
     take.bpm = bpm;
     take.progress = 0;
     take.bars = beats / barBeats;
@@ -238,7 +248,7 @@ void MusicGeneratorLoops::generate() {
   status = "Preparing immutable context";
   Json request = {{"slot", selected},
                   {"instrument", instrument},
-                  {"prompt", prompt},
+                  {"prompt", fullPrompt(bank.document, prompt)},
                   {"key", key},
                   {"bpm", bpm},
                   {"beats", beats},
@@ -247,7 +257,8 @@ void MusicGeneratorLoops::generate() {
                   {"seed", seed},
                   {"steps", steps},
                   {"variants", variants},
-                  {"context", Json::array()}};
+                  {"context", Json::array()},
+                  {"sound_idea", takes[generationStart].idea}};
   std::vector<std::pair<int, Clip>> sources;
   std::vector<std::array<double, 8>> params;
   for (int s = 0; s < Slots; ++s)
@@ -363,6 +374,7 @@ void MusicGeneratorLoops::edit(bool normalize, bool noise, bool fit) {
                            s.edited->samples.size());
   recipe["frames"] = uint64_t(std::llround(beats * 60.0 / bpm * 48000));
   recipe["crossfade_ms"] = crossfade;
+  recipe["remove_dc"] = true;
   if (normalize)
     recipe["normalize_db"] = -1.0;
   if (noise) {
@@ -374,6 +386,9 @@ void MusicGeneratorLoops::edit(bool normalize, bool noise, bool fit) {
   auto previous = s.recipe;
   const double barFrames = barBeats * 60.0 / bpm * 48000;
   enqueue([this, slot, recipe, original, previous, fit, barFrames]() {
+    if (!service.request("status").value("dc_removal", false))
+      throw std::runtime_error("Close all older LoopForge instances and "
+                               "restart once to update the audio service");
     auto path =
         profileRoot() / "input" /
         ("edit-" +
@@ -460,6 +475,7 @@ void MusicGeneratorLoops::exportWav() {
 void MusicGeneratorLoops::saveBankFile(const std::string &path) {
   try {
     auto snapshot = bank;
+    storeWorkspace(snapshot);
     for (int s = 0; s < 128; ++s)
       for (int p = 0; p < 8; ++p)
         snapshot[s].params[p] = GetParam(s * 8 + p)->Value();
@@ -495,9 +511,8 @@ void MusicGeneratorLoops::openBankFile(const std::string &path) {
     }
     history.clear();
     future.clear();
-    bpm = bank[selected].bpm;
-    beats = bank[selected].beats;
-    key = bank[selected].key;
+    restoreWorkspace();
+    republish();
     status = "Portable loop bank loaded";
     changed();
   } catch (const std::exception &e) {

@@ -1,6 +1,20 @@
-# Music Generator Loops 0.1.2
+# LoopForge 0.2.0
 
-Instrument von **Alphatester x KRGSH** für VST3, CLAP und als Standalone-App. Die PLAY-Ansicht orientiert sich am Aufbau von Output Arcade: große Loop-Fläche, vier Performance-Regler, Tastenbelegung unten. GENERATE und EDIT öffnen Generierung und Detailbearbeitung. Die Prozent-Schaltfläche skaliert die Ansicht auf 100, 75 oder 50 Prozent. Es werden keine Output-Grafiken oder Sounds mitgeliefert.
+Instrument von **Alphatester x KRGSH** für VST3, CLAP und als Standalone-App. Die Oberfläche übernimmt das bereitgestellte LoopForge-Design mit gemeinsamer Sound-Idee, PLAY / GENERATE / EDIT, Stereo-Waveforms und durchgehend sichtbarem Keyboard. Die technischen Bundle-Namen und Plugin-IDs bleiben für vorhandene Projekte erhalten. Bank öffnen/speichern, Umbenennen, Audioimport, Modellprüfung, Skalierung und Host-Sync befinden sich im Bank-/Einstellungsmenü oben.
+
+## Sound-Idee, Templates und Artwork
+
+Die gemeinsame Sound-Idee besteht aus Name, Text und Revision. Sie ergänzt den Instrument-Prompt für jede neue Generierung. Der Auftrag und jede fertige Variante behalten einen unveränderlichen Stand dieser Idee; Änderungen wirken auf zukünftige Generierungen. „Full prompt“ zeigt den zusammengesetzten Text. Der Template-Browser bietet getrennte Sound-Ideen und Instrument-Prompts, Suche, Factory-Presets und eigene Templates. Eigene Templates werden im Benutzerprofil (`prompt-templates.json`) und in der aktuellen Bank gespeichert. Importierte Bank-Templates stehen im Browser zur Verfügung.
+
+PLAY schaltet zwischen großer Stereo-Waveform mit Playhead und Coverart mit kompaktem Fortschrittsbalken um, während die Wiedergabe weiterläuft. PNG/JPEG-Artwork bis 4 MiB lässt sich importieren und wird in Bank und DAW-Zustand eingebettet. Ohne importiertes Artwork erscheint eine native grafische Bank-Coverfläche. Die vier Regler sind mit Level, Tone (Tiefpass), Tune und Pan vorbelegt. „Map“ erlaubt pro Slot die Zuordnung zu Pegel, Pan, Transposition, Filtern oder Loopgrenzen. Die bestehenden Host-Parameter-IDs bleiben unverändert.
+
+## Soundgruppen und globale Quantisierung
+
+Im rechten EDIT-Bereich Gruppen erstellen, benennen, durch Klick auf das Farbfeld einfärben und Slots hinzufügen oder entfernen. Eine Bank unterstützt bis zu 16 Gruppen. Gruppenzugehörigkeit erscheint als gemeinsamer Farbstreifen auf den Keyboard-Tasten. Die Mitgliederliste scrollt unabhängig und umfasst alle Seiten.
+
+Innerhalb einer Gruppe spielt ein Mitglied; beim Wechsel übernimmt das Ziel die musikalische Position am tatsächlichen Wechselzeitpunkt. Unterschiedlich lange Loops wickeln diese Position in Takten/Beats auf ihre eigene Länge um. Mehrere Gruppen können parallel laufen. Gruppensounds verwenden Toggle; der erneute Aufruf eines laufenden Mitglieds stoppt es. Eine neu gewählte Variante ersetzt eine bereits vorgemerkte Variante. Der kurze Übergangs-Fade vermeidet Klicks.
+
+GLOBAL bietet Aus, 1/16, 1/8, 1/4, 1/2, einen, zwei oder vier Takte. Negative interne Bankwerte stehen für Takt-Vielfache und folgen deshalb Taktartänderungen. Das Raster bestimmt Starts und Gruppenwechsel. Ein orangefarbener Status markiert vorgemerkte Slots. Die bisherige Spur läuft bis zur Grenze weiter. Der Ziel-Loop übernimmt die dann erreichte Position, nicht die Position beim Tastendruck. Host-Sync verwendet DAW-Tempo und -Position; die Standalone-App verwendet dieselbe Bedienung mit interner Clock. Das Schnitt-Snap im Editor ist davon unabhängig.
 
 ## Installation
 
@@ -16,14 +30,14 @@ macOS-Pakete sind lokal ad-hoc signiert, nicht notarisiert. Für öffentliche Ve
 
 `MusicGeneratorLoops.app` (macOS) beziehungsweise `MusicGeneratorLoops.exe` (Windows) starten. Unter Windows muss `MusicGeneratorLoops.resources` daneben bleiben. Unter Preferences (Cmd+, / Ctrl+,) Audioausgang, Samplerate, Puffer und MIDI-Eingang einstellen. Die App benötigt keinen Audioeingang. Die Bildschirmtasten und der Play-Schalter funktionieren auch ohne MIDI-Keyboard.
 
-GENERATE → Tempo / BPM setzt in der Standalone-App zugleich das Wiedergabe- und Exporttempo (4/4, Startwert 120 BPM). Alle Slots werden über den Stereoausgang abgehört; gespeicherte Buszuweisungen bleiben für den Austausch mit der DAW erhalten. Open bank / Save bank tauscht komplette `.mgloops`-Banks mit beiden Pluginformaten aus. Banks vor dem Beenden speichern; die Standalone-App stellt sie nicht automatisch beim nächsten Start wieder her. Modelle werden aus demselben App-Datenverzeichnis erkannt.
+GENERATE → Tempo / BPM setzt in der Standalone-App zugleich das Wiedergabe- und Exporttempo (4/4, Startwert 120 BPM). Alle Slots werden über den Stereoausgang abgehört; gespeicherte Buszuweisungen bleiben für den Austausch mit der DAW erhalten. Das Bankmenü mit Open bank / Save bank tauscht komplette `.mgloops`-Banks mit beiden Pluginformaten aus. Banks vor dem Beenden speichern; die Standalone-App stellt sie nicht automatisch beim nächsten Start wieder her. Modelle werden aus demselben App-Datenverzeichnis erkannt.
 
 ## Spielen
 
 128 MIDI-Noten besitzen feste Slots, auf acht Seiten mit 16 Tasten. Jede Taste wählt und spielt ihren Loop. Shift-Klick wählt nur aus. Rechtsklick aktiviert den Slot als expliziten KI-Kontext. Auch schwarze Tasten können eigene Loops enthalten.
 
 - Gate spielt, solange die Note gehalten wird. Toggle schaltet mit jedem Note-on um. One-shot spielt einen Zyklus. Wiederholte Gate-/One-shot-Noten starten neu.
-- Quantisierung: sofort, Sechzehntel, Beat, Takt. Choke-Gruppen und Ausgangsbus befinden sich in EDIT; Modus, Raster und Ausgang auch in PLAY.
+- Globale Quantisierung steuert Starts und Gruppenwechsel. Choke, Retrigger und Ausgangsbus befinden sich in PLAY; Soundgruppen werden in EDIT verwaltet.
 - Maximal 32 Stimmen; die älteste Stimme wird bei Überschreitung ausgeblendet. Jeder Slot hat eine Stimme und genau einen Ausgang: Master oder einer von 16 zusätzlichen Stereo-Bussen.
 - Level, Tone (Tiefpass), Tune und Pan sind die vier Performance-Regler. EDIT enthält zusätzlich Hochpass und numerische Loopgrenzen. Alle acht Parameter pro Note besitzen feste Host-IDs und sind automatisierbar.
 - Der Player übernimmt Tempo, Taktart und Position vom Host. Nach Stop können neue Noten mit dem letzten Tempo gespielt werden. Ohne Hostinformationen gelten 120 BPM und 4/4. Die Stretch-Latenz wird dem Host gemeldet.
@@ -34,13 +48,13 @@ Das Plugin verwendet automatisch die Modelle aus dem Datenverzeichnis der App: u
 
 GENERATE ist zweigeteilt: links stehen die Einstellungen mit direkter Instrumentauswahl per Dropdown, rechts die erzeugten Varianten als Waveform-Karten. Beide Bereiche lassen sich mit Mausrad/Trackpad oder den sichtbaren Scrollleisten unabhängig scrollen; Generate und Keyboard bleiben erreichbar. Jeder Klick auf Generate legt sofort eine Karte pro Variante an. Modellladen und Kontextaufbereitung zeigen einen laufenden Status; danach werden echte DiT-Schritte und Prozentwerte angezeigt. Während Decoding, Loopaufbereitung und WAV-Rendering bleibt die Karte als in Arbeit sichtbar. Abbruch und Fehler bleiben an der jeweiligen Karte erkennbar. Die Waveform erscheint erst, wenn tatsächlich Audiodaten vorliegen.
 
-Beim Abspielen zeigt ein latenzberücksichtigter Playhead die Position in den Ergebnis-Waveforms und im Editor; in PLAY läuft ein Positionsmarker um die Loop-Fläche.
+Beim Abspielen zeigt ein latenzberücksichtigter Playhead die Position in den Ergebnis-Waveforms und im Editor; in PLAY stehen Stereo-Waveform und kompakte Fortschrittsanzeige zur Verfügung.
 
-Fertige Karten bieten Play/Stop, Use note und Drag WAV → DAW. Die Waveform selbst kann auf eine Keyboard-Taste gezogen werden; eine normale Auswahl spielt sie vor. Use note übernimmt sie auf die ausgewählte Note. Das Ersetzen einer belegten Taste ist per Undo rückgängig zu machen. Die Ergebnisse der aktuellen Sitzung bleiben in der scrollbaren Liste (bis zu 128 Karten); übernommene Loops mit Save bank sichern. WAVs werden vor dem Drag im Hintergrund fertig gerendert und bleiben dauerhaft im Profil erhalten.
+Fertige Karten bieten Play/Stop, Replace und WAV-Dragging. Die Waveform selbst kann auf eine Keyboard-Taste gezogen werden; eine normale Auswahl spielt sie vor. Replace übernimmt sie auf die ausgewählte Note. Das Ersetzen einer belegten Taste ist per Undo rückgängig zu machen. Die Ergebnisse der aktuellen Sitzung bleiben in der scrollbaren Liste (bis zu 128 Karten); übernommene Loops mit Save bank sichern. WAVs werden vor dem Drag im Hintergrund fertig gerendert und bleiben dauerhaft im Profil erhalten.
 
 In GENERATE Instrument, Beschreibung, Tonart (z. B. `A minor` oder `C major`), BPM, Taktlänge, Seed und Varianten einstellen. Standard sind vier Takte bei Hosttempo. Für weitere Instrumente andere Slots per Rechtsklick als Kontext auswählen. Ein WAV kann zunächst in einen anderen Slot importiert und als Kontext markiert werden. Der Zielslot ist ausgeschlossen. Jeder Auftrag speichert seinen Kontext vor dem Einreihen unveränderlich.
 
-Ohne Kontext verwendet die Engine Textgenerierung, mit Kontext `lego`. Die Engine erzeugt mindestens zehn Sekunden und zwei zusätzliche Takte Rohmaterial. Daraus wird ein taktgenauer Abschnitt ohne lange Randstille gewählt und auf die exakte musikalische Framezahl aufbereitet. Fehlt ein geeigneter vollständiger Abschnitt, bleibt der vorhandene Loop erhalten und die Generierung meldet einen Fehler. Mit „Audition take“ vorhören und erst mit „Accept take“ übernehmen. Dur-/Mollwechsel erfordern eine neue Generierung; Tune transponiert Halbtonschritte unabhängig vom Tempo. Mehrere Plugininstanzen teilen eine serielle Warteschlange pro Benutzer. Ein Dienstfehler unterbricht geladene Loops nicht.
+Ohne Kontext verwendet die Engine Textgenerierung, mit Kontext `lego`. Die Engine erzeugt mindestens zehn Sekunden und zwei zusätzliche Takte Rohmaterial. Daraus wird ein taktgenauer Abschnitt ohne lange Randstille gewählt und auf die exakte musikalische Framezahl aufbereitet. Fehlt ein geeigneter vollständiger Abschnitt, bleibt der vorhandene Loop erhalten und die Generierung meldet einen Fehler. Die fertige Variante vorhören und mit „Replace“ oder einem Drag auf die gewünschte Taste übernehmen. Dur-/Mollwechsel erfordern eine neue Generierung; Tune transponiert Halbtonschritte unabhängig vom Tempo. Mehrere Plugininstanzen teilen eine serielle Warteschlange pro Benutzer. Ein Dienstfehler unterbricht geladene Loops nicht.
 
 Die erste Generierung lädt große Modelle in den Speicher und kann entsprechend dauern. „Check models“ startet erforderliche Downloads nur auf ausdrückliche Bedienung. Ein Plugin-Scan lädt keine Modelle.
 
@@ -48,20 +62,20 @@ Die erste Generierung lädt große Modelle in den Speicher und kann entsprechend
 
 Import audio oder Datei-Drop unterstützt WAV, MP3, Bibliotheks-ZIP und Pro-Stem-ZIP. Mehrere Dateien belegen aufeinanderfolgende Slots. Ein ZIP wird begrenzt und ohne Übernahme seiner internen Pfade entpackt. Pro-Projektmetadaten liefern Tempo und Tonart; gerenderte Stems starten mit neutralem Pegel und Pan. Bei einfachen Audiodateien BPM, Tonart und Taktlänge passend einstellen.
 
-EDIT zeigt die Wellenform mit Zoom und Auswahl. Ziehen setzt Grenzen mit Beat-Snap; Shift-Ziehen markiert eine Rauschstelle. Numerische Start-/Endwerte erlauben genaue Schnitte.
+EDIT zeigt beide Stereokanäle mit Zoom, Taktmarkierungen und Auswahl. Ziehen setzt Grenzen mit einstellbarem Schnitt-Snap (Aus bis 1/32); Shift-Ziehen markiert eine Rauschstelle. Numerische Start-/Endwerte erlauben genaue Schnitte.
 
 - Zero check sucht nahe Schnittpunkte anhand beider Stereokanäle. Die Auswahllänge bleibt erhalten; ein Nullübergang in beiden Kanälen ist nicht immer möglich.
 - Trim / fade rendert die Auswahl auf die eingestellte Taktlänge. Die einstellbare End-/Anfangsüberblendung (Standard 5 ms) verändert die Zykluslänge nicht.
 - Fit loop entfernt lange Randstille auf dem Taktraster. Falls kein vollständiger Abschnitt passt, wiederholt es eine kürzere vollständige Phrase (z. B. vier Takte zweimal für acht Takte). Die Taktlänge bleibt exakt, interne Pausen bleiben erhalten; Undo stellt den vorherigen Stand wieder her.
-- Normalize wendet nach Crossfade eine Peak-Normalisierung auf −1 dBFS an.
+- Bearbeitung entfernt Gleichspannungsanteile. Normalize wendet nach Crossfade eine Peak-Normalisierung auf −1 dBFS an.
 - De-hiss benötigt eine markierte Rauschstelle und verwendet offline spektrale Rauschminderung mit einstellbarer Reduktion. Hoch-/Tiefpass stehen für die weitere Klangbearbeitung bereit.
 - A: original und B: edited dienen dem Vergleich. Original und Bearbeitungsrezept bleiben gespeichert; Undo/Redo stellt frühere Bearbeitungen wieder her.
 
 ## WAV und portable Projekte
 
-„Render WAV“ erzeugt im Hintergrund einen vollständigen Zyklus bei Hosttempo und Host-Samplerate mit aktueller Transposition, Pegel, Pan, Filtern und Loopgrenzen. Danach „Drag WAV → REAPER“ in die Arrangementansicht ziehen. Alternativ „Save WAV as…“ verwenden. Float32-Stereo-WAVs bleiben im Benutzerprofil unter `exports` erhalten, damit REAPER dauerhaft darauf verweisen kann. Sie werden beim Schließen des Plugins nicht gelöscht.
+„Render WAV“ erzeugt im Hintergrund einen vollständigen Zyklus bei Hosttempo und Host-Samplerate mit aktueller Transposition, Pegel, Pan, Filtern und Loopgrenzen. Danach „Drag WAV → REAPER“ in die Arrangementansicht ziehen.  Float32-Stereo-WAVs bleiben im Benutzerprofil unter `exports` erhalten, damit REAPER dauerhaft darauf verweisen kann. Sie werden beim Schließen des Plugins nicht gelöscht.
 
-DAW-Zustände enthalten Originalaudio, bearbeitetes Audio und Slotparameter. Ein gespeichertes Projekt kann deshalb ohne die ursprünglichen Dateien oder Modelle spielen. Open bank / Save bank verwendet ein versioniertes `.mgloops`-Format für den Austausch zwischen Standalone, VST3 und CLAP. Derzeit beträgt die Grenze 512 MiB pro eingebetteter Bank; entsprechend kurze Loops verwenden. Lange Banks können das Speichern des Projekts merklich vergrößern.
+DAW-Zustände enthalten Originalaudio, bearbeitetes Audio, Slotparameter, Sound-Idee, Gruppen, Templates, Macro-Zuordnungen, Artwork und Generierungseinstellungen. Ein gespeichertes Projekt kann deshalb ohne die ursprünglichen Dateien oder Modelle spielen. Open bank / Save bank verwendet ein versioniertes `.mgloops`-Format für den Austausch zwischen Standalone, VST3 und CLAP. Das neue Bankformat Version 2 liest auch Banken der Version 1; ältere Pluginversionen können Version 2 nicht öffnen. Derzeit beträgt die Grenze 512 MiB pro eingebetteter Bank; entsprechend kurze Loops verwenden. Lange Banks können das Speichern des Projekts merklich vergrößern.
 
 Dienstprofil: macOS `~/Library/Application Support/MusicGeneratorLoops`, Windows `%LOCALAPPDATA%\MusicGeneratorLoops`. Entwickler können `MUSIC_LOOPS_PROFILE` und `MUSIC_LOOPS_RESOURCES` für isolierte Tests setzen. Ergebnisse, Exporte und Modelle werden nicht automatisch gelöscht. Aufträge laufen nicht nach einem Dienstneustart weiter; sie müssen neu gestartet werden.
 

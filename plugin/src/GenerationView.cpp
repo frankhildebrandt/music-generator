@@ -1,8 +1,8 @@
 #include "Editor.h"
 namespace loops::ui {
 namespace {
-constexpr float CardHeight = 174;
-const IRECT Settings(36, 124, 422, 480), Results(454, 124, 1084, 539);
+constexpr float CardHeight = 132;
+const IRECT Settings(22, 145, 477, 475), Results(496, 145, 1108, 540);
 } // namespace
 
 void LoopEditor::scrollBar(IGraphics &g, IRECT viewport, double scroll,
@@ -20,58 +20,66 @@ void LoopEditor::scrollBar(IGraphics &g, IRECT viewport, double scroll,
 }
 
 void LoopEditor::generation(IGraphics &g) {
-  label(g, "GENERATION SETTINGS", {36, 93, 420, 116}, 12, Mint);
-  label(g, "GENERATED LOOPS", {454, 93, 905, 116}, 12, Mint);
+  g.FillRoundRect(Panel, {10, 106, 486, 563}, 5);
+  label(g, "INSTRUMENT PROMPT", {22, 112, 265, 137}, 15);
   label(g,
-        "XL · " + std::to_string(p.takes.size()) +
-            (p.takes.size() == 1 ? " take" : " takes"),
-        {925, 93, 1084, 116}, 11, Muted);
-  g.DrawLine(Line, 438, 94, 438, 539);
-  settingsScroll = std::clamp(settingsScroll, 0.0, 460.0 - Settings.H());
+        "Shared idea v" + std::to_string(p.bank.document.value("revision", 1)),
+        {290, 112, 477, 137}, 10, Teal);
+  label(g, "VARIANTS", {507, 111, 750, 137}, 15);
+  label(g,
+        "Target " + noteName(p.selected) +
+            (p.bank[p.selected].edited ? " · occupied" : " · empty"),
+        {770, 111, 1107, 137}, 11, Muted);
+  settingsScroll = std::clamp(settingsScroll, 0.0, 520.0 - Settings.H());
   const float top = Settings.T - float(settingsScroll);
   const size_t settingsHits = hits.size();
   g.PathClipRegion(Settings);
-  input(g, {36, top, 212, top + 57}, "INSTRUMENT", p.instrument + "  ▾",
+  input(g, {22, top, 226, top + 52}, "INSTRUMENT", p.instrument + "  v",
         "instrument");
-  input(g, {226, top, 404, top + 57}, "KEY / SCALE", p.key, "key");
-  input(g, {36, top + 72, 212, top + 129}, "TEMPO / BPM", number(p.bpm, 1),
-        "bpm");
-  input(g, {226, top + 72, 404, top + 129}, "LENGTH / BARS",
-        number(p.beats / p.barBeats), "bars");
-  input(g, {36, top + 146, 404, top + 236}, "DESCRIBE THE SOUND", "", "prompt");
+  input(g, {239, top, 460, top + 52}, "TEMPLATE", "Browse instrument prompts",
+        "instrumentTemplates");
+  input(g, {22, top + 63, 460, top + 139}, "INSTRUMENT DESCRIPTION", "",
+        "prompt");
   g.DrawMultiLineText(text(12), p.prompt.c_str(),
-                      {44, top + 172, 396, top + 230});
-  input(g, {36, top + 252, 148, top + 309}, "STEPS", std::to_string(p.steps),
+                      {30, top + 89, 450, top + 134});
+  label(g, "AUDIO CONTEXT", {22, top + 147, 130, top + 167}, 9, Muted);
+  float contextX = 132;
+  for (int note = 0; note < Slots; ++note)
+    if (p.context[note] && note != p.selected && p.bank[note].edited) {
+      if (contextX < 450)
+        label(g, noteName(note) + " " + p.bank[note].name.substr(0, 10),
+              {contextX, top + 147, contextX + 110, top + 167}, 9, Teal);
+      contextX += 110;
+    }
+  input(g, {22, top + 178, 226, top + 230}, "KEY / SCALE", p.key + "  v",
+        "keySelect");
+  input(g, {239, top + 178, 460, top + 230}, "TEMPO / BPM", number(p.bpm, 1),
+        "bpm");
+  input(g, {22, top + 242, 226, top + 294}, "LENGTH / BARS",
+        number(p.beats / p.barBeats), "bars");
+  input(g, {239, top + 242, 460, top + 294}, "STEPS", std::to_string(p.steps),
         "steps");
-  input(g, {160, top + 252, 272, top + 309}, "VARIANTS",
-        std::to_string(p.variants), "variants");
-  input(g, {284, top + 252, 404, top + 309}, "SEED", std::to_string(p.seed),
+  input(g, {22, top + 305, 169, top + 357}, "SEED", std::to_string(p.seed),
         "seed");
-#ifdef APP_API
-  label(g, "ACE-Step XL · standalone tempo", {36, top + 327, 404, top + 352},
-        11, Muted);
-#else
-  button(g, {36, top + 327, 210, top + 359}, "Use host tempo", "host");
-  label(g, "ACE-Step XL", {226, top + 327, 404, top + 359}, 11, Muted);
+  button(g, {175, top + 325, 226, top + 357}, "Dice", "randomSeed");
+  input(g, {239, top + 305, 460, top + 357}, "VARIANTS",
+        std::to_string(p.variants), "variants");
+  button(g, {22, top + 370, 460, top + 400},
+         fullPromptOpen ? "Full prompt  v" : "Full prompt  >", "fullPrompt");
+  if (fullPromptOpen)
+    g.DrawMultiLineText(text(10), fullPrompt(p.bank.document, p.prompt).c_str(),
+                        {30, top + 408, 451, top + 514});
+#ifndef APP_API
+  button(g, {22, top + 465, 175, top + 493}, "Use host tempo", "host");
 #endif
-  int context = 0;
-  for (int note = 0; note < 128; ++note)
-    if (p.context[note] && note != p.selected && p.bank[note].edited)
-      ++context;
-  label(g,
-        std::to_string(context) + " context loops · target note " +
-            std::to_string(p.selected),
-        {36, top + 378, 404, top + 404}, 11, Muted);
-  label(g, "Right-click keys to include them as context.",
-        {36, top + 408, 404, top + 448}, 11, Muted);
   g.PathClipRegion();
   for (size_t n = settingsHits; n < hits.size(); ++n)
     hits[n].rect = hits[n].rect.Intersect(Settings);
-  scrollBar(g, Settings, settingsScroll, 460, "settingsScroll");
-  button(g, {36, 496, 422, 539},
+  scrollBar(g, Settings, settingsScroll, 520, "settingsScroll");
+  label(g, "ACE-Step XL · Local", {24, 497, 227, 533}, 11, Muted);
+  button(g, {244, 491, 477, 538},
          p.busy ? "Cancel generation" : "Generate loops",
          p.busy ? "cancel" : "generate", true);
-
   const double content =
       std::max(double(Results.H()), p.takes.size() * double(CardHeight));
   takeScroll = std::clamp(takeScroll, 0.0, content - Results.H());
@@ -79,11 +87,11 @@ void LoopEditor::generation(IGraphics &g) {
   g.PathClipRegion(Results);
   if (p.takes.empty()) {
     g.FillRoundRect(Panel, Results.GetPadded(-14), 8);
-    label(g, "Your next loops start here.", {485, 215, 1040, 255}, 23);
+    label(g, "Your next loops start here.", {518, 225, 1080, 265}, 23);
     label(g, "Generate to create a waveform slot immediately.",
-          {485, 265, 1040, 290}, 12, Muted);
+          {518, 275, 1080, 300}, 12, Muted);
     label(g, "Audition · drag to a key · drag WAV into your DAW",
-          {485, 300, 1040, 335}, 12, Muted);
+          {518, 310, 1080, 345}, 12, Muted);
   }
   for (size_t i = 0; i < p.takes.size(); ++i) {
     const float y = Results.T + float(i * CardHeight - takeScroll);
@@ -91,20 +99,22 @@ void LoopEditor::generation(IGraphics &g) {
       continue;
     const auto &take = p.takes[i];
     const bool ready = !take.result.empty();
-    const IRECT card(454, y, 1066, y + 162), wave(468, y + 42, 1052, y + 101);
+    const IRECT card(496, y, 1094, y + 124), wave(510, y + 36, 1080, y + 80);
     g.FillRoundRect(Panel, card, 7);
     g.DrawRoundRect(p.auditionTake == int(i) ? Mint : Line, card, 7);
-    label(g, take.title, {468, y + 7, 810, y + 34}, 14);
+    label(g,
+          take.title + " · v" + std::to_string(take.idea.value("revision", 1)),
+          {510, y + 4, 815, y + 30}, 14);
     label(g, number(take.bars, 0) + " bars · " + number(take.bpm, 1) + " BPM",
-          {820, y + 7, 1052, y + 34}, 11, Muted);
+          {825, y + 4, 1080, y + 30}, 11, Muted);
     g.FillRoundRect(Background, wave, 4);
     g.DrawLine(Line, wave.L, wave.MH(), wave.R, wave.MH());
     if (ready && take.result.contains("waveform")) {
       const auto &bins = take.result.at("waveform");
       for (size_t column = 0; column < bins.size(); ++column) {
         const float x = wave.L + float(column) / bins.size() * wave.W();
-        g.DrawLine(Mint, x, wave.MH() - bins[column][1].get<float>() * 26, x,
-                   wave.MH() - bins[column][0].get<float>() * 26);
+        g.DrawLine(Mint, x, wave.MH() - bins[column][1].get<float>() * 19, x,
+                   wave.MH() - bins[column][0].get<float>() * 19);
       }
       hits.push_back({wave, "takeDrag" + std::to_string(i)});
       const double position = p.takePosition(int(i));
@@ -113,18 +123,18 @@ void LoopEditor::generation(IGraphics &g) {
         g.DrawLine(White, x, wave.T, x, wave.B, nullptr, 1.5f);
         g.FillTriangle(White, x - 4, wave.T, x + 4, wave.T, x, wave.T + 5);
       }
-      button(g, {468, y + 117, 560, y + 149},
+      button(g, {510, y + 88, 580, y + 115},
              p.auditionTake == int(i) ? "Stop" : "Play",
              "takePlay" + std::to_string(i));
-      button(g, {572, y + 117, 814, y + 149},
-             "Use note " + std::to_string(p.selected),
+      button(g, {590, y + 88, 861, y + 115},
+             "Replace " + noteName(p.selected) + "…",
              "takeAssign" + std::to_string(i));
-      button(g, {826, y + 117, 1052, y + 149}, "Drag WAV → DAW",
+      button(g, {871, y + 88, 1080, y + 115}, "WAV",
              "takeWav" + std::to_string(i));
     } else {
       label(g, take.pending ? "Waiting for audio..." : "No audio produced",
             wave.GetPadded(-12), 12, Muted);
-      const IRECT progress(468, y + 105, 1052, y + 109);
+      const IRECT progress(510, y + 84, 1080, y + 87);
       g.FillRect(Line, progress);
       if (take.progress >= 0)
         g.FillRect(Mint,
@@ -140,10 +150,10 @@ void LoopEditor::generation(IGraphics &g) {
             progress.L + float(tick % 1400) / 1400 * (progress.W() - 100);
         g.FillRect(Mint, {left, progress.T, left + 100, progress.B});
       }
-      label(g, take.phase, {468, y + 118, 960, y + 149}, 11, Gold);
+      label(g, take.phase, {510, y + 92, 977, y + 115}, 11, Gold);
       if (take.progress >= 0)
         label(g, number(take.progress * 100, 0) + "%",
-              {980, y + 118, 1052, y + 149}, 12, Mint);
+              {998, y + 92, 1080, y + 115}, 12, Mint);
     }
   }
   g.PathClipRegion();

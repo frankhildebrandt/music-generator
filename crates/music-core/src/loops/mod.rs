@@ -29,6 +29,12 @@ pub const INSTRUMENTS: &[&str] = &[
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SoundIdea {
+    pub name: String,
+    pub prompt: String,
+    pub revision: u32,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GenerationRequest {
     pub slot: u8,
     pub instrument: String,
@@ -47,6 +53,8 @@ pub struct GenerationRequest {
     pub variants: u32,
     #[serde(default)]
     pub context: Vec<ContextSource>,
+    #[serde(default)]
+    pub sound_idea: Option<SoundIdea>,
 }
 fn four() -> u32 {
     4
@@ -67,9 +75,14 @@ impl GenerationRequest {
         self.beats * 60.0 / self.bpm
     }
     pub fn validate(&self) -> Result<()> {
+        if self.sound_idea.as_ref().is_some_and(|idea| {
+            idea.name.len() > 1024 || idea.prompt.len() > 8000 || idea.revision == 0
+        }) {
+            return Err(message("Invalid sound idea snapshot"));
+        }
         if self.slot > 127
             || !INSTRUMENTS.contains(&self.instrument.as_str())
-            || self.prompt.len() > 8000
+            || self.prompt.len() > 16100
             || self.key.len() > 80
             || !self.bpm.is_finite()
             || !(30.0..=300.0).contains(&self.bpm)
@@ -101,4 +114,5 @@ pub struct EditRecipe {
     pub noise_start: u64,
     pub noise_end: u64,
     pub noise_db: f64,
+    pub remove_dc: bool,
 }

@@ -10,6 +10,12 @@ struct PlayerProbe {
         return true;
     return false;
   }
+  static double played(const Player &player, int slot) {
+    for (const auto &voice : player.voices)
+      if (voice.slot == slot)
+        return voice.played;
+    return -1;
+  }
   static double sourcePosition(const Player &player, int slot) {
     for (const auto &voice : player.voices)
       if (voice.slot == slot)
@@ -85,6 +91,91 @@ int main() {
     player.process(outputs, 2, 256, {150, 1, true, 4});
     require(PlayerProbe::sourcePosition(player, 3) > 0,
             "Transport jump did not resume");
+    Player grouped;
+    grouped.prepare(48000);
+    auto groupAudio = std::make_shared<Audio>();
+    groupAudio->samples.resize(48000, {.2f, .1f});
+    for (int n = 0; n < 3; ++n) {
+      auto c = std::make_unique<Clip>();
+      c->audio = groupAudio;
+      c->beats = n == 1 ? .5 : 2;
+      c->group = n == 2 ? 2 : 1;
+      c->mode = Mode::Toggle;
+      c->quantize = 1;
+      grouped.publish(n, std::move(c));
+    }
+    auto advance = [&](int frames) {
+      while (frames > 0) {
+        const int n = std::min(256, frames);
+        grouped.process(outputs, 2, n, {120, 0, false, 4, true});
+        frames -= n;
+      }
+    };
+    grouped.event({0, 0, -1, 1});
+    advance(12000);
+    grouped.event({0, 1, -1, 1});
+    advance(256);
+    require(grouped.isQueued(1), "Group target not shown as queued");
+    require(PlayerProbe::active(grouped, 0),
+            "Group source stopped before boundary");
+    advance(11744);
+    const double before = PlayerProbe::played(grouped, 0);
+    advance(1);
+    require(!grouped.isQueued(1),
+            "Group target did not start at exact boundary");
+    require(
+        std::abs(PlayerProbe::played(grouped, 1) - before) < .0001,
+        "Group inherited request-time instead of switch-time musical position");
+    const double latencyBeats = grouped.latencySamples() * 120.0 / (60 * 48000);
+    const double expectedRead =
+        std::fmod(std::max(0.0, before - latencyBeats), .5) / .5 * 48000;
+    require(std::abs(PlayerProbe::sourcePosition(grouped, 1) - expectedRead) <
+                10,
+            "Short group target did not wrap its musical phase");
+    advance(grouped.latencySamples() + 300);
+    require(!PlayerProbe::active(grouped, 0),
+            "Exclusive group source kept playing");
+    grouped.event({0, 2, -1, 1});
+    advance(24000);
+    require(PlayerProbe::active(grouped, 1) && PlayerProbe::active(grouped, 2),
+            "Different sound groups cannot play together");
+    Player immediate;
+    immediate.prepare(48000);
+    for (int n = 0; n < 3; ++n) {
+      auto c = std::make_unique<Clip>();
+      c->audio = groupAudio;
+      c->beats = n == 0 ? 2 : .5;
+      c->group = 1;
+      c->mode = Mode::Toggle;
+      immediate.publish(n, std::move(c));
+    }
+    immediate.event({0, 0, -1, 1});
+    for (int n = 0; n < 20; ++n)
+      immediate.process(outputs, 2, 256, {120, 0, false, 4});
+    const double immediatePhase = PlayerProbe::played(immediate, 0);
+    immediate.event({37, 1, -1, 1});
+    immediate.process(outputs, 2, 256, {120, 0, false, 4});
+    require(std::abs(PlayerProbe::played(immediate, 1) - immediatePhase -
+                     256 * 120.0 / (60 * 48000)) < .0001,
+            "Immediate switch lost current group position / sample offset");
+    Player jumped;
+    jumped.prepare(48000);
+    for (int n = 0; n < 2; ++n) {
+      auto c = std::make_unique<Clip>();
+      c->audio = groupAudio;
+      c->beats = n ? 32 : 16;
+      c->group = 1;
+      c->mode = Mode::Toggle;
+      jumped.publish(n, std::move(c));
+    }
+    jumped.event({0, 0, -1, 1});
+    jumped.process(outputs, 2, 256, {120, 0, true, 4});
+    jumped.process(outputs, 2, 256, {120, 20, true, 4});
+    jumped.event({0, 1, -1, 1});
+    jumped.process(outputs, 2, 256, {120, 20 + 256.0 / 24000, true, 4});
+    require(
+        PlayerProbe::played(jumped, 1) > 20,
+        "Host jump lost unwrapped group position when moving to a longer loop");
     std::cout << "MIDI modes, offsets, quantization, transport jumps and 100 "
                  "exact cycles passed\n";
   } catch (const std::exception &error) {

@@ -65,6 +65,7 @@ void MusicGeneratorLoops::updateTakes(const Json &data) {
     const size_t index = i - generationStart;
     if (index < results.size()) {
       take.result = results[index];
+      take.result["sound_idea"] = take.idea;
       take.phase = "Ready";
       take.progress = 1;
       take.pending = false;

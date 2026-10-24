@@ -26,9 +26,9 @@ void LoopEditor::label(IGraphics &g, const std::string &value, IRECT r,
 }
 void LoopEditor::button(IGraphics &g, IRECT r, const std::string &title,
                         const std::string &action, bool active) {
-  g.FillRoundRect(active ? IColor(255, 34, 84, 75) : Panel, r, 5);
+  g.FillRoundRect(active ? Mint : Panel, r, 4);
   g.DrawRoundRect(active ? Mint : Line, r, 5);
-  label(g, title, r.GetPadded(-8), 12, active ? Mint : White);
+  label(g, title, r.GetPadded(-8), 12, active ? Background : White);
   hits.push_back({r, action});
 }
 void LoopEditor::input(IGraphics &g, IRECT r, const std::string &title,
@@ -73,6 +73,10 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
     if (!it->rect.Contains(x, y))
       continue;
     auto id = it->action;
+    if (forgeAction(id, it->rect)) {
+      SetDirty(false);
+      return;
+    }
     if (id == "settingsScroll" || id == "takeScroll") {
       scrollDrag = id == "settingsScroll" ? 0 : 1;
       origin = y;
@@ -133,7 +137,8 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
       return;
     }
     if (id == "masterplay") {
-      double active = p.GetParam(p.selected * 8 + Active)->Value();
+      double active =
+          p.position(p.selected) >= 0 || p.queued(p.selected) ? 1 : 0;
       p.parameter(Active, active > 0.5 ? 0 : 1);
       SetDirty(false);
       return;
@@ -154,8 +159,9 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
     }
     auto &slot = p.bank[p.selected];
     if (id == "wave" && slot.edited) {
-      double ratio =
-          std::clamp(p.viewStart + (x - 24) / 1072.0 / p.zoom, 0.0, 1.0);
+      boundaryDrag = true;
+      double ratio = std::clamp(
+          p.viewStart + (x - waveBounds.L) / waveBounds.W() / p.zoom, 0.0, 1.0);
       if (mod.S) {
         p.noiseStart = ratio * slot.edited->samples.size() / slot.edited->rate;
         p.noiseEnd = p.noiseStart;
@@ -211,6 +217,7 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
       slot.choke = (slot.choke + 1) % 17;
       p.publish(p.selected);
     } else if (id.rfind("param", 0) == 0) {
+      boundaryDrag = false;
       drag = std::stoi(id.substr(5));
       origin = y;
       initial = p.GetParam(p.selected * 8 + drag)->Value();
@@ -297,7 +304,7 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
       const auto previous = p.takes.size();
       p.generate();
       if (p.takes.size() > previous)
-        takeScroll = previous * 174.0;
+        takeScroll = previous * 132.0;
     } else if (id == "cancel")
       p.cancel();
     else if (id == "variant" && !p.candidates.empty())
@@ -315,11 +322,11 @@ void LoopEditor::OnMouseDrag(float x, float y, float, float,
   if (scrollDrag >= 0) {
     if (scrollDrag == 0)
       settingsScroll =
-          std::clamp(initial + (y - origin) * 460.0 / 356.0, 0.0, 104.0);
+          std::clamp(initial + (y - origin) * 520.0 / 330.0, 0.0, 190.0);
     else {
-      const double content = std::max(415.0, p.takes.size() * 174.0);
-      takeScroll = std::clamp(initial + (y - origin) * content / 415.0, 0.0,
-                              content - 415.0);
+      const double content = std::max(395.0, p.takes.size() * 132.0);
+      takeScroll = std::clamp(initial + (y - origin) * content / 395.0, 0.0,
+                              content - 395.0);
     }
     SetDirty(false);
     return;
@@ -342,20 +349,21 @@ void LoopEditor::OnMouseDrag(float x, float y, float, float,
     return;
   auto &slot = p.bank[p.selected];
   if (drag == 100 && slot.edited) {
-    double ratio =
-        std::clamp(p.viewStart + (x - 24) / 1072.0 / p.zoom, 0.0, 1.0);
+    double ratio = std::clamp(
+        p.viewStart + (x - waveBounds.L) / waveBounds.W() / p.zoom, 0.0, 1.0);
     p.noiseEnd = ratio * slot.edited->samples.size() / slot.edited->rate;
-  } else if (drag == Start || drag == End) {
-    double ratio =
-        std::clamp(p.viewStart + (x - 24) / 1072.0 / p.zoom, 0.0, 1.0);
-    if (!mod.C && slot.edited && p.beats > 0)
-      ratio = std::round(ratio * p.beats * 4) / (p.beats * 4);
+  } else if (boundaryDrag && (drag == Start || drag == End)) {
+    double ratio = std::clamp(
+        p.viewStart + (x - waveBounds.L) / waveBounds.W() / p.zoom, 0.0, 1.0);
+    if (!mod.C && slot.edited && p.beats > 0 && p.snap > 0)
+      ratio = std::round(ratio * slot.beats * p.snap) / (slot.beats * p.snap);
     p.parameter(drag, ratio);
   } else {
-    double scale = drag == Gain    ? 0.01
-                   : drag == Pan   ? 0.01
-                   : drag == Pitch ? 0.1
-                                   : 100;
+    double scale = drag == Gain                   ? 0.01
+                   : drag == Pan                  ? 0.01
+                   : drag == Pitch                ? 0.1
+                   : drag == Start || drag == End ? .002
+                                                  : 100;
     p.parameter(drag, initial + (origin - y) * scale);
   }
   SetDirty(false);
@@ -390,13 +398,23 @@ void LoopEditor::OnMouseDblClick(float x, float y, const IMouseMod &) {
 }
 void LoopEditor::OnMouseWheel(float x, float y, const IMouseMod &mod,
                               float delta) {
+  if (templateOpen) {
+    templateScroll = std::max(0.0, templateScroll - delta * 35.0);
+    SetDirty(false);
+    return;
+  }
+  if (view == 1 && x > 844 && y > 209 && y < 373) {
+    groupScroll = std::max(0.0, groupScroll - delta * 35.0);
+    SetDirty(false);
+    return;
+  }
   if (view == 2) {
-    if (y >= 124 && y <= 539) {
-      if (x < 438)
-        settingsScroll = std::clamp(settingsScroll - delta * 40.0, 0.0, 104.0);
+    if (y >= 145 && y <= 540) {
+      if (x < 486)
+        settingsScroll = std::clamp(settingsScroll - delta * 40.0, 0.0, 190.0);
       else
         takeScroll = std::clamp(takeScroll - delta * 40.0, 0.0,
-                                std::max(0.0, p.takes.size() * 174.0 - 415));
+                                std::max(0.0, p.takes.size() * 132.0 - 395));
     }
     SetDirty(false);
     return;
@@ -410,6 +428,53 @@ void LoopEditor::OnMouseWheel(float x, float y, const IMouseMod &mod,
 }
 void LoopEditor::OnDrop(const char *path) { p.importFile(path); }
 void LoopEditor::OnPopupMenuSelection(IPopupMenu *menu, int) {
+  std::lock_guard<std::recursive_mutex> stateLock(p.stateMutex);
+  if (menu == &choiceMenu && menu->GetChosenItemIdx() >= 0) {
+    const int chosen = menuValues.at(menu->GetChosenItemIdx());
+    auto &slot = p.bank[p.selected];
+    if (menuAction == "global") {
+      p.bank.document["quantize"] = chosen / 1000.0;
+      p.republish();
+    } else if (menuAction == "snap")
+      p.snap = chosen;
+    else if (menuAction == "assignGroup") {
+      slot.group = chosen;
+      p.publish(p.selected);
+      groupSelected = chosen;
+    } else if (menuAction == "groupSelect")
+      groupSelected = chosen;
+    else if (menuAction == "groupAdd") {
+      p.bank[chosen].group = groupSelected;
+      p.publish(chosen);
+    } else if (menuAction == "busSelect") {
+      slot.bus = chosen;
+      p.publish(p.selected);
+    } else if (menuAction == "keySelect") {
+      static const char *roots[]{"C",  "C#", "D",  "D#", "E",  "F",
+                                 "F#", "G",  "G#", "A",  "A#", "B"};
+      p.key =
+          std::string(roots[chosen % 12]) + (chosen < 12 ? " minor" : " major");
+    } else if (menuAction.rfind("map", 0) == 0)
+      slot.macros.at(std::stoi(menuAction.substr(3))) = chosen;
+    else if (menuAction == "settings") {
+      static const char *actions[]{"open",   "save",  "bankName", "import",
+                                   "models", "scale", "sync"};
+      const auto action = std::string(actions[chosen]);
+      if (!forgeAction(action, {170, 10, 350, 38})) {
+        if (action == "open" || action == "save")
+          bankDialog(action == "save");
+        else if (action == "import")
+          importDialog();
+        else if (action == "models")
+          p.install();
+        else if (action == "scale")
+          GetUI()->Resize(PLUG_WIDTH, PLUG_HEIGHT,
+                          GetUI()->GetDrawScale() > .9 ? .75f : 1.f);
+      }
+    }
+    SetDirty(false);
+    return;
+  }
   if (menu != &instrumentMenu || menu->GetChosenItemIdx() < 0 ||
       menu->GetChosenItemIdx() >= int(Instruments.size()))
     return;
@@ -418,8 +483,13 @@ void LoopEditor::OnPopupMenuSelection(IPopupMenu *menu, int) {
   SetDirty(false);
 }
 void LoopEditor::OnTextEntryCompletion(const char *value, int) {
+  std::lock_guard<std::recursive_mutex> stateLock(p.stateMutex);
   try {
     std::string s = value;
+    if (forgeEntry(field, s)) {
+      SetDirty(false);
+      return;
+    }
     if (field == "key") {
       p.key = s.substr(0, 80);
       auto &slot = p.bank[p.selected];

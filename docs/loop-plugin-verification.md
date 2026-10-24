@@ -1,3 +1,20 @@
+# LoopForge verification — 0.2.0
+
+Manufacturer: Alphatester x KRGSH. Technical bundle names and parameter IDs retained.
+
+## Current change
+
+- Native macOS arm64 standalone, VST3 and CLAP built successfully.
+- DSP tests cover queued group changes, phase at the actual boundary, immediate changes with sample offsets, different loop lengths, simultaneous independent groups and host seeks into longer targets.
+- Embedded bank round trip includes shared idea/revision, groups and macro mappings; a generated version-one fixture remains readable with unchanged audio.
+- Existing realtime allocation audit, tempo/export and 100-cycle timing tests pass.
+- Rust edit tests include stereo DC removal before normalization, exact frame count and immutable input. Shared core and service regression suites pass.
+- Native UI checked with a real existing bank: stereo editor, template application, group creation/addition, keyboard stripes, waveform/coverart switch during playback.
+- Final artifact, artwork import, macro mapping and validators are checked in the ongoing acceptance run; platform CI and practical Windows/Intel host acceptance are separate checks.
+- Windows CI exposed a parallel MSVC import-library collision between VST3 and CLAP; per-format import and PDB directories fix the collision without serializing the build.
+
+## Earlier acceptance record (0.1.2)
+
 # Loop plugin verification — 2026-10-24
 
 Development version 0.1.2, manufacturer Alphatester x KRGSH. Checked on macOS Apple Silicon with REAPER 7.82. This is an engineering record, not a completed release acceptance certificate.

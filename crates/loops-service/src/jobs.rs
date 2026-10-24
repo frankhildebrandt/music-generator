@@ -133,7 +133,7 @@ pub async fn enqueue_generation(
                 let recipe=EditRecipe{start,end,frames:target_frames,crossfade_ms:5.0,..Default::default()};
                 let edited=music_core::loops::edit(&audio,&recipe)?;
                 let path=dir.join(format!("{}.wav",id()));edited.write(&path)?;
-                results.push(json!({"path":path,"original":original,"frames":target_frames,"bpm":request.bpm,"beats":request.beats,"bars":request.beats/(request.numerator as f64*4.0/request.denominator as f64),"key":request.key,"name":request.instrument,"seed":seed,"recipe":recipe}));
+                results.push(json!({"path":path,"original":original,"frames":target_frames,"bpm":request.bpm,"beats":request.beats,"bars":request.beats/(request.numerator as f64*4.0/request.denominator as f64),"key":request.key,"name":request.instrument,"seed":seed,"recipe":recipe,"sound_idea":request.sound_idea}));
                 update(&service,&jid,json!({"id":jid,"status":"running","message":"Loop ready","variant":variant,"variants":request.variants,"progress":1.0,"results":results})).await;
             }
             Ok(json!({"id":jid,"status":"done","message":"Ready to audition — choose a variant","results":results}))

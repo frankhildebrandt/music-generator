@@ -113,3 +113,32 @@ fn context_cannot_include_target_slot() {
     });
     assert!(req.validate().is_err());
 }
+
+#[test]
+fn dc_removal_preserves_stereo_cycle_and_normalization() {
+    let source = Audio {
+        samples: (0..4800)
+            .map(|n| {
+                let tone = (n as f32 * 2.0 * std::f32::consts::PI / 48.0).sin() * 0.2;
+                [tone + 0.3, tone - 0.15]
+            })
+            .collect(),
+    };
+    let output = edit(
+        &source,
+        &EditRecipe {
+            remove_dc: true,
+            normalize_db: Some(-1.0),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(source.samples.len(), output.samples.len());
+    for ch in 0..2 {
+        let mean =
+            output.samples.iter().map(|s| s[ch] as f64).sum::<f64>() / output.samples.len() as f64;
+        assert!(mean.abs() < 1e-6);
+    }
+    assert!((output.peak() - 10_f32.powf(-1.0 / 20.0)).abs() < 1e-6);
+    assert_eq!(source.samples[0], [0.3, -0.15]);
+}

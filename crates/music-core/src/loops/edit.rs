@@ -59,6 +59,20 @@ pub fn edit(source: &Audio, recipe: &EditRecipe) -> Result<Audio> {
     if recipe.noise_db > 0.0 {
         denoise(source, &mut output, recipe)?;
     }
+    if recipe.remove_dc {
+        let mut mean = [0.0_f64; 2];
+        for pair in &output.samples {
+            for ch in 0..2 {
+                mean[ch] += pair[ch] as f64;
+            }
+        }
+        let count = output.samples.len() as f64;
+        for pair in &mut output.samples {
+            for ch in 0..2 {
+                pair[ch] -= (mean[ch] / count) as f32;
+            }
+        }
+    }
     let fade = ((recipe.crossfade_ms * RATE as f64 / 1000.0).round() as usize)
         .min(output.samples.len() / 2);
     let size = output.samples.len();

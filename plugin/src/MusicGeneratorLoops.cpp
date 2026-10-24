@@ -24,9 +24,11 @@ MusicGeneratorLoops::MusicGeneratorLoops(const InstanceInfo &info)
         ->InitDouble((prefix + "Loop end").c_str(), 1, 0.00001, 1, 0.00001);
   }
 
+  loadTemplates();
   player.prepare(48000);
 #ifdef APP_API
   followHostGeneration = false;
+  hostSync = false;
 #endif
   mMakeGraphicsFunc = [this]() {
     return MakeGraphics(*this, PLUG_WIDTH, PLUG_HEIGHT, PLUG_FPS,
@@ -73,7 +75,7 @@ MusicGeneratorLoops::~MusicGeneratorLoops() {
 }
 void MusicGeneratorLoops::ProcessBlock(sample **, sample **outputs,
                                        int frames) {
-  double tempo = mTimeInfo.mTempo;
+  double tempo = audioHostSync.load() ? mTimeInfo.mTempo : audioBpm.load();
 #ifdef APP_API
   tempo = audioBpm.load();
 #endif
@@ -87,9 +89,19 @@ void MusicGeneratorLoops::ProcessBlock(sample **, sample **outputs,
   audioBarBeats.store(bar);
   audioNumerator.store(num);
   audioDenominator.store(den);
-  player.process(
-      outputs, NOutChansConnected(), frames,
-      {audioBpm.load(), mTimeInfo.mPPQPos, mTimeInfo.mTransportIsRunning, bar});
+  bool internal = !audioHostSync.load();
+#ifdef APP_API
+  internal = true;
+#endif
+  player.process(outputs, NOutChansConnected(), frames,
+                 {audioBpm.load(), mTimeInfo.mPPQPos,
+                  mTimeInfo.mTransportIsRunning, bar, internal});
+  for (int ch = 0; ch < std::min(2, NOutChansConnected()); ++ch) {
+    float peak = 0;
+    for (int n = 0; n < frames; ++n)
+      peak = std::max(peak, float(std::abs(outputs[ch][n])));
+    meters[ch].store(std::max(peak, meters[ch].load() * .92f));
+  }
 }
 void MusicGeneratorLoops::ProcessMidiMsg(const IMidiMsg &msg) {
   if (msg.StatusMsg() == IMidiMsg::kNoteOn)
@@ -135,6 +147,10 @@ void MusicGeneratorLoops::trigger(int note, bool on) {
 }
 void MusicGeneratorLoops::publish(int slot) {
   auto clip = std::make_unique<loops::Clip>(bank[slot].clip());
+  const double grid = bank.document.value("quantize", -1.0);
+  clip->quantize = grid < 0 ? -grid * barBeats : grid;
+  if (clip->group > 0)
+    clip->mode = Mode::Toggle;
 #ifdef APP_API
   // Preserve portable bus assignments while monitoring all slots in stereo.
   clip->bus = 0;
@@ -151,6 +167,7 @@ bool MusicGeneratorLoops::SerializeState(IByteChunk &chunk) const {
   try {
     std::lock_guard<std::recursive_mutex> lock(stateMutex);
     auto snapshot = bank;
+    storeWorkspace(snapshot);
     for (int s = 0; s < Slots; ++s)
       for (int p = 0; p < 8; ++p)
         snapshot[s].params[p] = GetParam(s * 8 + p)->Value();
@@ -191,9 +208,7 @@ int MusicGeneratorLoops::UnserializeState(const IByteChunk &chunk, int pos) {
 }
 void MusicGeneratorLoops::OnRestoreState() {
   iplug::Plugin::OnRestoreState();
-  bpm = bank[selected].bpm;
-  beats = bank[selected].beats;
-  key = bank[selected].key;
+  restoreWorkspace();
   for (int id = 0; id < NumParams; ++id)
     player.uiParameter(id, GetParam(id)->Value());
   if (GetUI())
