@@ -62,6 +62,28 @@ void LoopEditor::bankDialog(bool save) {
         }
       });
 }
+void LoopEditor::saveWavDialog() {
+  if (p.exportPath.empty())
+    p.exportWav();
+  else {
+    WDL_String file, path;
+    auto source = p.exportPath;
+    GetUI()->PromptForFile(
+        file, path, EFileAction::Save, "wav",
+        [this, source](const WDL_String &f, const WDL_String &) {
+          if (f.GetLength()) {
+            try {
+              std::filesystem::copy_file(
+                  std::filesystem::u8path(source),
+                  std::filesystem::u8path(f.Get()),
+                  std::filesystem::copy_options::overwrite_existing);
+            } catch (const std::exception &e) {
+              p.status = e.what();
+            }
+          }
+        });
+  }
+}
 LoopEditor::LoopEditor(MusicGeneratorLoops &plugin)
     : IControl(IRECT(0, 0, 1120, 780)), p(plugin) {
   for (const char *instrument : Instruments)
@@ -248,26 +270,7 @@ void LoopEditor::OnMouseDown(float x, float y, const IMouseMod &mod) {
       else
         GetUI()->InitiateExternalFileDragDrop(p.exportPath.c_str(), it->rect);
     } else if (id == "savewav") {
-      if (p.exportPath.empty())
-        p.exportWav();
-      else {
-        WDL_String file, path;
-        auto source = p.exportPath;
-        GetUI()->PromptForFile(
-            file, path, EFileAction::Save, "wav",
-            [this, source](const WDL_String &f, const WDL_String &) {
-              if (f.GetLength()) {
-                try {
-                  std::filesystem::copy_file(
-                      std::filesystem::u8path(source),
-                      std::filesystem::u8path(f.Get()),
-                      std::filesystem::copy_options::overwrite_existing);
-                } catch (const std::exception &e) {
-                  p.status = e.what();
-                }
-              }
-            });
-      }
+      saveWavDialog();
     } else if (id == "zoomin")
       p.zoom = std::min(64.0, p.zoom * 2);
     else if (id == "zoomout") {
@@ -458,13 +461,15 @@ void LoopEditor::OnPopupMenuSelection(IPopupMenu *menu, int) {
       slot.macros.at(std::stoi(menuAction.substr(3))) = chosen;
     else if (menuAction == "settings") {
       static const char *actions[]{"open",   "save",  "bankName", "import",
-                                   "models", "scale", "sync"};
+                                   "models", "scale", "sync",     "savewav"};
       const auto action = std::string(actions[chosen]);
       if (!forgeAction(action, {170, 10, 350, 38})) {
         if (action == "open" || action == "save")
           bankDialog(action == "save");
         else if (action == "import")
           importDialog();
+        else if (action == "savewav")
+          saveWavDialog();
         else if (action == "models")
           p.install();
         else if (action == "scale")

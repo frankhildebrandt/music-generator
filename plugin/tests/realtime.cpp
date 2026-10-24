@@ -18,7 +18,8 @@ void operator delete(void *p, size_t) noexcept { std::free(p); }
 void *operator new[](size_t n) { return ::operator new(n); }
 void operator delete[](void *p) noexcept { std::free(p); }
 int main() {
-  Player player;
+  auto playerStorage = std::make_unique<Player>();
+  auto &player = *playerStorage;
   player.prepare(48000);
   auto audio = std::make_shared<Audio>();
   audio->samples.resize(24000);
@@ -38,7 +39,8 @@ int main() {
   std::array<double *, 34> ptr{};
   for (int ch = 0; ch < 34; ++ch)
     ptr[ch] = data[ch].data();
-  Player grouped;
+  auto groupedStorage = std::make_unique<Player>();
+  auto &grouped = *groupedStorage;
   grouped.prepare(48000);
   for (int slot = 0; slot < 4; ++slot) {
     auto clip = std::make_unique<Clip>();

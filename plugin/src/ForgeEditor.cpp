@@ -210,8 +210,14 @@ void LoopEditor::performance(IGraphics &g) {
         if (!data.empty())
           artwork = g.LoadBitmap(artKey.c_str(), data.data(), int(data.size()));
       }
-      if (artwork.IsValid())
-        g.DrawBitmap(artwork, art);
+      if (artwork.IsValid()) {
+        const float fit =
+            std::min(art.W() / artwork.W(), art.H() / artwork.H());
+        const float width = artwork.W() * fit, height = artwork.H() * fit;
+        g.DrawFittedBitmap(artwork,
+                           {art.MW() - width * .5f, art.MH() - height * .5f,
+                            art.MW() + width * .5f, art.MH() + height * .5f});
+      }
     } else {
       // A code-native bank cover remains available before the user imports art.
       for (int n = 0; n < 35; ++n)
@@ -233,9 +239,10 @@ void LoopEditor::performance(IGraphics &g) {
   if (pos >= 0)
     g.FillRoundRect(Mint, {82, y, 82 + float(pos) * 351, y + 5}, 2);
   label(g,
-        pos >= 0 ? number(pos * slot.beats / p.barBeats + 1, 2) + " / " +
-                       number(slot.beats / p.barBeats, 0) + " BARS"
-                 : "READY",
+        pos >= 0
+            ? musicalPosition(pos * slot.beats, p.barBeats, p.denominator) +
+                  " / " + number(slot.beats / p.barBeats, 0) + " BARS"
+            : "READY",
         {447, y - 8, 610, y + 14}, 10, Muted);
   std::string next = "No queued switch";
   for (int n = 0; n < Slots; ++n)

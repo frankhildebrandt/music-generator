@@ -73,7 +73,7 @@ EDIT zeigt beide Stereokanäle mit Zoom, Taktmarkierungen und Auswahl. Ziehen se
 
 ## WAV und portable Projekte
 
-„Render WAV“ erzeugt im Hintergrund einen vollständigen Zyklus bei Hosttempo und Host-Samplerate mit aktueller Transposition, Pegel, Pan, Filtern und Loopgrenzen. Danach „Drag WAV → REAPER“ in die Arrangementansicht ziehen.  Float32-Stereo-WAVs bleiben im Benutzerprofil unter `exports` erhalten, damit REAPER dauerhaft darauf verweisen kann. Sie werden beim Schließen des Plugins nicht gelöscht.
+„Render WAV“ erzeugt im Hintergrund einen vollständigen Zyklus bei Hosttempo und Host-Samplerate mit aktueller Transposition, Pegel, Pan, Filtern und Loopgrenzen. Danach „Drag WAV“ in die Arrangementansicht ziehen. „Save rendered WAV as…“ im Bankmenü speichert den vorbereiteten Export an einem gewählten Ort.  Float32-Stereo-WAVs bleiben im Benutzerprofil unter `exports` erhalten, damit REAPER dauerhaft darauf verweisen kann. Sie werden beim Schließen des Plugins nicht gelöscht.
 
 DAW-Zustände enthalten Originalaudio, bearbeitetes Audio, Slotparameter, Sound-Idee, Gruppen, Templates, Macro-Zuordnungen, Artwork und Generierungseinstellungen. Ein gespeichertes Projekt kann deshalb ohne die ursprünglichen Dateien oder Modelle spielen. Open bank / Save bank verwendet ein versioniertes `.mgloops`-Format für den Austausch zwischen Standalone, VST3 und CLAP. Das neue Bankformat Version 2 liest auch Banken der Version 1; ältere Pluginversionen können Version 2 nicht öffnen. Derzeit beträgt die Grenze 512 MiB pro eingebetteter Bank; entsprechend kurze Loops verwenden. Lange Banks können das Speichern des Projekts merklich vergrößern.
 

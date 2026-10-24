@@ -15,6 +15,14 @@ inline std::string number(double n, int digits = 2) {
   s << std::fixed << std::setprecision(digits) << n;
   return s.str();
 }
+inline std::string musicalPosition(double beats, double barBeats,
+                                   int denominator) {
+  beats = std::max(0.0, beats);
+  const double within = std::fmod(beats, barBeats) * denominator / 4.0;
+  return std::to_string(int(beats / barBeats) + 1) + "." +
+         std::to_string(int(within) + 1) + "." +
+         std::to_string(int(std::fmod(within, 1.0) * 4) + 1);
+}
 inline constexpr std::array<const char *, 12> Instruments{
     "drums",      "bass",   "keyboard",       "guitar", "synth", "strings",
     "percussion", "vocals", "backing_vocals", "fx",     "brass", "woodwinds"};
@@ -63,6 +71,7 @@ public:
   void entry(const std::string &id, const std::string &value, IRECT r);
   void importDialog();
   void bankDialog(bool save);
+  void saveWavDialog();
   explicit LoopEditor(MusicGeneratorLoops &plugin);
   void chrome(IGraphics &g);
   void soundIdea(IGraphics &g);

@@ -31,7 +31,8 @@ void require(bool value, const char *message) {
 }
 int main() {
   try {
-    Player player;
+    auto playerStorage = std::make_unique<Player>();
+    auto &player = *playerStorage;
     player.prepare(48000);
     auto audio = std::make_shared<Audio>();
     audio->samples.resize(2400, {0.2f, 0.2f});
@@ -91,7 +92,8 @@ int main() {
     player.process(outputs, 2, 256, {150, 1, true, 4});
     require(PlayerProbe::sourcePosition(player, 3) > 0,
             "Transport jump did not resume");
-    Player grouped;
+    auto groupedStorage = std::make_unique<Player>();
+    auto &grouped = *groupedStorage;
     grouped.prepare(48000);
     auto groupAudio = std::make_shared<Audio>();
     groupAudio->samples.resize(48000, {.2f, .1f});
@@ -139,7 +141,8 @@ int main() {
     advance(24000);
     require(PlayerProbe::active(grouped, 1) && PlayerProbe::active(grouped, 2),
             "Different sound groups cannot play together");
-    Player immediate;
+    auto immediateStorage = std::make_unique<Player>();
+    auto &immediate = *immediateStorage;
     immediate.prepare(48000);
     for (int n = 0; n < 3; ++n) {
       auto c = std::make_unique<Clip>();
@@ -158,7 +161,8 @@ int main() {
     require(std::abs(PlayerProbe::played(immediate, 1) - immediatePhase -
                      256 * 120.0 / (60 * 48000)) < .0001,
             "Immediate switch lost current group position / sample offset");
-    Player jumped;
+    auto jumpedStorage = std::make_unique<Player>();
+    auto &jumped = *jumpedStorage;
     jumped.prepare(48000);
     for (int n = 0; n < 2; ++n) {
       auto c = std::make_unique<Clip>();

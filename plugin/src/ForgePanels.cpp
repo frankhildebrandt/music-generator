@@ -53,8 +53,8 @@ bool LoopEditor::forgeAction(const std::string &id, IRECT bounds) {
     choose(id,
            {"Open bank…", "Save bank…", "Rename bank…", "Import audio…",
             "Check / install XL models", "UI scale",
-            "Toggle host sync / internal clock"},
-           {0, 1, 2, 3, 4, 5, 6}, bounds);
+            "Toggle host sync / internal clock", "Save rendered WAV as…"},
+           {0, 1, 2, 3, 4, 5, 6, 7}, bounds);
   else if (id == "bankName")
     entry(id, p.bank.document.value("name", "Untitled bank"),
           {187, 10, 365, 39});

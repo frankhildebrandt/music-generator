@@ -169,8 +169,7 @@ void Player::activate(Voice &v, const Clock &clock, double) {
   // Feed wrapped pre-roll so the stretcher's processing time starts at the
   // note.
   const int pre = v.stretch.inputLatency();
-  std::array<std::array<float, 32768>, 2> input{};
-  float *pointers[2] = {input[0].data(), input[1].data()};
+  float *pointers[2] = {preroll[0].data(), preroll[1].data()};
   const auto &audio = *clip->audio;
   const double length = double(audio.samples.size());
   for (int i = 0; i < std::min(pre, 32768); ++i) {
@@ -181,7 +180,7 @@ void Player::activate(Voice &v, const Clock &clock, double) {
         length);
     size_t n = size_t(pos);
     for (int ch = 0; ch < 2; ++ch)
-      input[ch][i] = audio.samples[n][ch];
+      preroll[ch][i] = audio.samples[n][ch];
   }
   v.stretch.seek(pointers, std::min(pre, 32768), 1.0);
 }
@@ -413,7 +412,8 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
 Audio renderCycle(const Clip &clip,
                   const std::array<double, ParamsPerSlot> &params, double bpm,
                   double rate) {
-  Player player;
+  auto playerStorage = std::make_unique<Player>();
+  auto &player = *playerStorage;
   player.prepare(rate);
   auto copy = std::make_unique<Clip>(clip);
   copy->bus = 0;

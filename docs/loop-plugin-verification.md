@@ -10,7 +10,7 @@ Manufacturer: Alphatester x KRGSH. Technical bundle names and parameter IDs reta
 - Existing realtime allocation audit, tempo/export and 100-cycle timing tests pass.
 - Rust edit tests include stereo DC removal before normalization, exact frame count and immutable input. Shared core and service regression suites pass.
 - Native UI checked with a real existing bank: stereo editor, template application, group creation/addition, keyboard stripes, waveform/coverart switch during playback.
-- Final artifact, artwork import, macro mapping and validators are checked in the ongoing acceptance run; platform CI and practical Windows/Intel host acceptance are separate checks.
+- Artwork import, macro mapping, native bank save and validators passed; see the final UI record below. Platform CI and practical Windows/Intel host acceptance are separate checks.
 - Windows CI exposed a parallel MSVC import-library collision between VST3 and CLAP; per-format import and PDB directories fix the collision without serializing the build.
 
 ## Earlier acceptance record (0.1.2)
@@ -76,3 +76,9 @@ The progress parser regression checks current-generation offsets and rejects inv
 Instrument selection uses a native dropdown with the twelve supported instrument IDs and a single current-selection checkmark. The audio player publishes normalized per-slot positions through atomics once per block. The UI reads them for take preview, assigned takes, the trim editor and the PLAY position marker. Positions account for stretch output latency, wrap with the musical cycle and disappear when the voice stops. A timing regression checks phase advancement and stopped visibility; existing no-allocation tests cover the additional publication path.
 
 Actual XL text2music at 155 BPM produced an exact eight-bar loop in the standalone package. Its draft appeared immediately, the finished waveform rendered, Play/Stop toggled and internal waveform drag assigned the result to note 38 while preserving the prior note-36 audio. XL Lego with selected note-38 context returned variants incrementally, with real 50-step progress visible while further variants were still running. Native WAV drop to REAPER remains subject to the manual acceptance item above.
+
+## Final UI and package checks
+
+The 0.2.0 UI imported PNG artwork and mapped M1 to High Pass. Saving through the native bank dialog produced a version-two bank containing all three assigned sounds, group membership, macro target 4, 13,855 embedded artwork bytes, idea revision 2 and workspace settings. Artwork fitting was corrected after this visual test to preserve the full image and its aspect ratio. The native VST3 validator passed 47/47 and the CLAP host passed its scan/render/recall checks. Package verification found 480 files with matching checksums and valid local signatures.
+
+Windows compilation now succeeds through all three plugin formats. The next CI run exposed the platform's smaller default thread stack in the enlarged DSP test fixtures. Player fixtures now live on the heap; the audio preroll buffer is also preallocated as part of the player instead of occupying 256 KiB on the callback stack. This preserves the no-allocation audio callback contract. Final Windows execution and practical Windows/Intel DAW acceptance remain separate checks.

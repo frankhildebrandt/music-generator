@@ -38,10 +38,8 @@ void LoopEditor::chrome(IGraphics &g) {
             std::to_string(p.denominator),
         {723, 13, 850, 36}, 11);
   const double ppq = p.transportPosition();
-  const auto beat = int(std::fmod(ppq, p.barBeats)) + 1;
-  label(g,
-        std::to_string(int(ppq / p.barBeats) + 1) + "." + std::to_string(beat),
-        {853, 13, 900, 36}, 11);
+  label(g, musicalPosition(ppq, p.barBeats, p.denominator), {853, 13, 900, 36},
+        10);
   label(g, "GLOBAL", {904, 10, 950, 23}, 8, Muted);
   button(g, {951, 9, 1030, 39}, timing() + " v", "global");
   label(g, p.hostSync ? "LOCKED" : "INTERNAL", {1036, 11, 1081, 22}, 7, Teal);

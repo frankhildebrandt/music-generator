@@ -73,6 +73,7 @@ class Player {
   bool wasRunning = false;
   uint64_t age = 0;
   std::array<Voice, Voices> voices;
+  std::array<std::array<float, 32768>, 2> preroll{};
   std::array<Clip *, Slots> clips{};
   std::array<std::atomic<double>, Slots> playheads;
   std::array<std::atomic<bool>, Slots> queued{};
