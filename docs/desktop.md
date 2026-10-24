@@ -55,7 +55,9 @@ Packaged macOS builds enable Apple's App Sandbox. Network client/server entitlem
 
 The current ad-hoc test signatures have no stable Developer ID identity. Replacing the app with a different test build can require selecting external folders again; model and song files remain intact. Folder grants survive restarting the same build, which has been tested. Stable signing and notarization remain a separate release step.
 
-Earlier unsandboxed desktop test builds used `~/Library/Application Support/de.alphatester.music-generator/`. To retain that library, select that directory using the first-run import button; it copies the database and songs into an empty sandbox library and reuses verified models after authorization. Existing files remain in place. Legacy browser-project imports still use the same button.
+The package identifier is `de.alphatester.music-generator` on every platform. Builds with a different package identifier use a separate profile and, on macOS, a separate App Sandbox container. To migrate, use **Import existing library** in an empty installation and select the previous app's directory containing `music.db` through the native folder dialog. Use the previous app's storage location; it is not necessarily the current profile path listed above.
+
+Import copies SQLite/WAL data and songs, keeping original song parameters and source files. It does not merge populated libraries or change the previous installation. Existing models can be reused after checksum verification; authorize external model/song folders again through the native Browse dialog when required. The new app cannot silently inherit another identifier's sandbox permissions. Legacy browser-project imports still use the same button.
 
 The studio and Settings include a [ModelPicker](model-picker.md) for 52 ACE-Step synthesis weights and eight language weights, with a RAM-budget filter and verified resumable downloads. [HeartMuLa](heartmula.md) adds two native integrated model/codec choices with its own parameters, downloads and local generation. New jobs retain a model snapshot; existing songs keep their saved values.
 
