@@ -40,7 +40,7 @@ export async function prepareEngine() {
       if (!server) throw new Error("Downloaded archive has no engine executable");
       built = path.dirname(server);
     }
-    await rm(engineFolder, { recursive: true, force: true }); await mkdir(engineFolder, { recursive: true });
+    await rm(engineFolder, { recursive: true, force: true }); await mkdir(engineFolder, { recursive: true }); await writeFile(path.join(engineFolder,".gitkeep"), "");
     // Preserve the complete runtime directory, including dynamically loaded GPU backends.
     for (const file of await files(built)) {
       const relative = path.relative(built, file);
