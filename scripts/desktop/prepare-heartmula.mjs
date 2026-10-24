@@ -24,7 +24,8 @@ export async function recordHeartmula(folder = heartFolder) {
 export async function prepareHeartmula() {
   try { await verifyHeartmula(); return; } catch { /* Prepare pinned complete runtime. */ }
   const cache = path.join(root,".cache/desktop/heartmula"); await mkdir(cache,{recursive:true});
-  const source = path.join(cache,"source"); const build = path.join(cache,"build");
+  // Never reuse an extracted source tree from a different pinned revision.
+  const source = path.join(cache,pin.revision,"source"); const build = path.join(cache,pin.revision,"build");
   let built;
   if (platform === "windows") {
     const archive = path.join(cache,"runtime.zip"); await download(pin.windows_url,archive,pin.windows_sha256);
@@ -41,7 +42,7 @@ export async function prepareHeartmula() {
     }
     const options=["-DCMAKE_BUILD_TYPE=Release","-DAUDIOCPP_MODEL_SET=custom","-DAUDIOCPP_MODELS=heartmula","-DAUDIOCPP_DEPLOYMENT_BUILD=ON","-DAUDIOCPP_BUILD_C_API=OFF","-DAUDIOCPP_BUILD_NATIVE_MODEL_MANAGER=OFF","-DENGINE_ENABLE_NATIVE_CPU=OFF","-DENGINE_ENABLE_CPU_ALL_VARIANTS=OFF","-DENGINE_ENABLE_OPENMP=OFF","-DGGML_OPENMP=OFF","-DENGINE_ENABLE_CUDA=OFF","-DENGINE_BUILD_TESTS=OFF","-DENGINE_BUILD_EXAMPLES=OFF","-DENGINE_BUILD_WARMBENCH=OFF",`-DENGINE_ENABLE_METAL=${platform==="macos"&&!target.cpuOnly?"ON":"OFF"}`,`-DENGINE_ENABLE_VULKAN=${platform==="linux"?"ON":"OFF"}`];
     if(platform==="macos")options.push(`-DCMAKE_OSX_ARCHITECTURES=${architecture==="arm64"?"arm64":"x86_64"}`,`-DCMAKE_OSX_DEPLOYMENT_TARGET=${target.minimumSystemVersion}`,"-DGGML_METAL_EMBED_LIBRARY=ON");
-    if(architecture==="x64")options.push("-DGGML_AVX=OFF","-DGGML_AVX2=OFF","-DGGML_FMA=OFF","-DGGML_F16C=OFF");
+    if(architecture==="x64")options.push("-DGGML_SSE42=OFF","-DGGML_BMI2=OFF","-DGGML_AVX=OFF","-DGGML_AVX2=OFF","-DGGML_FMA=OFF","-DGGML_F16C=OFF");
     await run("cmake",["-S",source,"-B",build,...options]); await run("cmake",["--build",build,"--target","audiocpp_cli","--parallel","2"]); built=path.join(build,"bin");
   }
   await rm(heartFolder,{recursive:true,force:true}); await mkdir(heartFolder,{recursive:true});
