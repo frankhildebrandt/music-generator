@@ -13,7 +13,7 @@ it("uses the upstream defaults only for a fresh generation form", () => {
 });
 
 it("restores stored old, custom and new song values without mutating parameters", () => {
-  for (const params of [{ inference_steps: 50, lm_temperature: 1 }, { inference_steps: 75, lm_temperature: 0.65 }, { inference_steps: 80, lm_temperature: 1.2 }]) {
+  for (const params of [{ inference_steps: 8, lm_temperature: 0.65 }, { inference_steps: 50, lm_temperature: 1 }, { inference_steps: 75, lm_temperature: 0.65 }, { inference_steps: 80, lm_temperature: 1.2 }]) {
     Object.freeze(params);
     expect(samplingForSong(params)).toEqual(params);
   }
@@ -30,6 +30,12 @@ it("updates both tooltips in all twelve languages while retaining desktop messag
   vi.stubGlobal("navigator", { language: "en" });
   vi.stubGlobal("document", { documentElement: { lang: "" }, querySelectorAll: () => [], querySelector: () => null });
   const { I18N, LANGS } = await import("./i18n.js");
+  const { modelTranslations } = await import("./model-i18n");
+  expect(Object.keys(modelTranslations).sort()).toEqual(Object.keys(LANGS).sort());
+  for (const values of Object.values(modelTranslations)) {
+    expect(values).toHaveLength(21);
+    expect(values.every(v => typeof v === "string" && v.length > 0)).toBe(true);
+  }
   expect(Object.keys(LANGS)).toHaveLength(12);
   for (const lang of Object.keys(LANGS) as (keyof typeof I18N)[]) {
     expect(I18N[lang].iterations_tip).toContain("80");

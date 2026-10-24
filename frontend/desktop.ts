@@ -12,7 +12,7 @@ export async function requestClose(): Promise<void> {
   closing = true;
   try {
     const queue = await backend.queue().catch(() => null);
-    if ((queue?.running.length || queue?.queued || queue?.active || document.body.dataset.settingUp === "true") && !await confirm(t("desktop_close_busy"), { title: "Music Generator", kind: "warning" })) return;
+    if ((queue?.running.length || queue?.queued || queue?.active || document.body.dataset.settingUp === "true" || document.body.dataset.modelDownload === "true") && !await confirm(t("desktop_close_busy"), { title: "Music Generator", kind: "warning" })) return;
     await backend.exit();
   } finally { closing = false; }
 }

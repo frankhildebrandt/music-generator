@@ -50,6 +50,60 @@ fn gpu_selftest_rejects_empty_and_repetitive_codes() {
     ));
 }
 
+#[tokio::test]
+async fn analysis_multipart_contains_selected_model_names_and_original_audio() {
+    let app = Router::new()
+        .route(
+            "/understand",
+            post(
+                |headers: axum::http::HeaderMap, body: axum::body::Bytes| async move {
+                    assert!(headers[CONTENT_TYPE]
+                        .to_str()
+                        .unwrap()
+                        .starts_with("multipart/form-data; boundary="));
+                    let text = String::from_utf8_lossy(&body);
+                    assert!(text.contains("name=\"request\""));
+                    assert!(text.contains("\"lm_model\":\"acestep-5Hz-lm-4B-Q6_K.gguf\""));
+                    assert!(text.contains("\"synth_model\":\"acestep-v15-turbo-Q5_K_M.gguf\""));
+                    assert!(body.windows(7).any(|bytes| bytes == b"RIFF\x00\xff\x01"));
+                    Json(json!({"id":"analysis"}))
+                },
+            ),
+        )
+        .route(
+            "/job",
+            get(
+                |Query(query): Query<std::collections::HashMap<String, String>>| async move {
+                    Json(if query.contains_key("result") {
+                        json!({"caption":"piano"})
+                    } else {
+                        json!({"status":"done"})
+                    })
+                },
+            ),
+        );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let models = music_generator::catalog::Selection {
+        provider: "ace-step".into(),
+        synthesis: "acestep-v15-turbo-Q5_K_M.gguf".into(),
+        language: "acestep-5Hz-lm-4B-Q6_K.gguf".into(),
+    };
+    let client = EngineClient::new(base.clone(), base, 0.01, 1.0).unwrap();
+    let result = client
+        .analyze(
+            b"RIFF\x00\xff\x01".to_vec(),
+            "idea.wav".into(),
+            &models,
+            &CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(result["caption"], "piano");
+    task.abort();
+}
+
 #[test]
 fn codes_obey_requested_duration_and_the_ten_minute_ceiling() {
     for (duration, lm_duration, expected) in [

@@ -24,4 +24,14 @@ describe("desktop contracts", () => {
     expect(failure).toBeInstanceOf(Error);
     expect((failure as Error).message).toBe("Disk full");
   });
+  it("passes model selections through typed commands and preserves job snapshots", async () => {
+    const selection = { provider: "ace-step", synthesis: "acestep-v15-turbo-Q8_0.gguf", language: "acestep-5Hz-lm-4B-Q6_K.gguf" };
+    invoke.mockResolvedValue(selection);
+    await backend.useModels(selection);
+    expect(invoke).toHaveBeenLastCalledWith("use_models", { selection });
+    await backend.generate({ prompt: "piano", model_selection: selection, inference_steps: 8 });
+    expect(invoke).toHaveBeenLastCalledWith("generate", { request: { prompt: "piano", model_selection: selection, inference_steps: 8 } });
+    await backend.cancelModelDownload();
+    expect(invoke).toHaveBeenLastCalledWith("cancel_model_download", undefined);
+  });
 });

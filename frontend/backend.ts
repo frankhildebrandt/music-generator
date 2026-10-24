@@ -1,5 +1,5 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import type { Bootstrap, Filter, Folder, Generation, Health, Queue, Settings, SetupRequest, Song, Update } from "./types";
+import type { Bootstrap, Filter, Folder, Generation, Health, Queue, Settings, SetupRequest, Song, Update, ModelCatalog, ModelSelection } from "./types";
 
 async function command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   try { return await invoke<T>(name, args); }
@@ -13,6 +13,9 @@ export const backend = {
   setup: (request: SetupRequest) => command<{ ok: boolean; mode: string }>("setup_models", { request }),
   estimate: (request: SetupRequest) => command<{ missing_bytes: number; free_bytes: number }>("setup_estimate", { request }),
   cancelSetup: () => command<void>("cancel_setup"),
+  modelCatalog: () => command<ModelCatalog>("model_catalog"),
+  useModels: (selection: ModelSelection) => command<ModelSelection>("use_models", { selection }),
+  cancelModelDownload: () => command<void>("cancel_model_download"),
   importLibrary: (root: string) => command<{ songs: number; models_dir: string }>("import_library", { root }),
   songs: async (filter: Filter = {}) => (await command<Song[]>("list_songs", { filter })).map(audioUrl),
   song: async (id: string) => audioUrl(await command<Song>("get_song", { id })),
@@ -25,12 +28,12 @@ export const backend = {
   deleteFolder: (id: string) => command<void>("delete_folder", { id }),
   queue: () => command<Queue>("queue"),
   settings: () => command<Settings>("get_settings"),
-  saveSettings: (values: Pick<Settings, "timeout_minutes" | "songs_dir" | "dit"> & Partial<Pick<Settings, "lm_device" | "export_format">>) => command<Settings>("save_settings", { values }),
+  saveSettings: (values: Pick<Settings, "timeout_minutes" | "songs_dir"> & Partial<Pick<Settings, "lm_device" | "export_format">>) => command<Settings>("save_settings", { values }),
   health: () => command<Health>("health"),
-  analyze: async (file: File) => {
+  analyze: async (file: File, selection?: ModelSelection) => {
     if (file.size > 60 * 1024 * 1024) throw new Error("Audio files must be smaller than 60 MB");
     const filename = /\.(wav|mp3|flac|m4a|ogg)$/i.test(file.name) ? file.name : `${file.name}.wav`;
-    return command<Record<string, unknown>>("analyze", { data: Array.from(new Uint8Array(await file.arrayBuffer())), filename });
+    return command<Record<string, unknown>>("analyze", { data: Array.from(new Uint8Array(await file.arrayBuffer())), filename, selection });
   },
   export: (kind: "audio" | "lyrics" | "zip", destination: string, id: string | null = null, folder: string | null = null) => command<void>("export_file", { kind, destination, id, folder }),
   checkUpdate: () => command<Update>("check_update"),
