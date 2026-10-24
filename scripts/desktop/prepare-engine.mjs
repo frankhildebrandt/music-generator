@@ -22,6 +22,8 @@ export async function prepareEngine() {
       await run("git", ["submodule", "update", "--init", "--recursive"], { cwd: sourceDir });
       built = path.join(sourceDir, "build");
       if (platform === "macos") {
+        // New libc++ headers expose float from_chars even when the deployment OS lacks it.
+        await run("git", ["apply", path.join(root,"scripts/desktop/patches/acestep-macos-compat.patch")], { cwd: sourceDir });
         await cp(path.join(root,"scripts/desktop/engine-sandbox.mm"), path.join(sourceDir,"desktop-sandbox.mm"));
         const cmake = path.join(sourceDir,"CMakeLists.txt");
         await writeFile(cmake,(await readFile(cmake,"utf8")).replace("LANGUAGES C CXX)","LANGUAGES C CXX OBJC OBJCXX)"));
