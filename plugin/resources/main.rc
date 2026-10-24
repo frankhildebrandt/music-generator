@@ -107,4 +107,6 @@ BEGIN
  VK_OEM_COMMA, ID_PREFERENCES, VIRTKEY, CONTROL, NOINVERT
 END
 
+#endif // English (United Kingdom) resources
+
 #include "plugin.rc"
