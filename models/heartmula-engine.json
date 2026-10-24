@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "revision": "507495611b22dc4590e0e5609e05e8096384e33f",
+  "tag": "v0.9.2-drama3-base-small",
+  "repository": "https://github.com/0xShug0/audio.cpp",
+  "source_url": "https://codeload.github.com/0xShug0/audio.cpp/tar.gz/507495611b22dc4590e0e5609e05e8096384e33f",
+  "source_sha256": "b3f08bd652d0f618dad53d2c1b45c00038dfa7fd3e3924d67d5cc7292677262a",
+  "windows_url": "https://github.com/0xShug0/audio.cpp/releases/download/v0.9.2-drama3-base-small/audio-v0.9.2-drama3-base-small-bin-windows-x64-vulkan-portable.zip",
+  "windows_sha256": "9c943d406af3543cc5005d158ed583210cd7a13371bffcd4b7f262f7a6a5ad16",
+  "windows_vulkan_url": "https://sdk.lunarg.com/sdk/download/1.4.309.0/windows/VulkanRT-1.4.309.0-Components.zip",
+  "windows_vulkan_sha256": "7d969f4d7b44e387667d3148f61559497c22d50cbe3d50adc9e5409afbce2df1"
+}

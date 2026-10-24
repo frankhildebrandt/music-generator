@@ -31,6 +31,7 @@ impl Progress {
             "title_download" => "Preparing title model",
             "title" => "Generating song title",
             "saving" => "Saving audio",
+            "heartmula" => "HeartMuLa / HeartCodec",
             _ => "Synth",
         };
         let steps = match (self.step, self.total_steps) {

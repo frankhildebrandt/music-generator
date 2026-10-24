@@ -31,13 +31,15 @@ it("updates both tooltips in all twelve languages while retaining desktop messag
   vi.stubGlobal("document", { documentElement: { lang: "" }, querySelectorAll: () => [], querySelector: () => null });
   const { I18N, LANGS } = await import("./i18n.js");
   const { modelTranslations } = await import("./model-i18n");
+  await import("./heart-i18n");
   expect(Object.keys(modelTranslations).sort()).toEqual(Object.keys(LANGS).sort());
   for (const values of Object.values(modelTranslations)) {
-    expect(values).toHaveLength(20);
+    expect(values).toHaveLength(21);
     expect(values.every(v => typeof v === "string" && v.length > 0)).toBe(true);
   }
   expect(Object.keys(LANGS)).toHaveLength(12);
   for (const lang of Object.keys(LANGS) as (keyof typeof I18N)[]) {
+    for(const key of ["heart_hint","heart_integrated","heart_steps","heart_temperature","heart_cpu","heart_analysis","heart_lyrics","heart_duration"])expect((I18N[lang] as unknown as Record<string,string>)[key]).toBeTruthy();
     expect(I18N[lang].iterations_tip).toContain("80");
     expect(I18N[lang].iterations_tip).toContain("50");
     expect(I18N[lang].variance_tip).toContain("1.2");

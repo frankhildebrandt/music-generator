@@ -50,6 +50,29 @@ fn main() {
             }),
             "Required MP3 codec missing from resources"
         );
+        let heart: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(root.join("heartmula/HEART_RUNTIME.json"))
+                .expect("HeartMuLa runtime missing: run npm run engine:prepare"),
+        )
+        .expect("Invalid HeartMuLa provenance");
+        let pin: serde_json::Value =
+            serde_json::from_str(include_str!("../models/heartmula-engine.json"))
+                .expect("Invalid HeartMuLa pin");
+        assert_eq!(
+            heart["revision"], pin["revision"],
+            "Wrong HeartMuLa runtime revision"
+        );
+        assert_eq!(heart["platform"], metadata["platform"]);
+        assert_eq!(heart["arch"], metadata["arch"]);
+        assert!(
+            files.contains_key(if platform == "windows" {
+                "heartmula/audiocpp_cli.exe"
+            } else {
+                "heartmula/audiocpp_cli"
+            }),
+            "HeartMuLa executable missing from resources"
+        );
+        println!("cargo:rerun-if-changed=../models/heartmula-engine.json");
         let title: serde_json::Value = serde_json::from_slice(
             &std::fs::read(root.join("title/TITLE_RUNTIME.json"))
                 .expect("Title runtime missing: run npm run engine:prepare"),

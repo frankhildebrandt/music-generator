@@ -1,5 +1,6 @@
 import "./desktop-i18n";
 import "./model-i18n";
+import "./heart-i18n";
 import "./title-i18n";
 import { applyI18n, t } from "./i18n.js";
 import { backend } from "./backend";

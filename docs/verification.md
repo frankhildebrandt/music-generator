@@ -1,8 +1,10 @@
-# Desktop provider separation — 2026-10-24
+# HeartMuLa provider — separate development branch, 2026-10-24
 
-The desktop branch now contains ACE-Step music generation and the shared local title model. The provider-specific runtime, model catalog entries, setup controls, sampling, tests, build requirements and notices have been extracted from this branch. Realtime progress, automatic titles, model snapshots and existing saved-song behavior remain covered by the desktop suite.
+HeartMuLa is maintained on `codex/heartmula`, based on `codex/desktop-bundles`. Its PR contains the native audio.cpp adapter, pinned Q8_0/F16 models and integrated HeartCodec, model/setup controls, independent sampling, provider tests, runtime packaging, Vulkan loaders and license notices. The desktop base retains ACE-Step, realtime progress and automatic titles. Inference and application code match the previously integrated `d0c0766` source; only CI branch selection and this verification record changed during extraction.
 
-Local macOS validation after separation: TypeScript/Vite, ESLint, 28 frontend tests, one Node build-policy test, 65 Rust tests, Rustfmt and Clippy with warnings as errors passed. This split has not yet received new native Windows/Linux/Intel bundle or GUI acceptance; earlier results below describe their historical source versions.
+Local checks after extraction passed: TypeScript/Vite, ESLint, 28 frontend tests, one Node build-policy test, 72 Rust tests, Rustfmt and Clippy with warnings as errors.
+
+See [heartmula.md](heartmula.md) for pinned runtime/model hashes and verification limits. Earlier actual inference and bundle results describe the original integrated source. The branch workflow runs the native platform matrix independently; new split-branch bundle results must be read from that run.
 
 # ModelPicker follow-up — 0.2.8 development, 2026-10-24
 

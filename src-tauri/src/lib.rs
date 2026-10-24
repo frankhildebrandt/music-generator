@@ -7,6 +7,7 @@ pub mod engine;
 pub mod error;
 pub mod exports;
 pub mod hardware;
+pub mod heartmula;
 pub mod import;
 pub mod library;
 pub mod manifest;

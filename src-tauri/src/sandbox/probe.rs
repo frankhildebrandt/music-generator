@@ -61,6 +61,9 @@ pub fn run(forbidden: &Path) -> Result<()> {
             if std::fs::read_dir(root.join("title-work"))?.next().is_some() { return Err(message("Title request files were not removed")); }
         }
 
+        let heart = crate::heartmula::probe(&resources,&CancellationToken::new()).await?;
+        if !heart.contains("[Desktop Sandbox] Unselected file access denied") { return Err(message("HeartMuLa sandbox enforcement was not confirmed")); }
+        println!("App Sandbox: native HeartMuLa runtime starts; unselected file access denied.");
         let log = std::fs::read_to_string(root.join("logs/ace-server.log"))?;
         if !log.contains("[Desktop Sandbox] Unselected file access denied") { return Err(message("Engine sandbox enforcement was not confirmed")); }
         println!("App Sandbox: unselected read/write denied; inherited engine read denied; container storage, loopback health and supervisor shutdown passed.");
