@@ -17,6 +17,7 @@ Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind 
 
 - Bestehende Bedienung, zwölf Sprachen, Bibliothek, Favoriten, Ordner und Varianten.
 - Echtzeit-Fortschritt mit Modellladephasen, Sprachmodell, gemessenen DiT-Schritten und VAE-Decodierung.
+- **IT und VAR (ACE-Step):** IT sind die Iterationen der Klangerzeugung (Standard 80), VAR die Varianz des Sprachmodells (Standard 1,2). Mehr Schritte brauchen mehr Zeit; höhere Varianz erzeugt freiere Ergebnisse, niedrigere hält sich enger an Stil und Prompt. Für andere Modellfamilien zeigt der ModelPicker eine ausdrückliche Schritte-Empfehlung. Gespeicherte Songwerte bleiben erhalten. HeartMuLa verwendet eigene Codec- und Temperaturwerte.
 - Mikrofonideen und Audioanalyse, Waveform-Player und native WAV-/TXT-/ZIP-Exporte.
 - Wahlweise MP3-Export mit 192 kbit/s für Einzeldateien und ZIPs; die Bibliothek behält das Original-WAV.
 - Songlänge von 10 Sekunden bis 10 Minuten; oberhalb von fünf Minuten Hinweise auf hohen Zeit- und Speicherbedarf. Lange Songs sind auf Intel-Macs und Rechnern mit 8 GB noch nicht praktisch geprüft.
