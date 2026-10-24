@@ -60,7 +60,7 @@ fn four() -> u32 {
     4
 }
 fn steps() -> u32 {
-    50
+    80
 }
 fn one() -> u32 {
     1

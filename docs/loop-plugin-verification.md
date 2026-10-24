@@ -1,6 +1,10 @@
-# LoopForge verification — 0.2.1
+# LoopForge verification — 0.2.2
 
 Manufacturer: Alphatester x KRGSH. Technical bundle names and parameter IDs retained.
+
+## Sampling defaults — 0.2.2
+
+Fresh native plugin/standalone workspaces and service requests without an explicit steps value use 80 passes, matching the desktop generation form. CFG/Guidance stays at the desktop SFT/XL preset of 1.0 and is shown in GENERATE. Contract tests check both text2music and Lego payloads and preserve explicit 32/50/100-step overrides; saved banks keep their stored settings.
 
 ## UI alignment update — 0.2.1
 

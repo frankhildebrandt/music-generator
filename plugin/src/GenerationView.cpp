@@ -76,7 +76,7 @@ void LoopEditor::generation(IGraphics &g) {
   for (size_t n = settingsHits; n < hits.size(); ++n)
     hits[n].rect = hits[n].rect.Intersect(Settings);
   scrollBar(g, Settings, settingsScroll, 520, "settingsScroll");
-  label(g, "ACE-Step XL · Local", {24, 497, 227, 533}, 11, Muted);
+  label(g, "ACE-Step XL · CFG 1.0 · Local", {24, 497, 237, 533}, 11, Muted);
   button(g, {244, 491, 477, 538},
          p.busy ? "Cancel generation" : "Generate loops",
          p.busy ? "cancel" : "generate", true);

@@ -69,7 +69,7 @@ public:
               status = "Import a loop or generate a new instrument.", models;
   double bpm = 120, beats = 16, crossfade = 5, noiseDb = 6, noiseStart = 0,
          noiseEnd = 0;
-  int steps = 50, variants = 1;
+  int steps = 80, variants = 1;
   int64_t seed = -1;
   bool followHostGeneration = true;
   bool context[128]{}, busy = false, compareOriginal = false;

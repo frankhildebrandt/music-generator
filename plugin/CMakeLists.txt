@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-project(MusicGeneratorLoops VERSION 0.2.1 LANGUAGES C CXX)
+project(MusicGeneratorLoops VERSION 0.2.2 LANGUAGES C CXX)
 if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "13.3")
 endif()

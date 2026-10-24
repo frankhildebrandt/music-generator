@@ -190,6 +190,8 @@ mod tests {
             );
             assert_eq!(params["bpm"], 155.0);
             assert_eq!(params["seed"], 42);
+            assert_eq!(params["inference_steps"], 80);
+            assert_eq!(params["guidance_scale"], 1.0);
         }
         let required: Vec<_> = music_core::manifest::manifest()
             .models
@@ -199,5 +201,22 @@ mod tests {
         assert_eq!(required.len(), 3);
         assert!(required.iter().any(|m| m.file == DEFAULT_MODEL));
         assert!(required.iter().all(|m| m.kind != "pro"));
+    }
+
+    #[test]
+    fn custom_passes_override_defaults_for_text_and_context() {
+        for steps in [32, 50, 100] {
+            let request: GenerationRequest = serde_json::from_value(json!({
+                "slot":36,"instrument":"bass","prompt":"Warm sub", "key":"A minor",
+                "bpm":120,"beats":16,"seed":42,"steps":steps
+            }))
+            .unwrap();
+            request.validate().unwrap();
+            for context in [false, true] {
+                let params = synthesis_params(&request, 10.0, 42, context);
+                assert_eq!(params["inference_steps"], steps);
+                assert_eq!(params["guidance_scale"], 1.0);
+            }
+        }
     }
 }

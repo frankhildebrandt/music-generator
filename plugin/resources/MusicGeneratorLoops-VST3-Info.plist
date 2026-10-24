@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>MusicGeneratorLoops</string>
 	<key>CFBundleGetInfoString</key>
-	<string>MusicGeneratorLoops v0.2.1 Copyright 2026 Alphatester x KRGSH</string>
+	<string>MusicGeneratorLoops v0.2.2 Copyright 2026 Alphatester x KRGSH</string>
 	<key>CFBundleIdentifier</key>
 	<string>de.alphatester-krgsh.vst3.MusicGeneratorLoops</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -17,11 +17,11 @@
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.2.1</string>
+	<string>0.2.2</string>
 	<key>CFBundleSignature</key>
 	<string>MgLp</string>
 	<key>CFBundleVersion</key>
-	<string>0.2.1</string>
+	<string>0.2.2</string>
 	<key>CSResourcesFileMapped</key>
 	<true/>
 	<key>LSMinimumSystemVersion</key>

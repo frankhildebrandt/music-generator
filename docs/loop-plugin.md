@@ -1,4 +1,4 @@
-# LoopForge 0.2.1
+# LoopForge 0.2.2
 
 Instrument von **Alphatester x KRGSH** für VST3, CLAP und als Standalone-App. Die Oberfläche übernimmt das bereitgestellte LoopForge-Design mit gemeinsamer Sound-Idee, PLAY / GENERATE / EDIT, Stereo-Waveforms und durchgehend sichtbarem Keyboard. Die technischen Bundle-Namen und Plugin-IDs bleiben für vorhandene Projekte erhalten. Bank öffnen/speichern, Umbenennen, Audioimport, Modellprüfung, Skalierung und Host-Sync befinden sich im Bank-/Einstellungsmenü oben.
 
@@ -53,6 +53,8 @@ Beim Abspielen zeigt ein latenzberücksichtigter Playhead die Position in den Er
 Fertige Karten bieten Play/Stop, Replace und WAV-Dragging. Die Waveform selbst kann auf eine Keyboard-Taste gezogen werden; eine normale Auswahl spielt sie vor. Replace übernimmt sie auf die ausgewählte Note. Das Ersetzen einer belegten Taste ist per Undo rückgängig zu machen. Die Ergebnisse der aktuellen Sitzung bleiben in der scrollbaren Liste (bis zu 128 Karten); übernommene Loops mit Save bank sichern. WAVs werden vor dem Drag im Hintergrund fertig gerendert und bleiben dauerhaft im Profil erhalten.
 
 In GENERATE Instrument, Beschreibung, Tonart (z. B. `A minor` oder `C major`), BPM, Taktlänge, Seed und Varianten einstellen. Standard sind vier Takte bei Hosttempo. Für weitere Instrumente andere Slots per Rechtsklick als Kontext auswählen. Ein WAV kann zunächst in einen anderen Slot importiert und als Kontext markiert werden. Der Zielslot ist ausgeschlossen. Jeder Auftrag speichert seinen Kontext vor dem Einreihen unveränderlich.
+
+Neue Generierungen starten wie die Desktop-App mit **80 Steps/Passes** und **CFG/Guidance 1,0** (SFT/XL). Eigene Steps-Werte und gespeicherte Bankeinstellungen bleiben erhalten.
 
 Ohne Kontext verwendet die Engine Textgenerierung, mit Kontext `lego`. Die Engine erzeugt mindestens zehn Sekunden und zwei zusätzliche Takte Rohmaterial. Daraus wird ein taktgenauer Abschnitt ohne lange Randstille gewählt und auf die exakte musikalische Framezahl aufbereitet. Fehlt ein geeigneter vollständiger Abschnitt, bleibt der vorhandene Loop erhalten und die Generierung meldet einen Fehler. Die fertige Variante vorhören und mit „Replace“ oder einem Drag auf die gewünschte Taste übernehmen. Dur-/Mollwechsel erfordern eine neue Generierung; Tune transponiert Halbtonschritte unabhängig vom Tempo. Mehrere Plugininstanzen teilen eine serielle Warteschlange pro Benutzer. Ein Dienstfehler unterbricht geladene Loops nicht.
 
