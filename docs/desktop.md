@@ -43,6 +43,8 @@ Settings → Export selects lossless WAV or MP3 at 192 kbit/s for both individua
 
 Songs can be 10 seconds to 10 minutes long. Above five minutes the form shows a localized time/memory warning. The language model may occasionally return extra audio codes; the outgoing synthesis payload is capped at the requested duration × 5 and at 3000 codes (600 seconds). This does not rewrite saved song parameters. Synthesis failures inspect only new lines in the combined stdout/stderr engine log; memory exhaustion and the model's maximum-length error get specific explanations. Earlier jobs' memory errors are ignored. Ten-minute generation remains untested on Intel Macs and 8 GiB machines; start with a short song on those systems.
 
+Since 0.2.7, new generations normalize to the actual audio peak instead of the engine's percentile clipping. Rust sends `peak_clip: 0` to both generation stages and reapplies it after LM enrichment. Existing library audio and stored parameters are retained. This addresses that normalization step; it is not a claim that every possible audible distortion has been eliminated.
+
 - macOS: `~/Library/Containers/de.alphatester.music-generator/Data/Library/Application Support/de.alphatester.music-generator/`
 - Windows: `%LOCALAPPDATA%\de.alphatester.music-generator\`
 - Linux: `$XDG_DATA_HOME/de.alphatester.music-generator/` (normally `~/.local/share/…`)
