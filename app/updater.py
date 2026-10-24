@@ -105,7 +105,8 @@ def _apply_nogit(s: dict) -> dict:
             return ""
     old_rev = acestep_rev()
     if not (ROOT / ".git").exists():
-        git("init", "-q", "-b", BRANCH)
+        git("init", "-q")   # ohne „-b“: ältere Git-Versionen (vor 2.28, z. B. alte Xcode-Kommandozeilenwerkzeuge) kennen die Option nicht
+        git("symbolic-ref", "HEAD", f"refs/heads/{BRANCH}")
     if "origin" not in git("remote").split():
         git("remote", "add", "origin", REPO_URL)
     git("fetch", "--quiet", "origin", BRANCH, timeout=120)
