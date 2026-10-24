@@ -280,7 +280,17 @@ void Player::process(double **outputs, int channels, int frames, Clock clock) {
   if (wasRunning &&
       (!clock.running || std::abs(clock.ppq - previousPpq) > 0.1)) {
     for (auto &v : voices) {
-      v.pending = false;
+      if (v.pending) {
+        if (!clock.running) {
+          v.slot = -1;
+          v.pending = false;
+        } else if (v.slot >= 0 && clips[v.slot]) {
+          const double grid = clips[v.slot]->quantize;
+          v.due = grid > 0 ? std::ceil((clock.ppq - 1e-9) / grid) * grid
+                           : clock.ppq;
+        }
+        continue;
+      }
       if (!clock.running)
         v.releasing = true;
       else if (v.slot >= 0) {

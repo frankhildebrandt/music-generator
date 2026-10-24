@@ -368,11 +368,12 @@ void MusicGeneratorLoops::edit(bool normalize, bool noise, bool fit) {
   busy = true;
   int slot = selected;
   Json recipe = Json::object();
-  recipe["start"] = uint64_t(GetParam(selected * 8 + Start)->Value() *
-                             s.edited->samples.size());
-  recipe["end"] = uint64_t(GetParam(selected * 8 + End)->Value() *
-                           s.edited->samples.size());
-  recipe["frames"] = uint64_t(std::llround(beats * 60.0 / bpm * 48000));
+  const double sourceFrames = s.edited->samples.size() / s.edited->rate * 48000;
+  recipe["start"] =
+      uint64_t(GetParam(selected * 8 + Start)->Value() * sourceFrames);
+  recipe["end"] =
+      uint64_t(GetParam(selected * 8 + End)->Value() * sourceFrames);
+  recipe["frames"] = uint64_t(std::llround(s.beats * 60.0 / s.bpm * 48000));
   recipe["crossfade_ms"] = crossfade;
   recipe["remove_dc"] = true;
   if (normalize)
@@ -384,7 +385,7 @@ void MusicGeneratorLoops::edit(bool normalize, bool noise, bool fit) {
   }
   auto original = s.edited;
   auto previous = s.recipe;
-  const double barFrames = barBeats * 60.0 / bpm * 48000;
+  const double barFrames = barBeats * 60.0 / s.bpm * 48000;
   enqueue([this, slot, recipe, original, previous, fit, barFrames]() {
     if (!service.request("status").value("dc_removal", false))
       throw std::runtime_error("Close all older LoopForge instances and "

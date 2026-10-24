@@ -180,6 +180,26 @@ int main() {
     require(
         PlayerProbe::played(jumped, 1) > 20,
         "Host jump lost unwrapped group position when moving to a longer loop");
+    auto seekingStorage = std::make_unique<Player>();
+    auto &seeking = *seekingStorage;
+    seeking.prepare(48000);
+    for (int n = 0; n < 2; ++n) {
+      auto c = std::make_unique<Clip>();
+      c->audio = groupAudio;
+      c->beats = n ? 32 : 16;
+      c->group = 1;
+      c->mode = Mode::Toggle;
+      c->quantize = 1;
+      seeking.publish(n, std::move(c));
+    }
+    seeking.event({0, 0, -1, 1});
+    seeking.process(outputs, 2, 256, {120, 0, true, 4});
+    seeking.event({0, 1, -1, 1});
+    seeking.process(outputs, 2, 256, {120, .5, true, 4});
+    require(seeking.isQueued(1), "Target was not queued before host seek");
+    seeking.process(outputs, 2, 256, {120, 20, true, 4});
+    require(!seeking.isQueued(1) && PlayerProbe::played(seeking, 1) >= 20,
+            "Pending target bypassed group activation after host seek");
     std::cout << "MIDI modes, offsets, quantization, transport jumps and 100 "
                  "exact cycles passed\n";
   } catch (const std::exception &error) {
