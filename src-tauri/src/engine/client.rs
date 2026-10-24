@@ -187,7 +187,8 @@ impl EngineClient {
             "guidance_scale",
             "use_cot_caption",
         ];
-        let mut request = json!({"output_format":"wav16", "lm_model": lm_file, "synth_model": dit});
+        // Normalize to the actual peak instead of clipping percentile outliers.
+        let mut request = json!({"output_format":"wav16", "peak_clip":0, "lm_model": lm_file, "synth_model": dit});
         for field in FIELDS {
             if let Some(value) = params
                 .get(field)
@@ -213,6 +214,7 @@ impl EngineClient {
         // saved song parameters remain unchanged.
         limit_audio_codes(&mut enriched, params);
         enriched["output_format"] = json!("wav16");
+        enriched["peak_clip"] = json!(0);
         enriched["synth_model"] = json!(dit);
         let log = self.synth_log.as_deref().map(SynthesisLog::capture);
         let result = self
@@ -243,13 +245,14 @@ impl EngineClient {
         &self,
         data: Vec<u8>,
         filename: String,
+        models: &crate::catalog::Selection,
         cancel: &CancellationToken,
     ) -> Result<Value> {
         let part = reqwest::multipart::Part::bytes(data).file_name(filename);
         let request = self
             .http
             .post(format!("{}/understand", self.lm))
-            .multipart(reqwest::multipart::Form::new().part("audio", part));
+            .multipart(reqwest::multipart::Form::new().part("audio", part).text("request", json!({"lm_model":models.language,"synth_model":models.synthesis,"vae":"vae-BF16.gguf"}).to_string()));
         let (ctype, body) = self
             .operation(&self.lm, "understand", request, cancel, |_| {})
             .await?;

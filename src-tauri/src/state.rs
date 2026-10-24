@@ -85,18 +85,18 @@ impl AppState {
         cancel: &CancellationToken,
     ) -> Result<EngineClient> {
         let mut engine = self.engine.lock().await;
-        if engine.as_mut().is_some_and(Engine::alive) {
-            return Ok(engine.as_ref().unwrap().client.clone());
-        }
-        engine.take();
         if settings.setup_complete
             && !self.is_setting_up()
-            && !crate::setup::models_valid(self, cancel).await?
+            && !crate::setup::models_valid_for(self, settings, cancel).await?
         {
             return Err(message(
                 "Models are missing or invalid. Open Models and hardware test in Settings.",
             ));
         }
+        if engine.as_mut().is_some_and(Engine::alive) {
+            return Ok(engine.as_ref().unwrap().client.clone());
+        }
+        engine.take();
         let started = Engine::start(
             &self.resources,
             &self.db.root.join("logs"),
@@ -175,17 +175,25 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
         state.changed(&app);
         let _awake = crate::power::KeepAwake::new();
         let outcome = async {
-            let settings = state.db.settings()?;
+            let mut settings = state.db.settings()?;
+            // New jobs carry an immutable model snapshot. Legacy rows remain untouched.
+            if let Some(selection) = params.get("model_selection").filter(|v| !v.is_null()) {
+                let selection: crate::catalog::Selection =
+                    serde_json::from_value(selection.clone())?;
+                selection.apply(&mut settings)?;
+            }
             let client = state.start_engine(&settings, &cancel).await?;
-            let dit = if settings.dit == "xl" {
-                "acestep-v15-xl-sft-Q8_0.gguf"
-            } else {
-                "acestep-v15-sft-Q8_0.gguf"
-            };
+            let selection = crate::catalog::Selection::from_settings(&settings);
             let (audio, ext, meta) = client
-                .generate(&params, &settings.lm_model, dit, &cancel, |progress| {
-                    state.report_progress(&app, &sid, progress);
-                })
+                .generate(
+                    &params,
+                    &selection.language,
+                    &selection.synthesis,
+                    &cancel,
+                    |progress| {
+                        state.report_progress(&app, &sid, progress);
+                    },
+                )
                 .await?;
             state.report_progress(&app, &sid, Progress::new("saving"));
             let dir = PathBuf::from(settings.songs_dir);

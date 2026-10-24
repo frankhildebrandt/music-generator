@@ -4,7 +4,7 @@ use crate::{
     error::{message, Result},
     hardware, manifest,
     state::AppState,
-    verification::{ModelVerifier, Verification},
+    verification::ModelVerifier,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -36,30 +36,25 @@ pub fn fingerprint(lm: &str, gpu: &str) -> String {
 
 pub async fn models_valid(state: &AppState, cancel: &CancellationToken) -> Result<bool> {
     let settings = state.db.settings()?;
+    models_valid_for(state, &settings, cancel).await
+}
+
+pub async fn models_valid_for(
+    state: &AppState,
+    settings: &crate::types::Settings,
+    cancel: &CancellationToken,
+) -> Result<bool> {
     if !settings.setup_complete {
         return Ok(false);
     }
-    let Some(size) = ["0.6B", "1.7B", "4B"]
-        .into_iter()
-        .find(|s| manifest::lm_file(s) == settings.lm_model)
-    else {
-        return Ok(false);
-    };
     let mut verifier = ModelVerifier::open(&state.db.root);
-    for model in manifest::selected(size, settings.dit == "xl")? {
-        let path = PathBuf::from(&settings.models_dir).join(&model.file);
-        let Ok(path) = path.canonicalize() else {
-            return Ok(false);
-        };
-        if verifier
-            .verify(&path, &model.sha256, cancel, |_, _| {})
-            .await?
-            == Verification::Invalid
-        {
-            return Ok(false);
-        }
-    }
-    Ok(true)
+    crate::catalog::verify(
+        &crate::catalog::Selection::from_settings(settings),
+        Path::new(&settings.models_dir),
+        &mut verifier,
+        cancel,
+    )
+    .await
 }
 
 pub async fn configure(
@@ -150,6 +145,15 @@ async fn configure_inner(
     settings.songs_dir = songs.to_string_lossy().into();
     settings.models_dir = models.to_string_lossy().into();
     settings.lm_model = manifest::lm_file(&request.lm);
+    settings.model_provider = "ace-step".into();
+    // The wizard deliberately returns to the supported starter profile.
+    settings.synthesis_model.clear();
+    settings.dit = if request.xl && settings.dit == "xl" {
+        "xl"
+    } else {
+        "standard"
+    }
+    .into();
     settings.vae_chunk = hw.vae_chunk;
     settings.mode = "single".into();
     let fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
