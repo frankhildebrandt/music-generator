@@ -14,6 +14,8 @@ Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) ü
 
 Voraussetzungen: Mac mit Apple Silicon (M1 oder neuer), mindestens 8 GB Arbeitsspeicher, 7–11 GB frei.
 
+**Intel-Macs** gehen nur eingeschränkt: Der Installer kompiliert den Modellserver selbst (etwa 2 Minuten, braucht die Xcode-Kommandozeilenwerkzeuge), und alles rechnet auf der CPU, weil die Intel-Grafik zu wenig Speicher hat. Gemessen auf einem MacBook Pro mit Core i5 und 8 GB: ein 30-Sekunden-Song brauchte etwa 13 Minuten, ein 10-Sekunden-Song etwa 1,5 Minuten. Längere Songs laufen leicht in die 30-Minuten-Grenze (Zahnrad › Timeout). Der Installer dauert dort rund 45 Minuten.
+
 ```bash
 git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
 open ~/MusicGenerator/Mac-Install.command
@@ -44,6 +46,7 @@ Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acest
 - **Music Generator OFF** beendet alles und schließt die Browser-Tabs
 - Oberfläche in zwölf Sprachen (Auswahl oben rechts): Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Türkisch, Polnisch, Russisch, Ukrainisch, Japanisch, Chinesisch. Korrekturen an `static/i18n.js` sind willkommen.
 - **Export:** Unter Zahnrad › Export wählst du, ob der Download (auch das ZIP) als **WAV** (verlustfrei, wie erzeugt) oder als **MP3** (192 kbit/s, deutlich kleiner) kommt. Die Bibliothek behält immer das WAV; MP3 wird beim Download daraus gemacht und zwischengespeichert (`data/export`, darf gelöscht werden).
+- **Länge:** 10 Sekunden bis 10 Minuten (Obergrenze der Klangerzeugung). Ab 5 Minuten dauert es lange und braucht viel Speicher: Gemessen mit Standard-Klangmodell und 80 Iterationen brauchte ein 10-Minuten-Song auf einem Mac mit 16 GB etwa 21 Minuten, auf einer GTX 1060 (6 GB) etwa 32 Minuten. Auf 8-GB-Rechnern und Intel-Macs ist das ungetestet.
 - **Idee aufnehmen** (Mikrofon-Knopf oben in der Kopfzeile): gedrückt halten, 5 bis 30 Sekunden summen, pfeifen oder singen. Die App beschreibt die Aufnahme und füllt Prompt, Tempo, Tonart und Takt aus; Stil und Länge bestimmst du. Die Melodie selbst wird nicht übernommen. Es wird nichts gespeichert, alles läuft lokal.
 
 ### Bedienung mit Screenreader
@@ -84,7 +87,7 @@ Das Skript zeigt, was es entfernt, und fragt vorher. Es beendet die Server, lös
 
 ## Linux (Arch Linux & Derivate)
 
-Der automatische Installer ist **nur für Arch Linux** und Derivate (CachyOS, EndeavourOS, Manjaro), er nutzt `pacman`. Auf Ubuntu/Debian/Fedora bitte die Einrichtung [von Hand](#andere-linux-distributionen-von-hand) unten nehmen (nur CPU: statt `buildcpu.sh` geht auch `cmake -S . -B build -DGGML_NATIVE=ON && cmake --build build -j`). **Ubuntu (experimentell, von Jano69, noch nicht auf echter Hardware getestet):** `./ubuntu.sh --dry-run` zeigt den Ablauf, `./ubuntu.sh --install-only` installiert (apt; CUDA nur mit vorhandenem Toolkit, sonst `--backend cpu`), `./ubuntu.sh --start` startet. Für Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
+Der automatische Installer ist **nur für Arch Linux** und Derivate (CachyOS, EndeavourOS, Manjaro), er nutzt `pacman`. Auf Ubuntu/Debian/Fedora bitte die Einrichtung [von Hand](#andere-linux-distributionen-von-hand) unten nehmen (nur CPU: statt `buildcpu.sh` geht auch `cmake -S . -B build -DGGML_NATIVE=ON && cmake --build build -j`). **Ubuntu und Linux Mint (experimentell, von Jano69, mit Anregungen aus der Community, noch nicht auf echter Hardware von uns getestet):** `./ubuntu.sh --dry-run` zeigt den Ablauf, `./ubuntu.sh --install-only` installiert über apt und wählt das Backend selbst: CUDA bei NVIDIA mit installiertem Toolkit, Vulkan bei AMD-, Intel- oder NVIDIA-Grafik mit Vulkan-Treiber, sonst CPU. Mit `--backend cuda|vulkan|cpu` lässt es sich vorgeben (Vulkan installiert dafür die Pakete `libvulkan-dev`, `mesa-vulkan-drivers`, `glslc`, `libshaderc-dev`, `spirv-headers`). `./ubuntu.sh --start` startet. Für Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
 
 ```bash
 git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator

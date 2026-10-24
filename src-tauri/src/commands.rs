@@ -186,6 +186,7 @@ pub fn get_settings(state: Desktop<'_>) -> Result<Value> {
     let mut result = serde_json::to_value(&settings)?;
     result["songs_dir_default"] = json!(state.db.root.join("songs"));
     result["mp3_available"] = json!(crate::audio_export::codec_path(&state.resources).is_file());
+    result["cpu_only"] = json!(crate::hardware::cpu_only());
     result["dit_xl_available"] = json!(PathBuf::from(settings.models_dir)
         .join("acestep-v15-xl-sft-Q8_0.gguf")
         .is_file());
@@ -258,14 +259,10 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
     app.asset_protocol_scope()
         .allow_directory(&settings.songs_dir, false)
         .map_err(|e| message(e.to_string()))?;
-    // Recreate the client so timeout changes apply to the next operation.
+    // Apply timing changes without losing the synthesis log used by diagnostics.
     if let Some(engine) = state.engine.lock().await.as_mut() {
-        engine.client = crate::engine::client::EngineClient::new(
-            engine.client.synth.clone(),
-            engine.client.lm.clone(),
-            settings.poll_interval,
-            settings.timeout_minutes,
-        )?;
+        engine.client.poll = std::time::Duration::from_secs_f64(settings.poll_interval);
+        engine.client.timeout = std::time::Duration::from_secs_f64(settings.timeout_minutes * 60.0);
     }
     state.changed(&app);
     Ok(settings)

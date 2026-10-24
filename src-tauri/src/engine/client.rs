@@ -1,8 +1,12 @@
-use super::progress::{stream_logs, Progress};
+use super::{
+    diagnostics::SynthesisLog,
+    progress::{stream_logs, Progress},
+};
 use crate::error::{message, Error, Result};
 use serde_json::{json, Value};
 use std::{
     collections::HashSet,
+    path::PathBuf,
     time::{Duration, Instant},
 };
 use tokio_util::sync::CancellationToken;
@@ -14,6 +18,7 @@ pub struct EngineClient {
     pub lm: String,
     pub poll: Duration,
     pub timeout: Duration,
+    pub synth_log: Option<PathBuf>,
 }
 
 impl EngineClient {
@@ -27,6 +32,7 @@ impl EngineClient {
             lm,
             poll: Duration::from_secs_f64(poll),
             timeout: Duration::from_secs_f64(timeout * 60.0),
+            synth_log: None,
         })
     }
 
@@ -45,9 +51,10 @@ impl EngineClient {
             Value::Number(n) => n.to_string(),
             _ => return Err(message("Engine returned no job ID")),
         };
+        let started = Instant::now();
         let outcome = tokio::select! {
             _ = cancel.cancelled() => Err(Error::Cancelled),
-            r = tokio::time::timeout(self.timeout, self.track(base, &jid, endpoint, &progress)) => r.unwrap_or_else(|_| Err(message(format!("{endpoint}: time limit exceeded")))),
+            r = tokio::time::timeout(self.timeout, self.track(base, &jid, endpoint, &progress)) => r.unwrap_or_else(|_| Err(timeout_error(endpoint, started.elapsed()))),
         };
         if outcome.is_err() {
             let _ = self
@@ -201,9 +208,14 @@ impl EngineClient {
                 "Language model returned no audio codes. Run the hardware test again.",
             ));
         }
+        // The synthesis model supports at most 600 seconds (3000 codes).
+        // Trim occasional LM overproduction only in this outgoing payload;
+        // saved song parameters remain unchanged.
+        limit_audio_codes(&mut enriched, params);
         enriched["output_format"] = json!("wav16");
         enriched["synth_model"] = json!(dit);
-        let (ctype, body) = self
+        let log = self.synth_log.as_deref().map(SynthesisLog::capture);
+        let result = self
             .operation(
                 &self.synth,
                 "synth",
@@ -213,8 +225,17 @@ impl EngineClient {
                 cancel,
                 progress,
             )
-            .await?;
-        let (audio, extension) = extract_audio(&ctype, &body)?;
+            .await
+            .and_then(|(ctype, body)| extract_audio(&ctype, &body));
+        let (audio, extension) = result.map_err(|error| {
+            if matches!(error, Error::Cancelled | Error::EngineTimeout { .. }) {
+                return error;
+            }
+            log.as_ref()
+                .and_then(|log| log.hint(&error.to_string()))
+                .map(message)
+                .unwrap_or(error)
+        })?;
         Ok((audio, extension, enriched))
     }
 
@@ -233,6 +254,42 @@ impl EngineClient {
             .operation(&self.lm, "understand", request, cancel, |_| {})
             .await?;
         extract_json(&ctype, &body)
+    }
+}
+
+fn timeout_error(endpoint: &str, elapsed: Duration) -> Error {
+    Error::EngineTimeout {
+        operation: match endpoint {
+            "lm" => "LM",
+            "synth" => "Synthese / Synthesis",
+            "understand" => "Analyse / Analysis",
+            other => other,
+        }
+        .to_owned(),
+        minutes: (elapsed.as_secs_f64() / 60.0).round().max(1.0) as u64,
+    }
+}
+
+pub fn limit_audio_codes(enriched: &mut Value, params: &Value) {
+    let seconds = params["duration"]
+        .as_f64()
+        .filter(|n| n.is_finite() && *n > 0.0)
+        .or_else(|| {
+            enriched["duration"]
+                .as_f64()
+                .filter(|n| n.is_finite() && *n > 0.0)
+        })
+        .unwrap_or(600.0)
+        .min(600.0);
+    let limit = (seconds * 5.0).round() as usize;
+    let codes: Vec<_> = enriched["audio_codes"]
+        .as_str()
+        .unwrap_or("")
+        .split(',')
+        .filter(|code| !code.trim().is_empty())
+        .collect();
+    if codes.len() > limit {
+        enriched["audio_codes"] = json!(codes[..limit].join(","));
     }
 }
 
@@ -322,4 +379,29 @@ pub fn selftest_ok(result: &Value) -> bool {
         && !result["keyscale"].as_str().unwrap_or("").is_empty()
         && (30..=70).contains(&codes.len())
         && distinct.len() as f64 / codes.len().max(1) as f64 > 0.3
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timeout_includes_stage_rounded_minutes_and_settings_guidance() {
+        for (seconds, minutes) in [(0.08, 1), (60.0, 1), (90.0, 2), (1800.0, 30)] {
+            for (endpoint, stage) in [
+                ("lm", "LM"),
+                ("synth", "Synthese"),
+                ("understand", "Analyse"),
+            ] {
+                let error = timeout_error(endpoint, Duration::from_secs_f64(seconds));
+                assert!(matches!(error, Error::EngineTimeout { minutes: n, .. } if n == minutes));
+                let text = error.to_string();
+                assert!(text.contains(stage));
+                assert!(text.contains(&format!("nach {minutes} Min.")));
+                assert!(text.contains("Timeout-Zeit erhöhen"));
+                assert!(text.contains("Raise the timeout in the settings"));
+                assert_eq!(serde_json::to_value(&error).unwrap(), json!(text));
+            }
+        }
+    }
 }

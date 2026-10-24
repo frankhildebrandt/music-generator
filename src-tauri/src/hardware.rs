@@ -10,6 +10,15 @@ pub struct Hardware {
     pub recommended_lm: String,
     pub vae_chunk: Option<u32>,
     pub platform: &'static str,
+    pub cpu_only: bool,
+}
+
+pub fn cpu_only_target(os: &str, arch: &str) -> bool {
+    os == "macos" && arch == "x86_64"
+}
+
+pub fn cpu_only() -> bool {
+    cpu_only_target(std::env::consts::OS, std::env::consts::ARCH)
 }
 
 pub fn recommend(ram: u64, vram: Option<u64>) -> (&'static str, Option<u32>) {
@@ -71,6 +80,7 @@ pub fn inspect() -> Hardware {
         recommended_lm: lm.into(),
         vae_chunk: chunk,
         platform: std::env::consts::OS,
+        cpu_only: cpu_only(),
     }
 }
 
@@ -92,8 +102,14 @@ fn output(program: &str, args: &[&str]) -> Option<String> {
 fn adapter() -> (String, Option<u64>) {
     if cfg!(target_os = "macos") {
         let chip = output("/usr/sbin/sysctl", &["-n", "machdep.cpu.brand_string"])
-            .unwrap_or_else(|| "Apple Silicon".into());
-        return (format!("{chip} · Metal / CPU"), None);
+            .unwrap_or_else(|| std::env::consts::ARCH.into());
+        return (
+            format!(
+                "{chip} · {}",
+                if cpu_only() { "CPU" } else { "Metal / CPU" }
+            ),
+            None,
+        );
     }
     if let Some(text) = output(
         "nvidia-smi",

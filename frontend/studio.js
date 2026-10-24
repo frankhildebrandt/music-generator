@@ -4,6 +4,9 @@ import { measureMelody, describeIdea, toWav } from "./melody";
 import { backend } from "./backend";
 import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
+import { samplingForSong } from "./song-sampling";
+import { songErrorKey } from "./song-errors";
+import { generationSeconds } from "./song-timing";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { startLibrarySync } from "./library-sync";
 import { progressText, progressBar } from "./progress";
@@ -36,7 +39,7 @@ let editingId = null;   // id des Songs, dessen Titel gerade bearbeitet wird
 let played = new Set();
 try { played = new Set(JSON.parse(localStorage.getItem("played") || "[]")); } catch {}
 const markPlayed = (id) => { played.add(id); try { localStorage.setItem("played", JSON.stringify([...played])); } catch {} };
-const genTime = (s) => { const t = (Date.parse(s.finished_at) - Date.parse(s.created_at)) / 1000; return isFinite(t) && t >= 0 ? fmt(t) : null; };
+const genTime = (s) => { const seconds = generationSeconds(s); return seconds === null ? null : fmt(seconds); };
 
 // Würfel: zufälliger Prompt. Sechs Bauformen von kurz bis lang, gespeist aus Stimmungen, Szenen, Besetzungen,
 // Produktion, Verlauf und ganzen Ideen; Gesang nur, wenn der Song nicht instrumental ist. Der Stil bleibt deine Wahl.
@@ -84,6 +87,7 @@ function updateSlider(box) {
   span.classList.toggle("small", Array.isArray(out));
   inp.setAttribute("aria-valuetext", box.dataset.fmt === "dur" ? t("vt_dur", Math.floor(v / 60), v % 60)
     : box.dataset.fmt === "bpm" ? (v <= min ? t("vt_auto") : `${v} BPM`) : span.textContent);
+  if (inp.name === "duration") $("#lenHint").hidden = v <= 300;   // ab 5:00 ehrlicher Hinweis: dauert lange, braucht viel Speicher
   if (inp.name === "variants") $("#genBtn").textContent = v > 1 ? t("generate_n", v) : t("generate");
 }
 const showDur = () => document.querySelectorAll(".slider").forEach(updateSlider);
@@ -174,8 +178,9 @@ function fillForm(s) {
   syncLyrics(); $("#lyricsBox").open = !form.instrumental.checked && !!(p.lyrics || "").trim();
   form.duration.value = p.duration || 90;
   form.bpm.value = p.bpm || form.bpm.min;
-  form.inference_steps.value = p.inference_steps || 50;
-  form.lm_temperature.value = p.lm_temperature ?? 0.85;   // ältere Songs liefen mit der Modell-Vorgabe
+  const sampling = samplingForSong(p);
+  form.inference_steps.value = sampling.inference_steps;
+  form.lm_temperature.value = sampling.lm_temperature;
   showDur();
   setSelect(form.keyscale, p.keyscale, true);
   setSelect(form.timesignature, p.timesignature);
@@ -440,10 +445,7 @@ function render() {
     .forEach((el) => el.setAttribute("aria-label", el.title));
 }
 function shortErr(msg = "") {
-  if (/nicht erreichbar/i.test(msg)) return t("err_offline");
-  if (/Codes/i.test(msg)) return t("err_codes");
-  if (/Zeitüberschreitung/i.test(msg)) return t("err_timeout");
-  return t("err_details");
+  return t(songErrorKey(msg));
 }
 
 $("#library").addEventListener("click", async (e) => {
@@ -681,6 +683,7 @@ $("#btnSettings").onclick = async () => {
   for (const k of ["timeout_minutes", "songs_dir", "dit", "lm_device", "export_format"]) sf[k].value = s[k];
   sf.export_format.querySelector("option[value=mp3]").disabled = !s.mp3_available;
   $("#expHint").hidden = s.mp3_available;
+  $("#settingsIntelHint").hidden = !s.cpu_only;
   sf.dit.querySelector('option[value="xl"]').disabled = !s.dit_xl_available;   // XL nur wählbar, wenn die Datei da ist
   $("#ditHint").hidden = s.dit_xl_available;
   sf.songs_dir.placeholder = s.songs_dir_default;   // Standard als Platzhalter, leer lassen = Standard
