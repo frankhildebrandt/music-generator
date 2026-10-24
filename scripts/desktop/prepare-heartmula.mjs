@@ -52,8 +52,18 @@ export async function prepareHeartmula() {
   }
   if(platform!=="windows") { await cp(path.join(source,"LICENSE"),path.join(heartFolder,"LICENSE-audio.cpp")); await cp(path.join(source,"external/ggml/LICENSE"),path.join(heartFolder,"LICENSE-ggml")); }
   else {
-    // The ACE-Step runtime carries the app-local MSVC redistributables.
-    const parent=path.dirname(heartFolder);for(const file of await files(parent))if(path.dirname(file)===parent&&/^(vcruntime140(?:_1)?|msvcp140(?:_[12])?|concrt140)\.dll$/i.test(path.basename(file)))await cp(file,path.join(heartFolder,path.basename(file)));
+    // Preserve the pinned package's matching CRT; fill only missing redistributables.
+    const parent=path.dirname(heartFolder);for(const file of await files(parent))if(path.dirname(file)===parent&&/^(vcruntime140(?:_1)?|msvcp140(?:_[12])?|concrt140)\.dll$/i.test(path.basename(file))&&!await exists(path.join(heartFolder,path.basename(file))))await cp(file,path.join(heartFolder,path.basename(file)));
+    // Vulkan is linked at process startup, even for CPU-only inference. Ship the
+    // loader app-locally so a clean Windows machine needs no runtime installer.
+    const runtime=path.join(cache,"vulkan-runtime.zip");await download(pin.windows_vulkan_url,runtime,pin.windows_vulkan_sha256);
+    const extracted=path.join(cache,"vulkan-runtime");await rm(extracted,{recursive:true,force:true});await mkdir(extracted,{recursive:true});
+    await run("tar.exe",["-xf",runtime,"-C",extracted]);
+    const components=await files(extracted);
+    const loader=components.find(f=>path.basename(f).toLowerCase()==="vulkan-1.dll"&&path.basename(path.dirname(f)).toLowerCase()==="x64");
+    const license=components.find(f=>path.basename(f)==="VulkanRT-License.txt");
+    if(!loader||!license)throw Error("Pinned Windows Vulkan loader/license missing");
+    await cp(loader,path.join(heartFolder,"vulkan-1.dll"));await cp(license,path.join(heartFolder,"LICENSE-Vulkan-Runtime.txt"));
   }
   if(platform!=="windows")for(const file of await files(path.join(source,"external")))if(/^(LICENSE|COPYING|NOTICE)/i.test(path.basename(file))){const dest=path.join(heartFolder,"licenses",path.relative(source,file));await mkdir(path.dirname(dest),{recursive:true});await cp(file,dest);}
   if(platform==="macos")await run("codesign",["--force","--sign","-","--entitlements",path.join(root,"src-tauri/Engine.entitlements"),path.join(heartFolder,exe)]);

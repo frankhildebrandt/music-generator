@@ -50,6 +50,7 @@ try {
   assert(app, "Application executable is missing");
   if (platform === "macos") await run("codesign", ["--verify", "--deep", "--strict", path.dirname(path.dirname(path.dirname(app)))]);
   if (platform === "windows") {
+    assert(await exists(path.join(engine,"heartmula/vulkan-1.dll")), "App-local HeartMuLa Vulkan loader is missing");
     assert(await exists(path.join(path.dirname(app), "WebView2/msedgewebview2.exe")), "Fixed WebView2 is missing");
     for (const dll of ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"]) {
       assert(await exists(path.join(engine, dll)), `Engine runtime ${dll} is missing`);
@@ -73,6 +74,8 @@ try {
     const bundle = path.dirname(path.dirname(path.dirname(app)));
     const minimum = execFileSync("/usr/libexec/PlistBuddy", ["-c", "Print :LSMinimumSystemVersion", path.join(bundle, "Contents/Info.plist")], { encoding: "utf8" }).trim();
     assert.equal(minimum, target.minimumSystemVersion);
+    const identifier = execFileSync("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleIdentifier", path.join(bundle, "Contents/Info.plist")], { encoding: "utf8" }).trim();
+    assert.equal(identifier, "de.alphatester.music-generator", "Unexpected package identifier");
     if (target.cpuOnly) assert(!extracted.some(file => /ggml-metal/i.test(path.basename(file))), "Intel bundle must not include a Metal backend");
     await verifyMacSandbox(app, engine);
   } else {
