@@ -9,6 +9,7 @@ pub struct Settings {
     pub lm_model: String,
     pub model_provider: String,
     pub synthesis_model: String,
+    pub model_profiles: std::collections::BTreeMap<String, crate::catalog::Selection>,
     pub dit: String,
     pub lm_device: String,
     pub export_format: String,
@@ -28,6 +29,7 @@ impl Default for Settings {
             lm_model: String::new(),
             model_provider: "ace-step".into(),
             synthesis_model: String::new(),
+            model_profiles: Default::default(),
             dit: "standard".into(),
             lm_device: "auto".into(),
             export_format: "wav".into(),
@@ -50,6 +52,7 @@ impl Settings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GenerateRequest {
+    pub heartmula_options: Option<crate::heartmula::Options>,
     pub model_selection: Option<crate::catalog::Selection>,
     pub prompt: String,
     pub style: String,
@@ -75,6 +78,7 @@ impl Default for GenerateRequest {
     fn default() -> Self {
         Self {
             model_selection: None,
+            heartmula_options: None,
             prompt: String::new(),
             style: String::new(),
             caption: String::new(),

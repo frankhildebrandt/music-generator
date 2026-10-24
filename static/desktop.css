@@ -40,6 +40,9 @@ html[data-platform=macos] .titlebar nav { display: none; }
 .title-model-card button { max-width: 100%; white-space: normal; }
 #modelProgress { width: 100%; accent-color: var(--accent2); }
 #modelFolder { opacity: .75; }
+body[data-provider=heartmula] #advBox .field:has([name=inference_steps]), body[data-provider=heartmula] #advBox .field:has([name=lm_temperature]) { display: none; }
+#heartControls { margin-bottom: 20px; }
+#heartControls input { max-width: 100%; min-width: 0; }
 @media (max-width: 650px) { .picker-fields { grid-template-columns: minmax(0, 1fr); } .model-picker-actions button { flex: 1 1 auto; } .model-bar { flex-wrap: wrap; } }
 /* The webview is the viewport; each pane scrolls inside the available client area. */
 html, body { width: 100%; height: 100%; overflow: hidden; }

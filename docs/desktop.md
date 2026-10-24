@@ -25,7 +25,7 @@ These first builds are unsigned test builds. macOS Gatekeeper and Windows SmartS
 
 ## Automatic song titles
 
-Leave the title empty to name the finished song with a shared local Qwen3-0.6B Q8 text model for ACE-Step. Actual generated lyrics take priority over the music prompt, including their language; instrumental songs use the prompt. Manual titles, later renames and saved generation parameters remain unchanged. Audio analysis no longer inserts a random title. The title dice still explicitly chooses a random title.
+Leave the title empty to name the finished song with a shared local Qwen3-0.6B Q8 text model, for both ACE-Step and HeartMuLa. Actual generated lyrics take priority over the music prompt, including their language; instrumental songs use the prompt. Manual titles, later renames and saved generation parameters remain unchanged. Audio analysis no longer inserts a random title. The title dice still explicitly chooses a random title.
 
 The assistant downloads the approximately 640 MB title model alongside the chosen music models. Existing installations keep their saved fast startup: download/verify the title model separately in the ModelPicker, or let the first blank-title job fetch it. Download failures occur before music generation and can be retried; cancellation and partial downloads use the same checksum-verified resume path as music weights. Once downloaded, naming works offline. A manual title needs neither the title model nor its download. Downloading it does not change the active provider or sampling settings.
 
@@ -47,7 +47,7 @@ Settings → Language model runs on offers Automatic and CPU only. The choice is
 
 Settings → Export selects lossless WAV or MP3 at 192 kbit/s for both individual songs and ZIPs. Playback and the library keep their original audio. MP3 uses the bundled `mp3-codec` through the same owned-process supervisor. The parent copies source audio into temporary container storage before conversion; no external folder grants are needed by the converter. Converted copies are cached by source size/modification time and deleted with their song. Incomplete conversions never replace originals or existing export destinations. If conversion fails, choose WAV and inspect `logs/export.log`. The native save dialog uses the selected extension. All twelve languages include the upstream labels and conversion errors, with desktop-specific device-change instructions.
 
-ACE-Step shows **IT** for synthesis iterations and **VAR** for language-model variance/temperature. New forms start at 80 and 1.2; saved songs retain their previous values. More iterations take longer; higher variance gives freer output, lower variance follows the style and prompt more closely. Use the explicit ModelPicker recommendation for other families, such as Turbo.
+ACE-Step shows **IT** for synthesis iterations and **VAR** for language-model variance/temperature. New forms start at 80 and 1.2; saved songs retain their previous values. More iterations take longer; higher variance gives freer output, lower variance follows the style and prompt more closely. Use the explicit ModelPicker recommendation for other families, such as Turbo. HeartMuLa has separate codec and temperature controls.
 
 ## Data and updates
 
@@ -69,7 +69,7 @@ To import an existing library, use **Import existing library** in an empty insta
 
 Import copies SQLite/WAL data and songs, keeping original song parameters and source files. It does not merge populated libraries or change the previous installation. Existing models can be reused after checksum verification; authorize external model/song folders again through the native Browse dialog when required. The new app cannot silently inherit another identifier's sandbox permissions. Legacy browser-project imports still use the same button.
 
-The studio and Settings include a [ModelPicker](model-picker.md) for 52 ACE-Step synthesis weights and eight language weights, with a RAM-budget filter and verified resumable downloads. New jobs retain a model snapshot; existing songs keep their saved values.
+The studio and Settings include a [ModelPicker](model-picker.md) for 52 ACE-Step synthesis weights and eight language weights, with a RAM-budget filter and verified resumable downloads. [HeartMuLa](heartmula.md) adds two native integrated model/codec choices with its own parameters, downloads and local generation. New jobs retain a model snapshot; existing songs keep their saved values.
 
 The app does not write into the program bundle. Replace the complete app/bundle for updates; models and library remain available. Setup → Version checks releases in this fork and opens the platform's new bundle. The app does not perform Git pulls or replace its own running files. Setup → Models and hardware test can download another model or repeat the test. Changing the song folder copies files first and switches the saved path only after successful copying; queued/running songs must finish or be cancelled before moving.
 
