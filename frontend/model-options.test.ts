@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 import source from "../models/catalog.json";
+import title from "../models/title-model.json";
 import { modelOptions, profile } from "./model-options";
 import type { ModelCatalog, ModelSelection } from "./types";
 
 function catalog(): ModelCatalog {
-  return { ...source, models: source.models.map(m => ({ ...m, present: false, verified: false, partial_bytes: 0 })), selection: selection(), hardware: { ram_bytes: 8 * 1024 ** 3, gpu: "CPU", vram_bytes: null, recommended_lm: "0.6B", vae_chunk: 256, platform: "macos", cpu_only: true }, free_bytes: 50 * 1024 ** 3, models_dir: "/models", busy: false } as ModelCatalog;
+  return { ...source, title_model: {...title.model,verified:false,present:false,partial_bytes:0}, models: source.models.map(m => ({ ...m, present: false, verified: false, partial_bytes: 0 })), selection: selection(), hardware: { ram_bytes: 8 * 1024 ** 3, gpu: "CPU", vram_bytes: null, recommended_lm: "0.6B", vae_chunk: 256, platform: "macos", cpu_only: true }, free_bytes: 50 * 1024 ** 3, models_dir: "/models", busy: false } as ModelCatalog;
 }
 function selection(): ModelSelection { return { provider: "ace-step", synthesis: "acestep-v15-sft-Q8_0.gguf", language: "acestep-5Hz-lm-0.6B-Q8_0.gguf" }; }
 

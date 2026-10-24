@@ -11,7 +11,7 @@ export async function verifyMacSandbox(app, engine) {
   const parent = entitlements(app);
   assert(enabled(parent,"com.apple.security.app-sandbox"), "Main app is not sandboxed");
   assert(!enabled(parent,"com.apple.security.inherit"), "Main app must not use child inheritance");
-  for (const file of [path.join(path.dirname(app),"music-engine-supervisor"),path.join(engine,"ace-server"),path.join(engine,"mp3-codec")]) {
+  for (const file of [path.join(path.dirname(app),"music-engine-supervisor"),path.join(engine,"ace-server"),path.join(engine,"mp3-codec"),path.join(engine,"title/music-title")]) {
     const child = entitlements(file);
     assert(enabled(child,"com.apple.security.app-sandbox") && enabled(child,"com.apple.security.inherit"), "Engine helper must inherit the app sandbox");
     assert.equal((child.match(/<key>com\.apple\.security\./g) || []).length, 2, "Child must have only the two inheritance entitlements");

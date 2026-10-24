@@ -14,6 +14,7 @@ export const backend = {
   estimate: (request: SetupRequest) => command<{ missing_bytes: number; free_bytes: number }>("setup_estimate", { request }),
   cancelSetup: () => command<void>("cancel_setup"),
   modelCatalog: () => command<ModelCatalog>("model_catalog"),
+  downloadTitleModel: () => command<void>("download_title_model"),
   useModels: (selection: ModelSelection) => command<ModelSelection>("use_models", { selection }),
   cancelModelDownload: () => command<void>("cancel_model_download"),
   importLibrary: (root: string) => command<{ songs: number; models_dir: string }>("import_library", { root }),

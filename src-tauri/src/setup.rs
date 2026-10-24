@@ -26,27 +26,31 @@ pub struct SetupRequest {
 }
 
 pub fn plan(request: &SetupRequest) -> Result<Vec<(manifest::Model, String)>> {
-    if let Some(selection) = &request.selection {
+    let mut selected = if let Some(selection) = &request.selection {
         if selection.provider != "heartmula" {
             return Err(message("Invalid setup provider"));
         }
         let catalog = crate::catalog::catalog();
-        return Ok(catalog
+        catalog
             .required(selection)?
             .into_iter()
             .map(|m| {
                 let url = m.url(&catalog);
                 (m.download(), url)
             })
-            .collect());
-    }
-    Ok(manifest::selected(&request.lm, request.xl)?
-        .into_iter()
-        .map(|m| {
-            let url = format!("{}/{}", manifest::manifest().base_url, m.file);
-            (m, url)
-        })
-        .collect())
+            .collect::<Vec<_>>()
+    } else {
+        manifest::selected(&request.lm, request.xl)?
+            .into_iter()
+            .map(|m| {
+                let url = format!("{}/{}", manifest::manifest().base_url, m.file);
+                (m, url)
+            })
+            .collect::<Vec<_>>()
+    };
+    let title = crate::titles::manifest();
+    selected.push((title.model, title.url));
+    Ok(selected)
 }
 
 pub fn fingerprint(lm: &str, gpu: &str) -> String {
@@ -162,6 +166,7 @@ async fn configure_inner(
         })
         .await?;
     }
+    crate::titles::probe(&state.resources, cancel).await?;
     let mut settings = state.db.settings()?;
     if Path::new(&settings.songs_dir) != songs && state.db.busy()? {
         return Err(message(

@@ -253,7 +253,7 @@ impl Database {
         } else {
             "acestep_cpp"
         };
-        Ok(self.lock().execute("UPDATE songs SET status='done',message=NULL,file=?1,result_meta=?2,engine=?5,finished_at=?3 WHERE id=?4 AND status='running'", params![file, meta.to_string(), now(), sid, engine])? == 1)
+        Ok(self.lock().execute("UPDATE songs SET status='done',message=NULL,file=?1,result_meta=?2,engine=?5,finished_at=?3,title=CASE WHEN title IS NULL OR trim(title)='' THEN COALESCE(?6,title) ELSE title END WHERE id=?4 AND status='running'", params![file, meta.to_string(), now(), sid, engine, meta["generated_title"].as_str().and_then(nonempty)])? == 1)
     }
 
     pub fn fail(&self, sid: &str, error: &str) -> Result<()> {

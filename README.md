@@ -22,6 +22,7 @@ Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind 
 - Wahlweise MP3-Export mit 192 kbit/s für Einzeldateien und ZIPs; die Bibliothek behält das Original-WAV.
 - Songlänge von 10 Sekunden bis 10 Minuten; oberhalb von fünf Minuten Hinweise auf hohen Zeit- und Speicherbedarf. Lange Songs sind auf Intel-Macs und Rechnern mit 8 GB noch nicht praktisch geprüft.
 - Sprachmodell wahlweise automatisch oder nur auf CPU; die Synthese kann weiterhin die Grafikkarte nutzen.
+- **Automatische Songtitel:** Titel leer lassen; ein kleines gemeinsames lokales Textmodell benennt den fertigen Song für ACE-Step und HeartMuLa. Lyrics und deren Sprache haben Vorrang vor dem Prompt. Rund 640 MB zusätzlicher Download im Assistenten oder ModelPicker; danach offline. Eigene Titel und vorhandene Songs bleiben erhalten.
 - Fortsetzbare Modelldownloads mit SHA-256-Prüfung; Sprachmodelle 0.6B, 1.7B und 4B, optional XL.
 - Übernahme einer alten Installation; Originaldaten bleiben erhalten.
 - Modelle und Songs außerhalb der App, mit wählbaren Speicherorten. Updates durch Austausch des Bundles.

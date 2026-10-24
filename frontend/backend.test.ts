@@ -31,6 +31,8 @@ describe("desktop contracts", () => {
     expect(invoke).toHaveBeenLastCalledWith("use_models", { selection });
     await backend.generate({ prompt: "piano", model_selection: selection, inference_steps: 8 });
     expect(invoke).toHaveBeenLastCalledWith("generate", { request: { prompt: "piano", model_selection: selection, inference_steps: 8 } });
+    await backend.downloadTitleModel();
+    expect(invoke).toHaveBeenLastCalledWith("download_title_model", undefined);
     await backend.cancelModelDownload();
     expect(invoke).toHaveBeenLastCalledWith("cancel_model_download", undefined);
   });

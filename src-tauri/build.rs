@@ -65,6 +65,26 @@ fn main() {
             "HeartMuLa executable missing from resources"
         );
         println!("cargo:rerun-if-changed=../models/heartmula-engine.json");
+        let title: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(root.join("title/TITLE_RUNTIME.json"))
+                .expect("Title runtime missing: run npm run engine:prepare"),
+        )
+        .expect("Invalid title runtime provenance");
+        let pin: serde_json::Value =
+            serde_json::from_str(include_str!("../models/title-model.json"))
+                .expect("Invalid title model pin");
+        assert_eq!(title["revision"], pin["engine"]["revision"]);
+        assert_eq!(title["platform"], metadata["platform"]);
+        assert_eq!(title["arch"], metadata["arch"]);
+        assert!(
+            files.contains_key(if platform == "windows" {
+                "title/music-title.exe"
+            } else {
+                "title/music-title"
+            }),
+            "Title executable missing from resources"
+        );
+        println!("cargo:rerun-if-changed=../models/title-model.json");
         for (name, checksum) in files {
             assert!(
                 !name.split('/').any(|p| p == "..") && !std::path::Path::new(name).is_absolute(),

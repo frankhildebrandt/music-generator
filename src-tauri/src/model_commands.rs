@@ -34,6 +34,7 @@ pub fn model_catalog(state: State<'_, Arc<AppState>>) -> Result<Value> {
             })
             .collect(),
     );
+    result["title_model"] = crate::titles::status(root, &verifier);
     result["selection"] = json!(Selection::from_settings(&settings));
     result["profiles"] = json!(settings.model_profiles);
     result["hardware"] = json!(crate::hardware::inspect());
@@ -98,4 +99,35 @@ pub fn cancel_model_download(state: State<'_, Arc<AppState>>) {
     if let Some(cancel) = state.setup_cancel.lock().unwrap().as_ref() {
         cancel.cancel();
     }
+}
+
+/// Shared auxiliary model; installing it never switches the active music profile.
+#[tauri::command]
+pub async fn download_title_model(state: State<'_, Arc<AppState>>, app: AppHandle) -> Result<()> {
+    let _operation = state
+        .operation
+        .try_lock()
+        .map_err(|_| message("Please wait for the current generation, analysis or download"))?;
+    let settings = state.db.settings()?;
+    if !settings.setup_complete {
+        return Err(message("Complete the first-run assistant first"));
+    }
+    let cancel = state.shutdown.child_token();
+    *state.setup_cancel.lock().unwrap() = Some(cancel.clone());
+    state.stop_engine().await;
+    let outcome = crate::titles::install(
+        &state.db.root,
+        Path::new(&settings.models_dir),
+        &cancel,
+        |p| {
+            let _ = app.emit("model-download-progress", p);
+        },
+    )
+    .await;
+    *state.setup_cancel.lock().unwrap() = None;
+    if !state.shutdown.is_cancelled() {
+        state.restore_setup()?;
+    }
+    let _ = app.emit("models-changed", ());
+    outcome
 }

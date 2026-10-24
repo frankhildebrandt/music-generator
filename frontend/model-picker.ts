@@ -96,6 +96,12 @@ function render(): void {
   picker("modelRamWarning").hidden = planned || state.compatible;
   picker("modelCpuHint").hidden = planned || !catalog.hardware.cpu_only;
   picker("modelDependencies").textContent = heart?t("heart_integrated"):planned ? "" : `${t("picker_dependencies")}: ${state.models.filter(m => m.role === "dependency").map(m => `${m.file} (${m.verified ? t("picker_installed") : m.present ? t("picker_verify") : t("picker_missing")})`).join(" · ")}`;
+  const title=catalog.title_model;
+  picker("titleModelStatus").textContent=`Qwen3 0.6B Q8 · ${bytes(title.estimated_bytes)} · ${t(title.verified?"picker_installed":title.present?"picker_verify":"picker_missing")}`;
+  const titleButton=picker<HTMLButtonElement>("titleModelDownload");
+  titleButton.textContent=t(title.present?"title_model_verify":"title_model_download");
+  titleButton.hidden=title.verified;
+  titleButton.disabled=downloading||catalog.busy||(catalog.free_bytes!==null&&!title.present&&Math.max(0,title.estimated_bytes-title.partial_bytes)+64*1024**2>catalog.free_bytes);
   const apply = picker<HTMLButtonElement>("modelApply");
   apply.textContent = state.verified ? t("picker_use") : state.download ? t("picker_download_use") : t("picker_verify_use");
   const existing = draft.provider === catalog.selection.provider && draft.synthesis === catalog.selection.synthesis && draft.language === catalog.selection.language;
@@ -119,7 +125,7 @@ async function open(): Promise<void> {
   }
 }
 
-async function apply(): Promise<void> {
+async function apply(titleOnly = false): Promise<void> {
   downloading = true;
   document.body.dataset.modelDownload = "true";
   picker("modelError").textContent = "";
@@ -129,7 +135,8 @@ async function apply(): Promise<void> {
   picker("modelProgressText").textContent = t("desktop_verifying");
   render();
   try {
-    chosen = await backend.useModels({ ...draft });
+    if(titleOnly) await backend.downloadTitleModel();
+    else chosen = await backend.useModels({ ...draft });
     bar.max = 1; bar.value = 1;
     picker("modelProgressText").textContent = t("picker_selected");
   } catch (error) { picker("modelError").textContent = String(error); }
@@ -146,6 +153,7 @@ export async function initializeModelPicker(): Promise<void> {
   initialized = true;
   picker<HTMLButtonElement>("openModels").onclick = () => { void open(); };
   picker<HTMLButtonElement>("modelClose").onclick = () => dialog().close();
+  picker<HTMLButtonElement>("titleModelDownload").onclick = () => { void apply(true); };
   picker<HTMLButtonElement>("modelApply").onclick = () => { void apply(); };
   picker<HTMLButtonElement>("modelCancel").onclick = () => { void backend.cancelModelDownload().catch(error => { picker("modelError").textContent = String(error); }); };
   picker<HTMLButtonElement>("modelHardwareTest").onclick = () => { if (!downloading) { dialog().close(); document.dispatchEvent(new Event("manage-models")); } };
