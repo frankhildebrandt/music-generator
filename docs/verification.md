@@ -1,3 +1,7 @@
+# Native HeartMuLa follow-up — 0.2.9 development, 2026-10-24
+
+The published 0.2.8 files remain unchanged. The new native provider is documented in [heartmula.md](heartmula.md), including pinned runtime/model hashes and explicit verification limits. A genuine Q8_0 Metal run produced a nonempty 4.08-second stereo 48-kHz PCM WAV. Final native CI and in-app generation evidence are recorded in the PR. No Python/Node runtime was introduced.
+
 # ModelPicker follow-up — 0.2.8 development, 2026-10-24
 
 The published 0.2.7 assets below remain tied to their original source. The subsequent ModelPicker implementation is documented in [model-picker.md](model-picker.md). Local checks passed: TypeScript/Vite, ESLint, 20 frontend tests, one Node build-policy test, 53 Rust tests on Apple Silicon, Rustfmt and Clippy with warnings as errors. Additional native CI results are recorded in the PR after the build completes. Browser checks use simulated Tauri responses and cover 1440×960 / 500×800 layouts, download error/cancel/retry and selection persistence without changing sampling. They do not replace real inference on each target.

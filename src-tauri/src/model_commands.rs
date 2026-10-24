@@ -35,6 +35,7 @@ pub fn model_catalog(state: State<'_, Arc<AppState>>) -> Result<Value> {
             .collect(),
     );
     result["selection"] = json!(Selection::from_settings(&settings));
+    result["profiles"] = json!(settings.model_profiles);
     result["hardware"] = json!(crate::hardware::inspect());
     result["free_bytes"] = json!(fs2::available_space(root).ok());
     result["models_dir"] = json!(settings.models_dir);
@@ -57,6 +58,13 @@ pub async fn use_models(
     let settings = state.db.settings()?;
     if !settings.setup_complete {
         return Err(message("Complete the first-run assistant first"));
+    }
+    if selection.provider == "heartmula"
+        && !crate::heartmula::executable(&state.resources).is_file()
+    {
+        return Err(message(
+            "Bundled HeartMuLa engine is missing. Run npm run engine:prepare",
+        ));
     }
     if !catalog::compatible(&selection, &crate::hardware::inspect())?
         && selection != Selection::from_settings(&settings)

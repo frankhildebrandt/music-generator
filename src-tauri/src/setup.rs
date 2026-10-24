@@ -17,10 +17,36 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SetupRequest {
+    #[serde(default)]
+    pub selection: Option<crate::catalog::Selection>,
     pub lm: String,
     pub xl: bool,
     pub models_dir: String,
     pub songs_dir: String,
+}
+
+pub fn plan(request: &SetupRequest) -> Result<Vec<(manifest::Model, String)>> {
+    if let Some(selection) = &request.selection {
+        if selection.provider != "heartmula" {
+            return Err(message("Invalid setup provider"));
+        }
+        let catalog = crate::catalog::catalog();
+        return Ok(catalog
+            .required(selection)?
+            .into_iter()
+            .map(|m| {
+                let url = m.url(&catalog);
+                (m.download(), url)
+            })
+            .collect());
+    }
+    Ok(manifest::selected(&request.lm, request.xl)?
+        .into_iter()
+        .map(|m| {
+            let url = format!("{}/{}", manifest::manifest().base_url, m.file);
+            (m, url)
+        })
+        .collect())
 }
 
 pub fn fingerprint(lm: &str, gpu: &str) -> String {
@@ -96,7 +122,15 @@ async fn configure_inner(
     request: &SetupRequest,
     cancel: &CancellationToken,
 ) -> Result<Value> {
-    let selected = manifest::selected(&request.lm, request.xl)?;
+    let selected = plan(request)?;
+    if let Some(selection) = &request.selection {
+        if !crate::heartmula::executable(&state.resources).is_file() {
+            return Err(message("Bundled HeartMuLa engine is missing"));
+        }
+        if !crate::catalog::compatible(selection, &hardware::inspect())? {
+            return Err(message("HeartMuLa exceeds the estimated RAM budget"));
+        }
+    }
     let models = PathBuf::from(&request.models_dir);
     let songs = PathBuf::from(&request.songs_dir);
     if !models.is_absolute() || !songs.is_absolute() {
@@ -108,8 +142,8 @@ async fn configure_inner(
     std::fs::create_dir_all(&songs)?;
     let required: u64 = selected
         .iter()
-        .filter(|m| !models.join(&m.file).exists())
-        .map(|m| {
+        .filter(|(m, _)| !models.join(&m.file).exists())
+        .map(|(m, _)| {
             m.estimated_bytes.saturating_sub(
                 models
                     .join(format!("{}.part", m.file))
@@ -125,8 +159,7 @@ async fn configure_inner(
         .read_timeout(std::time::Duration::from_secs(60))
         .build()?;
     let mut verifier = ModelVerifier::open(&state.db.root);
-    for model in selected {
-        let url = format!("{}/{}", manifest::manifest().base_url, model.file);
+    for (model, url) in selected {
         download_model(&client, &url, &models, &model, &mut verifier, cancel, |p| {
             let _ = app.emit("setup-progress", p);
         })
@@ -156,8 +189,17 @@ async fn configure_inner(
     .into();
     settings.vae_chunk = hw.vae_chunk;
     settings.mode = "single".into();
+    if let Some(selection) = &request.selection {
+        if !crate::catalog::compatible(selection, &hw)? {
+            return Err(message("HeartMuLa exceeds the estimated RAM budget"));
+        }
+        selection.apply(&mut settings)?;
+    }
     let fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
-    if hw.cpu_only {
+    if settings.model_provider == "heartmula" {
+        let _ = app.emit("setup-stage", "starting");
+        crate::heartmula::probe(&state.resources, cancel).await?;
+    } else if hw.cpu_only {
         // The Intel engine contains no GPU backend. A GPU correctness benchmark is
         // inapplicable and can take minutes on older CPUs; verify server readiness.
         let _ = app.emit("setup-stage", "starting");

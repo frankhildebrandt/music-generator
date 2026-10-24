@@ -1,6 +1,7 @@
 export interface Settings {
   models_dir: string; songs_dir: string; lm_model: string; dit: "standard" | "xl";
   model_provider: string; synthesis_model: string;
+  model_profiles: Record<string,ModelSelection>;
   lm_device: "auto" | "cpu"; export_format: "wav" | "mp3"; mp3_available?: boolean;
   cpu_only?: boolean;
   poll_interval: number; timeout_minutes: number; mode: "single" | "split";
@@ -8,6 +9,7 @@ export interface Settings {
   songs_dir_default?: string; dit_xl_available?: boolean;
 }
 export interface Generation {
+  heartmula_options?: HeartOptions;
   model_selection?: ModelSelection;
   prompt?: string; style?: string; caption?: string; lyrics?: string; instrumental?: boolean;
   keep_caption?: boolean; title?: string; duration?: number; bpm?: number; keyscale?: string;
@@ -29,11 +31,12 @@ export interface Health { ok: boolean; error?: string; props?: { models?: Record
 export interface Update { available: boolean; current: string; latest?: string; url?: string; notes?: string }
 export interface Model { file: string; estimated_bytes: number; sha256: string; kind: string }
 export interface Bootstrap {
+  catalog: { models: Omit<CatalogModel,"verified"|"present"|"partial_bytes">[]; providers: ModelProvider[] };
   needs_setup: boolean; settings: Settings; version: string; data_dir: string; error: string | null;
   hardware: { ram_bytes: number; gpu: string; vram_bytes: number | null; recommended_lm: string; vae_chunk: number | null; platform: string; cpu_only: boolean };
   manifest: { version: number; base_url: string; models: Model[] };
 }
-export interface SetupRequest { lm: string; xl: boolean; models_dir: string; songs_dir: string }
+export interface SetupRequest { lm: string; xl: boolean; models_dir: string; songs_dir: string; selection?: ModelSelection }
 export interface DownloadProgress { file: string; phase: "downloading" | "verifying"; downloaded: number; total: number; bytes_per_second: number }
 export interface ModelSelection { provider: string; synthesis: string; language: string }
 export interface CatalogModel {
@@ -42,8 +45,15 @@ export interface CatalogModel {
   verified: boolean; present: boolean; partial_bytes: number;
 }
 export interface ModelCatalog {
+  profiles?: Record<string,ModelSelection>;
   version: number; revision: string; models: CatalogModel[];
-  providers: { id: string; name: string; status: "available" | "planned"; adapter: string | null; source: string }[];
+  providers: ModelProvider[];
   selection: ModelSelection; hardware: Bootstrap["hardware"]; free_bytes: number | null;
   models_dir: string; busy: boolean;
+}
+export interface HeartOptions { temperature: number; cfg_scale: number; top_k: number; codec_steps: number; codec_guidance: number }
+export interface ModelProvider {
+  id: string; name: string; status: "available" | "planned"; adapter: string | null; source: string;
+  integrated_language_model?: boolean; supports_analysis?: boolean; max_duration_seconds?: number;
+  memory_reserve_bytes?: number | null; default_synthesis?: string; default_language?: string;
 }

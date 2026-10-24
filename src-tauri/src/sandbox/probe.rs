@@ -46,6 +46,9 @@ pub fn run(forbidden: &Path) -> Result<()> {
         } else if engine.client.synth == engine.client.lm { return Err(message("CPU-only language model did not start a separate process")); }
         drop(engine);
         verify_exports(&resources, &root).await?;
+        let heart = crate::heartmula::probe(&resources,&CancellationToken::new()).await?;
+        if !heart.contains("[Desktop Sandbox] Unselected file access denied") { return Err(message("HeartMuLa sandbox enforcement was not confirmed")); }
+        println!("App Sandbox: native HeartMuLa runtime starts; unselected file access denied.");
         let log = std::fs::read_to_string(root.join("logs/ace-server.log"))?;
         if !log.contains("[Desktop Sandbox] Unselected file access denied") { return Err(message("Engine sandbox enforcement was not confirmed")); }
         println!("App Sandbox: unselected read/write denied; inherited engine read denied; container storage, loopback health and supervisor shutdown passed.");

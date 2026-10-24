@@ -12,3 +12,9 @@ Music Generator is distributed under the MIT license; see LICENSE.
 The GGUF models are downloaded separately from the pinned Hugging Face revision in models/manifest.json. Model cards and license information: https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF. Models are not included in the application download.
 
 Linux AppImage media support includes the GStreamer base/good plugins supplied by the build distribution. Additional proprietary codecs and GStreamer ugly plugins are not deliberately bundled.
+
+## HeartMuLa native provider
+
+- audio.cpp, Copyright 2026 ShugoAI LLC, Apache License 2.0: https://github.com/0xShug0/audio.cpp (pinned source and archive hashes in `models/heartmula-engine.json`). The packaged HeartMuLa CLI includes its upstream license and collected third-party notices; macOS additionally links this project's security-scoped bookmark bridge.
+- HeartMuLa-3B-happy-new-year and HeartCodec by the HeartMuLa contributors, Apache License 2.0: https://github.com/HeartMuLa/heartlib. Native GGUF packaging by audio-cpp: https://huggingface.co/audio-cpp/audio.cpp-gguf. Weights download separately through the verified model catalog; Python reference code is not part of the runtime.
+- ggml, MIT license: https://github.com/ggml-org/ggml. Additional native runtime dependency licenses are retained under the packaged HeartMuLa runtime's `licenses` directory.

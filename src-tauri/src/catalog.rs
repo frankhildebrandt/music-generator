@@ -17,6 +17,18 @@ pub struct Provider {
     pub status: String,
     pub adapter: Option<String>,
     pub source: String,
+    #[serde(default)]
+    pub integrated_language_model: bool,
+    #[serde(default)]
+    pub supports_analysis: bool,
+    #[serde(default)]
+    pub max_duration_seconds: u32,
+    #[serde(default)]
+    pub memory_reserve_bytes: Option<u64>,
+    #[serde(default)]
+    pub default_synthesis: String,
+    #[serde(default)]
+    pub default_language: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,9 +41,16 @@ pub struct Asset {
     pub estimated_bytes: u64,
     pub sha256: String,
     pub recommended_steps: Option<u32>,
+    #[serde(default)]
+    pub url: Option<String>,
 }
 
 impl Asset {
+    pub fn url(&self, catalog: &Catalog) -> String {
+        self.url
+            .clone()
+            .unwrap_or_else(|| format!("{}/{}", catalog.base_url, self.file))
+    }
     pub fn download(&self) -> Model {
         Model {
             file: self.file.clone(),
@@ -82,15 +101,26 @@ impl Selection {
 
     pub fn apply(&self, settings: &mut Settings) -> Result<()> {
         required(self)?;
+        let previous = Self::from_settings(settings);
+        if required(&previous).is_ok() {
+            settings
+                .model_profiles
+                .insert(previous.provider.clone(), previous);
+        }
+        settings
+            .model_profiles
+            .insert(self.provider.clone(), self.clone());
         settings.model_provider = self.provider.clone();
         settings.synthesis_model = self.synthesis.clone();
         settings.lm_model = self.language.clone();
-        settings.dit = if self.synthesis.contains("-xl-") {
-            "xl"
-        } else {
-            "standard"
+        if self.provider == "ace-step" {
+            settings.dit = if self.synthesis.contains("-xl-") {
+                "xl"
+            } else {
+                "standard"
+            }
+            .into();
         }
-        .into();
         Ok(())
     }
 }
@@ -102,12 +132,17 @@ pub fn required(selection: &Selection) -> Result<Vec<Asset>> {
 
 impl Catalog {
     pub fn required(&self, selection: &Selection) -> Result<Vec<Asset>> {
-        // Adding provider metadata does not enable a runtime. Future adapters dispatch here.
-        if selection.provider != "ace-step"
+        // Each available provider must have an explicitly implemented native adapter.
+        let adapter = match selection.provider.as_str() {
+            "ace-step" => "acestep.cpp",
+            "heartmula" => "audio.cpp",
+            _ => "",
+        };
+        if adapter.is_empty()
             || !self.providers.iter().any(|p| {
                 p.id == selection.provider
                     && p.status == "available"
-                    && p.adapter.as_deref() == Some("acestep.cpp")
+                    && p.adapter.as_deref() == Some(adapter)
             })
         {
             return Err(message(
@@ -121,10 +156,16 @@ impl Catalog {
                 .cloned()
                 .ok_or_else(|| message("Unknown model or incorrect model role"))
         };
-        let mut models = vec![
-            find(&selection.synthesis, "synthesis")?,
-            find(&selection.language, "language")?,
-        ];
+        let mut models = vec![find(&selection.synthesis, "synthesis")?];
+        if selection.provider == "heartmula" {
+            if !selection.language.is_empty() {
+                return Err(message(
+                    "HeartMuLa includes its own language model and HeartCodec",
+                ));
+            }
+        } else {
+            models.push(find(&selection.language, "language")?);
+        }
         models.extend(
             self.models
                 .iter()
@@ -170,7 +211,7 @@ pub async fn install_profile(
     for model in models {
         crate::download::download_model(
             &client,
-            &format!("{}/{}", catalog.base_url, model.file),
+            &model.url(catalog),
             root,
             &model.download(),
             &mut verifier,
@@ -190,7 +231,9 @@ pub async fn install_profile(
 /// A small dedicated GPU does not make a model incompatible: the engine supports CPU.
 pub fn memory_bytes(models: &[Asset]) -> u64 {
     let weights: u64 = models.iter().map(|m| m.estimated_bytes).sum();
-    let reserve = if models
+    let reserve = if models.iter().any(|m| m.provider == "heartmula") {
+        16
+    } else if models
         .iter()
         .any(|m| m.role == "synthesis" && m.file.contains("-xl-"))
     {

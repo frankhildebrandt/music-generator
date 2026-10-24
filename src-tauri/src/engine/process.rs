@@ -28,7 +28,7 @@ impl OwnedProcess {
         };
         let mut command = Command::new(executable);
         #[cfg(target_os = "macos")]
-        if let Some(index) = args.iter().position(|a| a == "--models") {
+        if let Some(index) = args.iter().position(|a| a == "--models" || a == "--model") {
             if let Some(models) = args.get(index + 1) {
                 command.env(
                     "MUSIC_MODEL_BOOKMARK",

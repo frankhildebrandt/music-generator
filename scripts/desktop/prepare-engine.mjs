@@ -3,12 +3,13 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { prepareHeartmula } from "./prepare-heartmula.mjs";
 import { architecture, download, engineRecipeHash, exists, files, hash, manifest, platform, recordHashes, root, run, target, verifyEngine } from "./common.mjs";
 
 export const engineFolder = path.join(root, "src-tauri/resources/engine");
 
 export async function prepareEngine() {
-  try { await verifyEngine(engineFolder); console.log("Engine resources verified."); return; } catch { /* Rebuild incomplete or changed resources. */ }
+  try { const {files: _files, ...proof} = await verifyEngine(engineFolder); await prepareHeartmula(); await recordHashes(engineFolder,proof); console.log("Engine resources verified."); return; } catch { /* Rebuild incomplete or changed resources. */ }
   const source = manifest.engines[platform];
   const cache = path.join(root, ".cache/desktop"); await mkdir(cache, { recursive: true });
   const work = await mkdtemp(path.join(tmpdir(), "music-engine-"));
@@ -54,6 +55,7 @@ export async function prepareEngine() {
       }
     }
     if (platform === "windows") await copyWindowsCrt();
+    await prepareHeartmula();
     await recordHashes(engineFolder, { platform, arch: architecture, revision: source.revision, source: source.url || source.repository, source_revision: source.source_revision || source.revision, archive_sha256: source.sha256 || null, sandbox_patch_sha256: platform === "macos" ? await hash(path.join(root,"scripts/desktop/engine-sandbox.mm")) : null, recipe_sha256: await engineRecipeHash() });
     await verifyEngine(engineFolder);
     console.log(`Prepared ${platform} engine ${source.revision}.`);

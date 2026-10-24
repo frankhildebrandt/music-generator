@@ -57,7 +57,7 @@ The current ad-hoc test signatures have no stable Developer ID identity. Replaci
 
 Earlier unsandboxed desktop test builds used `~/Library/Application Support/de.alphatester.music-generator/`. To retain that library, select that directory using the first-run import button; it copies the database and songs into an empty sandbox library and reuses verified models after authorization. Existing files remain in place. Legacy browser-project imports still use the same button.
 
-The studio and Settings include a [ModelPicker](model-picker.md) for 52 ACE-Step synthesis weights and eight language weights, with a RAM-budget filter and verified resumable downloads. Provider metadata prepares HeartMuLa without enabling its missing inference adapter. New jobs retain a model snapshot; existing songs keep their saved values.
+The studio and Settings include a [ModelPicker](model-picker.md) for 52 ACE-Step synthesis weights and eight language weights, with a RAM-budget filter and verified resumable downloads. [HeartMuLa](heartmula.md) adds two native integrated model/codec choices with its own parameters, downloads and local generation. New jobs retain a model snapshot; existing songs keep their saved values.
 
 The app does not write into the program bundle. Replace the complete app/bundle for updates; models and library remain available. Setup → Version checks releases in this fork and opens the platform's new bundle. The app does not perform Git pulls or replace its own running files. Setup → Models and hardware test can download another model or repeat the test. Changing the song folder copies files first and switches the saved path only after successful copying; queued/running songs must finish or be cancelled before moving.
 

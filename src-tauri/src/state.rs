@@ -61,6 +61,9 @@ impl AppState {
         settings: &Settings,
         cancel: &CancellationToken,
     ) -> Result<EngineClient> {
+        if settings.model_provider != "ace-step" {
+            return Err(message("Audio analysis is only available with ACE-Step. Choose ACE-Step in the ModelPicker"));
+        }
         let mut engine = self.engine.lock().await;
         if settings.setup_complete
             && !self.is_setting_up()
@@ -158,20 +161,40 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
                     serde_json::from_value(selection.clone())?;
                 selection.apply(&mut settings)?;
             }
-            let client = state.start_engine(&settings, &cancel).await?;
             let selection = crate::catalog::Selection::from_settings(&settings);
-            let (audio, ext, meta) = client
-                .generate(
+            let progress = |text: String| {
+                let _ = state.db.progress(&sid, &text);
+                state.changed(&app);
+            };
+            let (audio, ext, meta) = if selection.provider == "heartmula" {
+                state.stop_engine().await;
+                state.restore_setup()?;
+                if !crate::setup::models_valid_for(&state, &settings, &cancel).await? {
+                    return Err(message(
+                        "HeartMuLa model is missing or invalid. Open the ModelPicker",
+                    ));
+                }
+                crate::heartmula::generate(
+                    &state.resources,
+                    &state.db.root,
                     &params,
-                    &selection.language,
-                    &selection.synthesis,
+                    &settings,
                     &cancel,
-                    |text| {
-                        let _ = state.db.progress(&sid, &text);
-                        state.changed(&app);
-                    },
+                    progress,
                 )
-                .await?;
+                .await?
+            } else {
+                let client = state.start_engine(&settings, &cancel).await?;
+                client
+                    .generate(
+                        &params,
+                        &selection.language,
+                        &selection.synthesis,
+                        &cancel,
+                        progress,
+                    )
+                    .await?
+            };
             let dir = PathBuf::from(settings.songs_dir);
             tokio::fs::create_dir_all(&dir).await?;
             let filename = format!("{sid}.{ext}");
