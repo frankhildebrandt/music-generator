@@ -106,11 +106,8 @@ pub async fn configure(
         if !state.shutdown.is_cancelled()
             && models_valid(&state, &state.shutdown).await.unwrap_or(false)
         {
-            let previous = state.db.settings()?;
-            if state.start_engine(&previous, &state.shutdown).await.is_ok() {
-                state.ready.store(true, Ordering::SeqCst);
-                state.wake.notify_one();
-            }
+            // Both providers start lazily; HeartMuLa has no persistent ACE-Step server.
+            state.restore_setup()?;
         }
     }
     outcome
@@ -177,16 +174,6 @@ async fn configure_inner(
     let hw = hardware::inspect();
     settings.songs_dir = songs.to_string_lossy().into();
     settings.models_dir = models.to_string_lossy().into();
-    settings.lm_model = manifest::lm_file(&request.lm);
-    settings.model_provider = "ace-step".into();
-    // The wizard deliberately returns to the supported starter profile.
-    settings.synthesis_model.clear();
-    settings.dit = if request.xl && settings.dit == "xl" {
-        "xl"
-    } else {
-        "standard"
-    }
-    .into();
     settings.vae_chunk = hw.vae_chunk;
     settings.mode = "single".into();
     if let Some(selection) = &request.selection {
@@ -194,6 +181,20 @@ async fn configure_inner(
             return Err(message("HeartMuLa exceeds the estimated RAM budget"));
         }
         selection.apply(&mut settings)?;
+    } else {
+        // The wizard deliberately chooses an ACE-Step starter profile while
+        // remembering the previous provider selection before replacing it.
+        crate::catalog::Selection {
+            provider: "ace-step".into(),
+            synthesis: if request.xl && settings.dit == "xl" {
+                "acestep-v15-xl-sft-Q8_0.gguf"
+            } else {
+                "acestep-v15-sft-Q8_0.gguf"
+            }
+            .into(),
+            language: manifest::lm_file(&request.lm),
+        }
+        .apply(&mut settings)?;
     }
     let fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
     if settings.model_provider == "heartmula" {
