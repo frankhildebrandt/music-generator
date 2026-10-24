@@ -115,7 +115,7 @@ pub fn import_legacy(db: &Database, root: &Path) -> Result<Value> {
         )?;
         let imported = (|| -> Result<usize> {
             let tx = con.transaction()?;
-            let count = tx.execute("INSERT INTO songs SELECT id,group_id,created_at,finished_at,status,message,title,caption,lyrics,seed,params,result_meta,engine,file,favorite,folder_id FROM legacy.songs ORDER BY rowid", [])?;
+            let count = tx.execute("INSERT INTO songs(id,group_id,created_at,finished_at,status,message,title,caption,lyrics,seed,params,result_meta,engine,file,favorite,folder_id,started_at) SELECT id,group_id,created_at,finished_at,status,message,title,caption,lyrics,seed,params,result_meta,engine,file,favorite,folder_id,started_at FROM legacy.songs ORDER BY rowid", [])?;
             tx.execute(
                 "INSERT INTO folders SELECT id,name,created_at FROM legacy.folders",
                 [],

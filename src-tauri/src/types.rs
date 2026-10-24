@@ -96,6 +96,7 @@ pub struct Song {
     pub id: String,
     pub group_id: String,
     pub created_at: String,
+    pub started_at: Option<String>,
     pub finished_at: Option<String>,
     pub status: String,
     pub message: Option<String>,

@@ -4,11 +4,13 @@ import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { desktopTarget } from "./targets.mjs";
 
 export const root = fileURLToPath(new URL("../../", import.meta.url));
 export const manifest = JSON.parse(await readFile(path.join(root, "models/manifest.json"), "utf8"));
 export const platform = process.platform === "darwin" ? "macos" : process.platform === "win32" ? "windows" : "linux";
 export const architecture = process.arch;
+export const target = desktopTarget(platform, architecture);
 
 export function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -49,11 +51,17 @@ export async function recordHashes(folder, metadata) {
   await writeFile(path.join(folder, "VERSION.desktop.json"), JSON.stringify({ ...metadata, files: sums }, null, 2) + "\n");
 }
 
+export async function engineRecipeHash() {
+  const digest = createHash("sha256");
+  for (const name of ["prepare-engine.mjs", "targets.mjs"]) digest.update(await readFile(path.join(root, "scripts/desktop", name)));
+  return digest.digest("hex");
+}
+
 export async function verifyEngine(folder) {
   const provenance = JSON.parse(await readFile(path.join(folder, "VERSION.desktop.json"), "utf8"));
   if (provenance.platform !== platform || provenance.arch !== architecture || provenance.revision !== manifest.engines[platform].revision) throw new Error("Engine belongs to a different platform or revision");
   if (platform === "macos" && provenance.sandbox_patch_sha256 !== await hash(path.join(root,"scripts/desktop/engine-sandbox.mm"))) throw new Error("Engine sandbox bridge needs rebuilding");
-  if (platform === "macos" && provenance.recipe_sha256 !== await hash(path.join(root,"scripts/desktop/prepare-engine.mjs"))) throw new Error("Engine build recipe changed");
+  if (platform === "macos" && provenance.recipe_sha256 !== await engineRecipeHash()) throw new Error("Engine build recipe changed");
   const executable = platform === "windows" ? "ace-server.exe" : "ace-server";
   if (!provenance.files[executable]) throw new Error("Engine executable is missing from checksums");
   for (const [file, checksum] of Object.entries(provenance.files)) {

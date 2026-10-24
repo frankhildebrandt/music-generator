@@ -12,6 +12,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("{0}")]
     Http(#[from] reqwest::Error),
+    #[error("{operation}: Zeitüberschreitung nach {minutes} Min. In den Einstellungen (Zahnrad) die Timeout-Zeit erhöhen, besonders bei langen Songs. / Timeout after {minutes} min. Raise the timeout in the settings (gear), especially for long songs.")]
+    EngineTimeout { operation: String, minutes: u64 },
     #[error("Operation cancelled")]
     Cancelled,
 }

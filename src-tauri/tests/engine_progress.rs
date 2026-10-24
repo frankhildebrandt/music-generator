@@ -159,3 +159,61 @@ async fn engines_without_logs_still_finish_with_indeterminate_progress() {
         .all(|u| u.step.is_none() && u.total_steps.is_none()));
     server.abort();
 }
+
+#[tokio::test]
+async fn streaming_progress_preserves_timeout_guidance_and_job_cancellation() {
+    use futures_util::StreamExt;
+    use music_generator::error::Error;
+
+    let cancelled = Arc::new(AtomicU32::new(0));
+    let count = cancelled.clone();
+    let app = Router::new()
+        .route("/synth", post(|| async { Json(json!({"id":"pending"})) }))
+        .route(
+            "/logs",
+            get(|| async {
+                let first = futures_util::stream::once(async {
+                    Ok::<_, std::convert::Infallible>(
+                        "data: [Server] Job pending created (synth)\n\ndata: [DiT] Step 1/8\n\n",
+                    )
+                });
+                Response::builder()
+                    .header(CONTENT_TYPE, "text/event-stream")
+                    .body(Body::from_stream(
+                        first.chain(futures_util::stream::pending()),
+                    ))
+                    .unwrap()
+            }),
+        )
+        .route(
+            "/job",
+            get(|| async { Json(json!({"status":"running"})) }).post(move || {
+                count.fetch_add(1, Ordering::SeqCst);
+                async { Json(json!({"ok":true})) }
+            }),
+        );
+    let (mut client, server) = serve(app).await;
+    client.timeout = Duration::from_millis(250);
+    let updates = Mutex::new(Vec::new());
+    let error = client
+        .operation(
+            &client.synth,
+            "synth",
+            client.http.post(format!("{}/synth", client.synth)),
+            &CancellationToken::new(),
+            |update| updates.lock().unwrap().push(update),
+        )
+        .await
+        .unwrap_err();
+    assert!(matches!(error, Error::EngineTimeout { .. }));
+    assert!(error
+        .to_string()
+        .contains("Raise the timeout in the settings"));
+    assert_eq!(cancelled.load(Ordering::SeqCst), 1);
+    assert!(updates
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|u| u.step == Some(1) && u.total_steps == Some(8)));
+    server.abort();
+}

@@ -22,7 +22,7 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     element("#setupContent").innerHTML = `
       <form id="setupForm"><fieldset id="setupFields">
         <label class="field"><span class="lbl" data-i18n="language"></span><select id="setupLanguage"></select></label>
-        <section class="hardware-card"><h2 data-i18n="desktop_hardware"></h2><p id="hardwareInfo"></p></section>
+        <section class="hardware-card"><h2 data-i18n="desktop_hardware"></h2><p id="hardwareInfo"></p><p id="intelCpuHint" class="small" data-i18n="desktop_intel_cpu_hint" hidden></p></section>
         <section class="import-card"><button type="button" class="sek" id="importLibrary" data-i18n="desktop_import"></button><p class="small" data-i18n="desktop_import_hint"></p><p id="importStatus" role="status"></p></section>
         <label class="field"><span class="lbl" data-i18n="desktop_models_folder"></span><div class="path-picker"><input id="setupModels" required><button type="button" class="sek" data-setup-pick="setupModels" data-i18n="desktop_browse"></button></div></label>
         <label class="field"><span class="lbl" data-i18n="songs_dir"></span><div class="path-picker"><input id="setupSongs" required><button type="button" class="sek" data-setup-pick="setupSongs" data-i18n="desktop_browse"></button></div></label>
@@ -64,7 +64,7 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
       progress.value = payload.downloaded / Math.max(payload.total, 1);
       element("#setupProgressText").textContent = `${t(`desktop_${payload.phase}`)} ${payload.file} · ${bytes(payload.downloaded)} / ${bytes(payload.total)}${payload.bytes_per_second ? ` · ${(payload.bytes_per_second / 1024 ** 2).toFixed(1)} MiB/s` : ""}`;
     });
-    await listen<string>("setup-stage", ({ payload }) => { element<HTMLProgressElement>("#setupProgress").removeAttribute("value"); element("#setupProgressText").textContent = t(payload === "testing" ? "desktop_testing" : "desktop_cpu_fallback"); });
+    await listen<string>("setup-stage", ({ payload }) => { element<HTMLProgressElement>("#setupProgress").removeAttribute("value"); element("#setupProgressText").textContent = t(payload === "starting" ? "desktop_starting" : payload === "testing" ? "desktop_testing" : "desktop_cpu_fallback"); });
     initialized = true;
   }
   element<HTMLSelectElement>("#setupLanguage").value = LANG;
@@ -74,6 +74,7 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
   element<HTMLInputElement>("#setupXl").checked = data.settings.dit === "xl" || Boolean(data.settings.dit_xl_available);
   element("#setupBack").hidden = data.needs_setup;
   element("#hardwareInfo").textContent = `${bytes(data.hardware.ram_bytes)} RAM · ${data.hardware.gpu}${data.hardware.vram_bytes ? ` · ${bytes(data.hardware.vram_bytes)} VRAM` : ""}`;
+  element("#intelCpuHint").hidden = !data.hardware.cpu_only;
   element("#setupError").textContent = "";
   applyI18n(); await updateEstimate();
 }

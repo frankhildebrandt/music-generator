@@ -22,7 +22,7 @@ The stream protocol and step messages were checked against the pinned macOS/Linu
 
 ## Verification
 
-Automated coverage includes fragmented UTF-8/CRLF SSE lines, bounded buffering, old/wrong job rejection, invalid step counts, LM steps without totals, DiT/VAE phases, a real HTTP stream disconnect/reconnect, engines without `/logs`, completion/result handling, listener recovery, no library polling during healthy event delivery, overlapping snapshots and teardown. Existing engine cancellation and timeout tests continue to apply.
+Automated coverage includes fragmented UTF-8/CRLF SSE lines, bounded buffering, old/wrong job rejection, invalid step counts, LM steps without totals, DiT/VAE phases, a real HTTP stream disconnect/reconnect, engines without `/logs`, completion/result handling, listener recovery, no library polling during healthy event delivery, overlapping snapshots and teardown. A timeout during an active SSE stream must retain the typed timeout error, settings guidance and engine-job cancellation. Existing engine diagnostics, audio-code duration limits and queue timing tests continue to apply.
 
 Run:
 

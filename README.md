@@ -7,8 +7,11 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 | Plattform | Bundle |
 | --- | --- |
 | macOS 26+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
+| macOS 13.3+, Intel x64 (experimentell) | Eigenes DMG und ZIP, ausschließlich CPU |
 | Windows 10/11, x64 | ZIP mit EXE, Engine und WebView2 |
 | Linux, x64 | AppImage mit Vulkan/CPU-Engine |
+
+Intel-Macs verwenden das separate `macos-x64`-Bundle. Sprachmodell und Klangerzeugung rechnen auf der CPU; ein Song kann viele Minuten dauern. Mit 10 Sekunden, dem 0.6B-Sprachmodell und dem Standard-Klangmodell beginnen. Der Assistent prüft den Engine-Start und überspringt den GPU-Test. Native Builds werden auf macOS 15 geprüft; echte Generierung auf weiteren Intel-Macs und der Mindestversion bleibt manuell abzunehmen. Die Intel-/CPU-Hinweise des ursprünglichen Installers bleiben unter [docs/legacy/](docs/legacy/NOTICE.md) historische Dokumentation.
 
 Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind möglich. Downloads werden unter [Releases](https://github.com/frankhildebrandt/music-generator/releases) veröffentlicht; lokal gebaute Pakete liegen in `release/`.
 
@@ -16,6 +19,7 @@ Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind 
 - Echtzeit-Fortschritt mit Modellladephasen, Sprachmodell, gemessenen DiT-Schritten und VAE-Decodierung.
 - Mikrofonideen und Audioanalyse, Waveform-Player und native WAV-/TXT-/ZIP-Exporte.
 - Wahlweise MP3-Export mit 192 kbit/s für Einzeldateien und ZIPs; die Bibliothek behält das Original-WAV.
+- Songlänge von 10 Sekunden bis 10 Minuten; oberhalb von fünf Minuten Hinweise auf hohen Zeit- und Speicherbedarf. Lange Songs sind auf Intel-Macs und Rechnern mit 8 GB noch nicht praktisch geprüft.
 - Sprachmodell wahlweise automatisch oder nur auf CPU; die Synthese kann weiterhin die Grafikkarte nutzen.
 - Fortsetzbare Modelldownloads mit SHA-256-Prüfung; Sprachmodelle 0.6B, 1.7B und 4B, optional XL.
 - Übernahme einer alten Installation; Originaldaten bleiben erhalten.

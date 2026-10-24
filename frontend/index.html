@@ -83,8 +83,9 @@
       <div class="field"><span class="lbl" data-i18n="length">Länge</span>
         <div class="slider" data-fmt="dur">
           <div class="fill"></div><div class="knob"><span></span></div>
-          <input name="duration" type="range" min="10" max="300" step="5" value="90" aria-label="Länge" title="0:10 bis 5:00" data-i18n-aria="length" data-i18n-title="length_tip">
+          <input name="duration" type="range" min="10" max="600" step="5" value="90" aria-label="Länge" title="0:10 bis 10:00" data-i18n-aria="length" data-i18n-title="length_tip">
         </div>
+        <span class="small" id="lenHint" hidden aria-live="polite" data-i18n="len_long">Lange Songs brauchen viel Zeit und Speicher.</span>
       </div>
 
       <div class="field"><span class="lbl" title="Ganz links = Auto: Das Modell wählt das Tempo." data-i18n-title="bpm_tip">BPM</span>
@@ -110,16 +111,16 @@
 
       <details id="advBox">
         <summary data-i18n="advanced">Erweitert</summary>
-        <div class="field adv"><span class="lbl" title="Diffusionsschritte der Klangerzeugung. Mehr = langsamer, ab etwa 50 kaum noch hörbar besser (Modell-Vorgabe: 50)." data-i18n-title="iterations_tip" data-i18n="iterations">Iterationen</span>
+        <div class="field adv"><span class="lbl" title="Diffusionsschritte der Klangerzeugung. Mehr = langsamer, App-Standard: 80 (Modell-Vorgabe: 50)." data-i18n-title="iterations_tip" data-i18n="iterations">Iterationen</span>
           <div class="slider" data-fmt="int">
             <div class="fill"></div><div class="knob"><span></span></div>
-            <input name="inference_steps" type="range" min="10" max="100" step="5" value="50" aria-label="Iterationen" data-i18n-aria="iterations">
+            <input name="inference_steps" type="range" min="10" max="100" step="5" value="80" aria-label="Iterationen" data-i18n-aria="iterations">
           </div>
         </div>
-        <div class="field adv"><span class="lbl" title="Wie mutig das Sprachmodell den Song plant. Niedriger = vorhersehbar, höher = abwechslungsreicher, zu hoch = zerfahren (Modell-Vorgabe: 0.85)." data-i18n-title="variance_tip" data-i18n="variance">Varianz</span>
+        <div class="field adv"><span class="lbl" title="Wie mutig das Sprachmodell den Song plant. Niedriger = vorhersehbar, höher = abwechslungsreicher, zu hoch = zerfahren (App-Standard: 1.2; Modell-Vorgabe: 0.85)." data-i18n-title="variance_tip" data-i18n="variance">Varianz</span>
           <div class="slider" data-fmt="temp">
             <div class="fill"></div><div class="knob"><span></span></div>
-            <input name="lm_temperature" type="range" min="0.3" max="1.5" step="0.05" value="1" aria-label="Varianz" data-i18n-aria="variance">
+            <input name="lm_temperature" type="range" min="0.3" max="1.5" step="0.05" value="1.2" aria-label="Varianz" data-i18n-aria="variance">
           </div>
         </div>
         <div class="grid">
@@ -201,6 +202,7 @@
     <label class="field"><span class="lbl" title="Klingt der Song verzerrt oder schrecklich, hier „Nur CPU“ wählen. Das Sprachmodell rechnet dann auf dem Prozessor statt auf der Grafik." data-i18n-title="lm_dev_tip" data-i18n="lm_dev">Sprachmodell rechnet auf</span>
       <select name="lm_device"><option value="auto" data-i18n="lm_dev_auto">Automatisch</option><option value="cpu" data-i18n="lm_dev_cpu">Nur CPU</option></select>
       <span class="small" data-i18n="lm_dev_hint">Gilt ab der nächsten Generierung oder Analyse.</span>
+      <span class="small" id="settingsIntelHint" data-i18n="desktop_intel_cpu_hint" hidden></span>
     </label>
     <label class="field"><span class="lbl" data-i18n="timeout">Timeout (Min.)</span>
       <input name="timeout_minutes" type="number" min="1" max="600">

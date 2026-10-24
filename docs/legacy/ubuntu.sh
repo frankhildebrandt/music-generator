@@ -9,11 +9,12 @@ cd "$ROOT"
 ACTION=install; BACKEND=auto; LM_SIZE=1.7B; XL=0; YES=0; DRY=0; REBUILD=0; BROWSER=1; CPU_FALLBACK=0
 usage() { cat <<'HELP'
 Music Generator Ubuntu installer
-  ./ubuntu.sh [--install-only] [--yes] [--backend auto|cuda|cpu]
+  ./ubuntu.sh [--install-only] [--yes] [--backend auto|cuda|vulkan|cpu]
               [--lm 0.6B|1.7B|4B] [--xl] [--rebuild] [--cpu-fallback]
               [--dry-run] [--start|--stop|--status] [--no-browser] [--help]
 --dry-run plans operations without installing, downloading, deleting or starting anything.
 CUDA toolkit/driver must be installed separately (no automatic driver replacement).
+Vulkan (AMD/Intel graphics, or NVIDIA without CUDA toolkit): the Vulkan development packages are installed via apt.
 HELP
 }
 while (($#)); do
@@ -25,7 +26,7 @@ while (($#)); do
   --help|-h) usage; exit 0;; *) echo "Unknown option: $1" >&2; usage; exit 2;;
  esac; shift
 done
-[[ $BACKEND == auto || $BACKEND == cuda || $BACKEND == cpu ]] || { echo "Invalid backend: $BACKEND" >&2; exit 2; }
+[[ $BACKEND == auto || $BACKEND == cuda || $BACKEND == vulkan || $BACKEND == cpu ]] || { echo "Invalid backend: $BACKEND" >&2; exit 2; }
 [[ $LM_SIZE == 0.6B || $LM_SIZE == 1.7B || $LM_SIZE == 4B ]] || { echo "Invalid LM size: $LM_SIZE" >&2; exit 2; }
 if [[ $ACTION != install ]]; then
  [[ $DRY == 0 ]] || { echo "DRY RUN: would delegate $ACTION to arch_linux.sh (no installation)."; exit 0; }
@@ -40,9 +41,12 @@ fi
 [[ ${ID:-} == ubuntu || " ${ID_LIKE:-} " == *' ubuntu '* || " ${ID_LIKE:-} " == *' debian '* ]] || { echo "Ubuntu or Ubuntu-derived OS required: ${ID:-unknown}" >&2; exit 1; }
 command -v apt-get >/dev/null || { echo 'apt-get is missing.' >&2; exit 1; }
 [[ $(uname -m) == x86_64 ]] || { echo 'This installer supports x86_64 only.' >&2; exit 1; }
-export PATH="/usr/local/cuda/bin:$PATH"
+export PATH="/usr/local/cuda/bin:$PATH"   # das Standard-CUDA (Symlink /usr/local/cuda) hat Vorrang vor /usr/bin/nvcc
 if [[ $BACKEND == auto ]]; then
- if command -v nvcc >/dev/null 2>&1 && command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then BACKEND=cuda; else BACKEND=cpu; fi
+ if command -v nvcc >/dev/null 2>&1 && command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then BACKEND=cuda
+ # Vulkan: a graphics adapter (lspci) plus an installed Vulkan driver (icd file) -> use it; otherwise CPU
+ elif command -v lspci >/dev/null 2>&1 && lspci 2>/dev/null | grep -Eiq 'vga|3d controller|display controller' && compgen -G '/usr/share/vulkan/icd.d/*.json' >/dev/null; then BACKEND=vulkan
+ else BACKEND=cpu; fi
 fi
 if [[ $BACKEND == cuda ]]; then
  command -v nvcc >/dev/null 2>&1 || { echo 'CUDA toolkit (nvcc) missing. Install a compatible toolkit first or use --backend cpu.' >&2; exit 1; }
@@ -50,13 +54,16 @@ if [[ $BACKEND == cuda ]]; then
 fi
 LM_FILE="acestep-5Hz-lm-${LM_SIZE}-Q8_0.gguf"
 echo "Music Generator Ubuntu setup | ${PRETTY_NAME:-$ID} | backend=$BACKEND | LM=$LM_SIZE"
-packages=(build-essential cmake ninja-build git curl pkg-config libcurl4-openssl-dev lsof xdg-utils ca-certificates ccache)
+packages=(build-essential cmake ninja-build git curl pkg-config libcurl4-openssl-dev lsof xdg-utils ca-certificates ccache pciutils)
+[[ $BACKEND == vulkan ]] && packages+=(libvulkan-dev mesa-vulkan-drivers glslc libshaderc-dev spirv-headers)
 if [[ $DRY == 1 ]]; then
  echo 'DRY RUN: no side effects.'
  printf 'PLAN apt-get install: '; printf '%s ' "${packages[@]}"; echo
  echo 'PLAN uv sync --locked'
  echo "PLAN git checkout $ACESTEP_REV and git submodule update --init --recursive"
- if [[ $BACKEND == cuda ]]; then echo 'PLAN CMake: -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native -DGGML_CPU_ALL_VARIANTS=OFF'; else echo 'PLAN CMake: -DGGML_CPU_ALL_VARIANTS=OFF'; fi
+ if [[ $BACKEND == cuda ]]; then echo 'PLAN CMake: -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=<nvcc im PATH> -DCMAKE_CUDA_ARCHITECTURES=native -DGGML_CPU_ALL_VARIANTS=OFF'
+ elif [[ $BACKEND == vulkan ]]; then echo 'PLAN CMake: -DGGML_VULKAN=ON -DGGML_CPU_ALL_VARIANTS=OFF'
+ else echo 'PLAN CMake: -DGGML_CPU_ALL_VARIANTS=OFF'; fi
  echo "PLAN download + SHA256 verify: VAE, Qwen embedding, SFT, $LM_FILE $([[ $XL == 1 ]] && echo 'and XL' || true)"
  echo 'PLAN run local inference self-test and atomically write data/engine.conf'
  exit 0
@@ -84,20 +91,25 @@ BUILD=0
 [[ $REBUILD == 1 || ! -x "$ENGINE/build/ace-server" ]] && BUILD=1
 # Never reuse a previous CPU build when CUDA was selected (or vice versa).
 if [[ -f "$ENGINE/build/CMakeCache.txt" ]]; then
- if [[ $BACKEND == cuda ]] && ! grep -qx "GGML_CUDA:BOOL=ON" "$ENGINE/build/CMakeCache.txt"; then BUILD=1; fi
- if [[ $BACKEND == cpu ]] && grep -qx "GGML_CUDA:BOOL=ON" "$ENGINE/build/CMakeCache.txt"; then BUILD=1; fi
+ have_cuda=0; have_vk=0
+ grep -qx "GGML_CUDA:BOOL=ON" "$ENGINE/build/CMakeCache.txt" && have_cuda=1
+ grep -qx "GGML_VULKAN:BOOL=ON" "$ENGINE/build/CMakeCache.txt" && have_vk=1
+ want_cuda=0; want_vk=0; [[ $BACKEND == cuda ]] && want_cuda=1; [[ $BACKEND == vulkan ]] && want_vk=1
+ [[ $have_cuda != $want_cuda || $have_vk != $want_vk ]] && BUILD=1
 else BUILD=1; fi
 if [[ $BUILD == 1 ]]; then
  flags=(-DCMAKE_BUILD_TYPE=Release -DGGML_CPU_ALL_VARIANTS=OFF)
- if [[ $BACKEND == cuda ]]; then flags+=(-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native); fi
+ if [[ $BACKEND == cuda ]]; then flags+=(-DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER="$(command -v nvcc)" -DCMAKE_CUDA_ARCHITECTURES=native); fi
+ if [[ $BACKEND == vulkan ]]; then flags+=(-DGGML_VULKAN=ON); fi
  build_engine() {
   local target=$1; local -a f=(-DCMAKE_BUILD_TYPE=Release -DGGML_CPU_ALL_VARIANTS=OFF)
-  if [[ $target == cuda ]]; then f+=(-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native); fi
+  if [[ $target == cuda ]]; then f+=(-DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER="$(command -v nvcc)" -DCMAKE_CUDA_ARCHITECTURES=native); fi   # den nvcc aus dem PATH nehmen: bei mehreren CUDA-Versionen sonst /usr/bin/nvcc
+  if [[ $target == vulkan ]]; then f+=(-DGGML_VULKAN=ON); fi
   ( cd "$ENGINE"; rm -rf build; cmake -S . -B build "${f[@]}"; cmake --build build --config Release -j "${BUILD_JOBS:-4}" ) > "$DATA/build.log" 2>&1
  }
  if ! build_engine "$BACKEND"; then
-  if [[ $BACKEND == cuda && $CPU_FALLBACK == 1 ]]; then echo 'CUDA build failed; explicit CPU fallback requested.'; BACKEND=cpu; build_engine cpu || { echo 'CPU build failed: data/build.log' >&2; exit 1; }
-  else echo 'Build failed: data/build.log (no silent CUDA-to-CPU fallback).' >&2; exit 1; fi
+  if [[ ( $BACKEND == cuda || $BACKEND == vulkan ) && $CPU_FALLBACK == 1 ]]; then echo "$BACKEND build failed; explicit CPU fallback requested."; BACKEND=cpu; build_engine cpu || { echo 'CPU build failed: data/build.log' >&2; exit 1; }
+  else echo 'Build failed: data/build.log (no silent fallback to CPU; use --cpu-fallback to allow it).' >&2; exit 1; fi
  fi
 fi
 [[ -x "$ENGINE/build/ace-server" ]] || { echo 'ace-server executable missing after build.' >&2; exit 1; }
