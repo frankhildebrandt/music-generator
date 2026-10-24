@@ -1,190 +1,66 @@
 # Music Generator
 
-Eigene Songs lokal erzeugen – ohne Limits, ohne Abo, ohne Cloud.
-Web-Oberfläche für [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) über
-[acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp).
+Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows und Linux. Rust verwaltet Modelle, Warteschlange und Bibliothek; [acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) übernimmt die Musikberechnung.
 
-- **Mac** (Apple Silicon, Metal): diese Seite. Ausführliche Anleitung mit Bildern: **[Installationsanleitung.pdf](Installationsanleitung.pdf)**
-- **Windows** (NVIDIA, CUDA/Vulkan): **[README-WINDOWS.md](README-WINDOWS.md)**
-- Anleitung in anderen Sprachen: **[Installation-Guide-EN.pdf](Installation-Guide-EN.pdf)** (English), **[Installation-Guide-ZH.pdf](Installation-Guide-ZH.pdf)** (中文)
-- **Linux** (Arch Linux / Derivate mit Installer, andere Distributionen von Hand): Abschnitt [Linux](#linux-arch-linux--derivate) unten
-- **Videos zur Installation:** [Windows](https://youtu.be/se2g3tRFzrg) · [Mac](https://youtu.be/FxNSXj_wMBQ)
+**Herunterladen, entpacken, öffnen.** Keine Installer und keine Python-/Node-Installation beim Anwender. Der Startassistent lädt die benötigten Modelle und prüft die Hardware. Danach funktioniert die Musikgenerierung offline.
 
-## Installation
+| Plattform | Bundle |
+| --- | --- |
+| macOS 26+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
+| macOS 13.3+, Intel x64 (experimentell) | Eigenes DMG und ZIP, ausschließlich CPU |
+| Windows 10/11, x64 | ZIP mit EXE, Engine und WebView2 |
+| Linux, x64 | AppImage mit Vulkan/CPU-Engine |
 
-Voraussetzungen: Mac mit Apple Silicon (M1 oder neuer), mindestens 8 GB Arbeitsspeicher, 7–11 GB frei.
+Intel-Macs verwenden das separate `macos-x64`-Bundle. Sprachmodell und Klangerzeugung rechnen auf der CPU; ein Song kann viele Minuten dauern. Mit 10 Sekunden, dem 0.6B-Sprachmodell und dem Standard-Klangmodell beginnen. Der Assistent prüft den Engine-Start und überspringt den GPU-Test. Native Builds werden auf macOS 15 geprüft; echte Generierung auf weiteren Intel-Macs und der Mindestversion bleibt manuell abzunehmen. Die Intel-/CPU-Hinweise des ursprünglichen Installers bleiben unter [docs/legacy/](docs/legacy/NOTICE.md) historische Dokumentation.
 
-```bash
-git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
-open ~/MusicGenerator/Mac-Install.command
+Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind möglich. Downloads werden unter [Releases](https://github.com/frankhildebrandt/music-generator/releases) veröffentlicht; lokal gebaute Pakete liegen in `release/`.
+
+- Bestehende Bedienung, zwölf Sprachen, Bibliothek, Favoriten, Ordner und Varianten.
+- Echtzeit-Fortschritt mit Modellladephasen, Sprachmodell, gemessenen DiT-Schritten und VAE-Decodierung.
+- **IT und VAR (ACE-Step):** IT sind die Iterationen der Klangerzeugung (Standard 80), VAR die Varianz des Sprachmodells (Standard 1,2). Mehr Schritte brauchen mehr Zeit; höhere Varianz erzeugt freiere Ergebnisse, niedrigere hält sich enger an Stil und Prompt. Für andere Modellfamilien zeigt der ModelPicker eine ausdrückliche Schritte-Empfehlung. Gespeicherte Songwerte bleiben erhalten.
+- Mikrofonideen und Audioanalyse, Waveform-Player und native WAV-/TXT-/ZIP-Exporte.
+- Wahlweise MP3-Export mit 192 kbit/s für Einzeldateien und ZIPs; die Bibliothek behält das Original-WAV.
+- Songlänge von 10 Sekunden bis 10 Minuten; oberhalb von fünf Minuten Hinweise auf hohen Zeit- und Speicherbedarf. Lange Songs sind auf Intel-Macs und Rechnern mit 8 GB noch nicht praktisch geprüft.
+- Sprachmodell wahlweise automatisch oder nur auf CPU; die Synthese kann weiterhin die Grafikkarte nutzen.
+- **Automatische Songtitel:** Titel leer lassen; ein kleines gemeinsames lokales Textmodell benennt den fertigen Song für ACE-Step. Lyrics und deren Sprache haben Vorrang vor dem Prompt. Rund 640 MB zusätzlicher Download im Assistenten oder ModelPicker; danach offline. Eigene Titel und vorhandene Songs bleiben erhalten.
+- Fortsetzbare Modelldownloads mit SHA-256-Prüfung; Sprachmodelle 0.6B, 1.7B und 4B, optional XL.
+- Übernahme einer alten Installation; Originaldaten bleiben erhalten.
+- Modelle und Songs außerhalb der App, mit wählbaren Speicherorten. Updates durch Austausch des Bundles.
+- macOS App Sandbox mit gespeicherten Ordnerfreigaben und vererbter Sandbox für die Engine.
+
+## Entwickeln und bauen
+
+Node.js 24+, Rust und die nativen [Tauri-Bauvoraussetzungen](https://v2.tauri.app/start/prerequisites/) werden nur für die Entwicklung benötigt.
+
+```sh
+npm ci
+npm run engine:prepare
+npm run dev
 ```
 
-Der Installer
-
-1. prüft Chip, Arbeitsspeicher und freien Platz,
-2. schlägt das passende Sprachmodell vor (0.6B unter 12 GB, 1.7B bis 24 GB, 4B darüber),
-3. installiert was fehlt: Apple-Entwicklerwerkzeuge (für `git`) und `uv` (ohne Homebrew, ohne Passwort),
-4. lädt acestep.cpp in der getesteten Version (`b7ba6d9`) als fertige Programmdateien aus den [Releases](https://github.com/rabbitfiremediacreation/music-generator/releases) dieses Projekts und prüft die Prüfsumme (Apple Silicon ab macOS 26; ältere Versionen und Intel-Macs kompilieren selbst, dafür kommt `cmake` dazu),
-5. lädt nur die benötigten Modelle (fortsetzbar),
-6. testet, ob das Sprachmodell auf dem Grafikchip richtig rechnet (sonst CPU, siehe unten), und stellt bei weniger als 16 GB den Klang-Decoder auf kleinere Stücke ein,
-7. richtet die Symbole für **Music Generator ON / OFF** ein und startet die App.
-
-Er kann jederzeit erneut laufen; Erledigtes wird übersprungen.
-Optionen: `--yes` (keine Rückfragen), `--lm 0.6B|1.7B|4B`, `--xl`, `--no-start`, `--build` (Modellserver selbst kompilieren statt die fertigen Programmdateien zu laden; braucht funktionierende Apple-Entwicklerwerkzeuge bzw. Xcode).
-
-Die fertigen Mac-Programmdateien sind aus dem unveränderten Quelltext von acestep.cpp gebaut (Release `engine-macos-arm64-b7ba6d9`, Herkunft und Prüfsummen in `engine/acestep.cpp/build/README.txt` und `SHA256SUMS.txt`). Sie laufen auf M1 bis M4 und neuer, der passende CPU-Code wird beim Start gewählt.
-
-**XL-Klangmodell (optional):** Der Installer fragt, ob zusätzlich das größere Klangmodell ACE-Step 1.5 XL (4 statt 2 Milliarden Parameter, 5,3 GB) geladen werden soll. Laut den Entwicklern klingt es besser, es rechnet etwa doppelt so lange und braucht mehr Speicher (ab 16 GB Arbeitsspeicher bzw. 12 GB Grafikspeicher). Standard bleibt das kleinere Modell; XL wählst du danach unter Zahnrad › Klangmodell. Gemessen auf einem M4 mit 16 GB: ein 30-Sekunden-Song brauchte mit Standard 49 s, mit XL 99 s. Noch wenig getestet, Rückmeldungen willkommen.
-
-## Benutzen
-
-- **Music Generator ON** startet Modellserver und App und öffnet http://localhost:8765
-- **Music Generator OFF** beendet alles und schließt die Browser-Tabs
-- Oberfläche in zwölf Sprachen (Auswahl oben rechts): Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Türkisch, Polnisch, Russisch, Ukrainisch, Japanisch, Chinesisch. Korrekturen an `static/i18n.js` sind willkommen.
-- **Idee aufnehmen** (Mikrofon-Knopf oben in der Kopfzeile): gedrückt halten, 5 bis 30 Sekunden summen, pfeifen oder singen. Die App beschreibt die Aufnahme und füllt Prompt, Tempo, Tonart und Takt aus; Stil und Länge bestimmst du. Die Melodie selbst wird nicht übernommen. Es wird nichts gespeichert, alles läuft lokal.
-
-### Bedienung mit Screenreader
-
-Die App ist für VoiceOver (Mac), NVDA und JAWS (Windows) beschriftet: Jeder Knopf und Regler hat einen vorlesbaren Namen,
-die Regler sagen ihren Wert im Klartext („1 Minute 30 Sekunden“, „Auto“). „Neuer Song“ und „Bibliothek“ sind Bereiche mit
-Überschrift, jeder Song ist eine Überschrift der Ebene 3, so springt man mit der Überschriften-Navigation von Song zu Song.
-Was im Hintergrund passiert, wird angesagt: Songs in der Warteschlange, „Fertig: <Titel>“, Fehler, die Analyse.
-
-- **Tastenkürzel** (Alt bzw. Option): **Alt+G** generieren, **Alt+R** Idee aufnehmen (einmal starten, einmal beenden),
-  **Alt+N** zum Prompt, **Alt+B** zur Bibliothek. **Leertaste** spielt den gewählten Song ab oder hält ihn an.
-- **Aufnahme mit Screenreader:** Den Mikrofon-Knopf normal aktivieren (z. B. VoiceOver: Ctrl+Option+Leertaste). Die App
-  sagt „Aufnahme beginnt gleich“ und öffnet das Mikrofon erst danach, damit die Ansage nicht mit aufgenommen wird.
-  Noch einmal aktivieren beendet die Aufnahme.
-- **Löschen und Stoppen** fragen ohne Dialog nach: Der erste Druck schaltet den Knopf scharf („Zum Bestätigen noch einmal
-  drücken“), der zweite führt aus.
-
-Rückmeldungen von Screenreader-Nutzern sind sehr willkommen.
-
-## Aktualisieren
-
-In der App: Zahnrad › **Nach Updates suchen** › **Jetzt aktualisieren** (holt die neue Fassung von GitHub und startet die App neu; ändert sich acestep.cpp, weist sie auf den Installer hin). Oder von Hand:
-
-```bash
-cd ~/MusicGenerator && git pull
-open Mac-Install.command
+```sh
+npm run lint
+npm run build
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml --locked
+npm run bundle
 ```
 
-Songs und Einstellungen in `data/` bleiben erhalten. Das Update in der App startet nur die App neu; danach einmal **OFF** und **ON**, damit auch die Modellserver mit den neuen Einstellungen laufen.
-
-## Deinstallieren
-
-- **Mac:** `Mac-Uninstall.command` doppelklicken (oder im Terminal ausführen)
-- **Windows:** `Windows-Uninstall.bat` doppelklicken
-- **Linux:** `./Linux-Uninstall.sh` (oder `./arch_linux.sh --uninstall`)
-
-Das Skript zeigt, was es entfernt, und fragt vorher. Es beendet die Server, löscht Modellserver, Modelle, Python-Umgebung und Einstellungen (unter Windows auch die Verknüpfungen) und fragt, ob **Songs und Bibliothek** (Titel, Ordner, Favoriten) bleiben sollen. Vorgabe ist behalten. Mit `--yes` (Windows: `-Yes`) läuft es ohne Rückfragen und behält Songs und Bibliothek. Nicht entfernt werden der Programmordner selbst, Werkzeuge außerhalb davon (zum Beispiel `uv`) und Songs in einem selbst gewählten Song-Ordner. Zum Schluss den Programmordner löschen. Die Linux-Fassung geht auf eine Idee von ZeroDot1 zurück.
-
-## Linux (Arch Linux & Derivate)
-
-Unter Arch Linux (sowie CachyOS, EndeavourOS, Manjaro) steht ein automatisches All-in-One-Skript bereit (bereitgestellt von ZeroDot1):
-
-```bash
-git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
-cd ~/MusicGenerator
-./arch_linux.sh
-```
-
-Das Skript:
-1. Prüft System, RAM, Festplatte und Grafikkarte:
-   - **AMD Radeon** (z. B. **RX 9070 XT** / Navi 48 / RDNA4): Native Beschleunigung über ROCm/HIP (`rocm-hip-sdk`) oder Vulkan (`vulkan-radeon` / RADV).
-   - **NVIDIA**: CUDA oder Vulkan.
-   - **Intel**: Vulkan (`vulkan-intel`).
-   - **CPU**: Automatischer Fallback, falls keine GPU vorhanden ist.
-2. Installiert fehlende Abhängigkeiten via `pacman` oder `yay` (`base-devel`, `cmake`, `git`, `curl`, `uv`, `xdg-utils`, sowie je nach Backend `rocm-hip-sdk` bzw. `vulkan-headers`, `spirv-headers`, `shaderc`, `vulkan-icd-loader`).
-3. Richtet die Python-Umgebung mit `uv` ein.
-4. Kompiliert `acestep.cpp` mit optimaler Hardwarebeschleunigung (ROCm/HIP für AMD, CUDA für NVIDIA, Vulkan oder CPU).
-5. Lädt die benötigten GGUF-Modelle mit SHA-256-Prüfung herunter.
-6. Führt den Grafik-Selbsttest durch, startet die Server und öffnet den Browser unter `http://localhost:8765`.
-
-**Benutzen unter Linux:**
-- Starten: `./arch_linux.sh` (oder `./Music\ Generator\ ON.sh`)
-- Beenden: `./arch_linux.sh --stop` (oder `./Music\ Generator\ OFF.sh` sowie über den Knopf „Server stoppen“ in der Web-Oberfläche)
-- Status: `./arch_linux.sh --status`
-- Optionen: `--yes` (keine Rückfragen), `--yay` (Pakete via AUR-Helper yay installieren), `--backend [auto|rocm|hip|vulkan|cuda|cpu]`, `--lm [0.6B|1.7B|4B]`, `--xl`, `--rebuild`, `--no-browser`
-
-**Mehrere Grafikkarten:** Das Skript nutzt standardmäßig die erste Karte und bevorzugt die dedizierte (`HIP_VISIBLE_DEVICES=0`, `DRI_PRIME=1`, `GGML_VK_VISIBLE_DEVICES=0`). Wer eine andere Karte braucht, setzt die Variable vor dem Start selbst, zum Beispiel `GGML_VK_VISIBLE_DEVICES=1 ./arch_linux.sh --start`. Die eigenen Werte werden nicht überschrieben.
-
-### Andere Linux-Distributionen (von Hand)
-
-Das Skript setzt `pacman` voraus. Auf Ubuntu, Debian, Fedora und anderen geht es von Hand. **Ungetestet**, Rückmeldungen willkommen.
-
-Voraussetzungen: git, cmake, ein C++-Compiler, [uv](https://docs.astral.sh/uv/), für NVIDIA das CUDA-Toolkit (AMD/Intel: Vulkan-SDK).
-
-```bash
-git clone https://github.com/rabbitfiremediacreation/music-generator.git ~/MusicGenerator
-cd ~/MusicGenerator && uv sync
-# Modellserver in der getesteten Version bauen (Hash steht in scripts/common.sh)
-git clone --recurse-submodules https://github.com/ServeurpersoCom/acestep.cpp engine/acestep.cpp
-(cd engine/acestep.cpp && git checkout b7ba6d9 && ./buildcuda.sh)     # oder ./buildvulkan.sh, ./buildcpu.sh
-# Modelle laden: die drei festen plus ein Sprachmodell (Adresse und SHA-256 in scripts/common.sh)
-(cd engine/acestep.cpp && ./models.sh --lm 1.7B --sft)
-# Betriebsart: ein Server für alles
-mkdir -p data && printf 'MODE=single\nLM_FILE=acestep-5Hz-lm-1.7B-Q8_0.gguf\n' > data/engine.conf
-```
-
-Starten und Stoppen funktionieren danach mit `./arch_linux.sh --start` und `--stop`, auch ohne `pacman` (nicht getestet). Alternativ die beiden Server von Hand starten:
-
-```bash
-engine/acestep.cpp/build/ace-server --host 127.0.0.1 --port 8085 --models engine/acestep.cpp/models --max-batch 1
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8765
-```
-
-`models.sh` lädt mehr Varianten als nötig, gebraucht werden `vae-BF16`, `Qwen3-Embedding-0.6B-Q8_0`, `acestep-v15-sft-Q8_0` und das gewählte `acestep-5Hz-lm-*-Q8_0`. Songs liegen wie überall in `data/songs`.
+Die plattformspezifischen Pipelines stehen in `.github/workflows/desktop.yml`. Build, Datenablage, Import, Signierung und manuelle Abnahme beschreibt [docs/desktop.md](docs/desktop.md).
 
 ## Aufbau
 
-| Pfad | Inhalt |
-|---|---|
-| `Mac-Install.command` | Installer (Mac) |
-| `Mac-Uninstall.command`, `Windows-Uninstall.bat` / `.ps1`, `Linux-Uninstall.sh` | Deinstallation (Mac, Windows, Linux); `scripts/uninstall.sh` gemeinsam für Mac und Linux |
-| `Music Generator ON/OFF.command` | Start und Stopp (Mac) |
-| `Windows-Install.ps1`, `Music Generator ON/OFF.ps1` + `.bat` | Installer, Start und Stopp (Windows) |
-| `arch_linux.sh`, `Linux-Install.sh`, `Music Generator ON/OFF.sh` | Installer, Start und Stopp (Arch Linux & Linux) |
-| `scripts/common.sh` | gemeinsame Pfade, Ports, acestep.cpp-Version, Modell-Prüfsummen |
-| `scripts/common.ps1` | Windows-Gegenstück, liest die Werte aus `common.sh` |
-| `scripts/metal_selftest.py` | Sprachmodell-Test des Installers |
-| `scripts/symbole.sh` | setzt die Symbole der `.command`-Dateien (Mac) |
-| `scripts/uninstall.sh` | Deinstallation, gemeinsam für Mac und Linux |
-| `app/` | FastAPI-Backend: Queue, Bibliothek, Anbindung an ace-server |
-| `static/` | Oberfläche |
-| `docs/anleitung/` | Quelle der Installationsanleitung. `capture.py` fotografiert die laufende App (`uv run --with websockets python docs/anleitung/capture.py`), `build_pdf.py` baut daraus das PDF (`uv run --with reportlab python docs/anleitung/build_pdf.py Installationsanleitung.pdf`; andere Sprachen: `capture.py … en` und `build_pdf.py Installation-Guide-EN.pdf en`, Texte in `texts.py`) |
-| `engine/` | acestep.cpp und Modelle (vom Installer, nicht im Repo) |
-| `data/` | Songs, Datenbank, Logs, `engine.conf` (nicht im Repo) |
+| Bereich | Inhalt |
+| --- | --- |
+| `frontend/` | Vite-Oberfläche, TypeScript-Tauri-Schnittstelle, Assistent und erhaltene Studio-Bedienung |
+| `src-tauri/` | Rust-Backend, SQLite, Queue, Download- und Engine-Verwaltung |
+| `models/` | Versionierte Modell-/Engine- und WebView2-Downloadmanifeste |
+| `scripts/desktop/` | Vorbereitung der Engine und fertige Plattformpakete |
+| `static/` | Styles, Bilder und vendorter Waveform-Player |
+| `docs/legacy/` | Frühere Browser-/Installer-Dokumentation, gilt nicht für Desktop |
 
-## Projektordner verschieben
-
-Der Ordner darf nach der Installation verschoben oder umbenannt werden. Beim nächsten Start stellt „Music Generator ON“
-die Bibliothekspfade der Engine auf den neuen Ort um und prüft die Python-Umgebung; sonst ist nichts zu tun.
-
-## Grafikchip und die zwei Modi
-
-Auf dem Apple M4 liefert das Sprachmodell unter Metal in acestep.cpp `b7ba6d9` fehlerhafte Ergebnisse
-(0 Audio-Codes). Der Installer erkennt das mit einem kurzen Probelauf und schreibt nach `data/engine.conf`:
-
-- `MODE=split` – Sprachmodell auf der CPU (Port 8086), Klangerzeugung auf Metal (Port 8085)
-- `MODE=single` – alles auf einem Metal-Server (Port 8085)
-
-Nach einem Update von acestep.cpp (`ACESTEP_REV` in `scripts/common.sh`) testet der Installer neu.
-
-Auf Macs mit weniger als 16 GB setzt der Installer zusätzlich `VAE_CHUNK` (256 bei 8 GB, 512 bei 12 GB): Der Klang-Decoder
-rechnet dann in kleineren Kacheln. Ohne diese Einstellung reicht der Speicher bei Songs über etwa 30 Sekunden nicht,
-und statt Musik kommt Rauschen. Fehlt die Zeile in `data/engine.conf` (ältere Installation, nur aktualisiert), trägt „Music Generator ON“ sie
-selbst nach und startet einen Server mit alter Kachelgröße neu.
-
-## Lizenz der Modelle
-
-ACE-Step 1.5 steht nach den Angaben der Entwickler unter der **MIT-Lizenz** (GitHub-Projekt und Modellkarten auf Hugging Face, Stand Oktober 2026).
-Der Vorgänger ACE-Step v1 stand noch unter Apache 2.0. Bei zwei Einzelmodellen (Turbo und Sprachmodell 1.7B) fehlt die Lizenzangabe auf Hugging Face,
-sie gehören zur selben MIT-Familie. Die Modelle werden beim Installieren von
-[Hugging Face](https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF) geladen und sind nicht Teil dieses Repositorys.
-Vor kommerzieller Nutzung die Lizenz- und Trainingsdaten-Lage selbst prüfen.
+Der Python-Webserver und die Installations-/ON/OFF-Skripte wurden durch den Desktopbetrieb abgelöst. Die historischen PDF-Dokumentwerkzeuge sind keine Laufzeitabhängigkeit der App.
 
 ## Lizenz
 
-Der Code in diesem Repository steht unter der [MIT-Lizenz](LICENSE).
-`static/vendor/wavesurfer.min.js` stammt von [wavesurfer.js](https://github.com/katspaugh/wavesurfer.js) (BSD-3-Clause).
+Der Anwendungscode steht unter [MIT](LICENSE). Hinweise zu Engine, Modellen und weiteren Komponenten: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

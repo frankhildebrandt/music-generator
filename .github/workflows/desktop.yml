@@ -1,0 +1,91 @@
+name: Desktop bundles
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/desktop-bundles']
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            name: macos-arm64
+            arch: arm64
+            macos_min: '26.0'
+          - os: macos-15-intel
+            name: macos-x64
+            arch: x64
+            macos_min: '13.3'
+          - os: windows-2022
+            name: windows-x64
+            arch: x64
+          - os: ubuntu-22.04
+            name: linux-x64
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_min }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build curl unzip patchelf libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev libvulkan-dev libfuse2 gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+      - name: Pinned Vulkan SDK for Ubuntu 22.04
+        if: runner.os == 'Linux'
+        run: |
+          curl --fail --location --retry 3 https://sdk.lunarg.com/sdk/download/1.4.309.0/linux/vulkansdk-linux-x86_64-1.4.309.0.tar.xz -o "$RUNNER_TEMP/vulkan.tar.xz"
+          echo "616a25a9d8b33336e83957f97ca273b8e95461649723354300d02c26ae52a1f6  $RUNNER_TEMP/vulkan.tar.xz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/vulkan"
+          tar -xf "$RUNNER_TEMP/vulkan.tar.xz" -C "$RUNNER_TEMP/vulkan" 1.4.309.0/x86_64
+          echo "VULKAN_SDK=$RUNNER_TEMP/vulkan/1.4.309.0/x86_64" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/vulkan/1.4.309.0/x86_64/bin" >> "$GITHUB_PATH"
+      - run: npm ci
+      - name: Verify native build architecture
+        run: node -e "if (process.arch !== '${{ matrix.arch }}') throw new Error('Wrong native runner architecture')"
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:desktop
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/resources/engine
+            src-tauri/resources/WebView2
+          key: desktop-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('models/*.json', 'scripts/desktop/prepare-engine.mjs', 'scripts/desktop/prepare-title.mjs', 'scripts/desktop/title-runtime/*', 'scripts/desktop/licenses/*', 'scripts/desktop/common.mjs', 'scripts/desktop/targets.mjs', 'scripts/desktop/engine-sandbox.mm', 'src-tauri/Engine.entitlements') }}
+      - run: npm run bundle
+      - name: Verify relocated portable bundle
+        run: node scripts/desktop/verify-bundle.mjs
+      - name: Verify macOS disk image
+        if: runner.os == 'macOS'
+        run: node scripts/desktop/verify-bundle.mjs --dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Music-Generator-${{ matrix.name }}
+          path: release/*
+          if-no-files-found: error

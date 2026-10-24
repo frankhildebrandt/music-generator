@@ -1,0 +1,636 @@
+{
+  "version": 1,
+  "revision": "666ac70204440867d8c01ba4b119cc79c95b370a",
+  "base_url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a",
+  "providers": [
+    {
+      "id": "ace-step",
+      "name": "ACE-Step 1.5",
+      "status": "available",
+      "adapter": "acestep.cpp",
+      "source": "https://github.com/ServeurpersoCom/acestep.cpp"
+    }
+  ],
+  "models": [
+    {
+      "file": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "dependency",
+      "family": "Qwen3-Embedding-0.6B",
+      "precision": "Q8_0",
+      "estimated_bytes": 784144960,
+      "sha256": "972f23255e46adfe744a0eb9a0039f3c63988f65753b0968d776e8b27168c321",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-0.6B-BF16.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-0.6B",
+      "precision": "BF16",
+      "estimated_bytes": 1331108128,
+      "sha256": "8bc3e1de50fc91751ab893965c78c17589323bf4d2a9c1be2750ada7c7fabfaa",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-0.6B-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-0.6B",
+      "precision": "Q8_0",
+      "estimated_bytes": 709846656,
+      "sha256": "bdaf9e292d4470f31c19cafeaca1b74936a114667e3a85e5d33b65247e9908ec",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-1.7B-BF16.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-1.7B",
+      "precision": "BF16",
+      "estimated_bytes": 3713827104,
+      "sha256": "6e1b625ca8dc0bfe912fa7e16a563ec6e8c44e4199b612e3157e1e320a7d3077",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-1.7B-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-1.7B",
+      "precision": "Q8_0",
+      "estimated_bytes": 1975837568,
+      "sha256": "726f99a82f050b32ebc5c5e36acaa9d7acd06bfe5e579a62b00e0d0d6d0b7ec6",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-4B-BF16.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-4B",
+      "precision": "BF16",
+      "estimated_bytes": 8384454592,
+      "sha256": "9fca9915919a1108da33d8d98fbe6c1a07bfee101d27098416650dcbde037b72",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-4B-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-4B",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 3025965984,
+      "sha256": "938ed7067c8897f66acf4c3a86fc1fa8113d5cd1a5f13e6edec2e03207514e2d",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-4B-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-4B",
+      "precision": "Q6_K",
+      "estimated_bytes": 3442713504,
+      "sha256": "d39b8b5070fa617a0f57dcc26e710f8096a293c21721c5f714318bab7b40cfdb",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-5Hz-lm-4B-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "language",
+      "family": "acestep-5Hz-lm-4B",
+      "precision": "Q8_0",
+      "estimated_bytes": 4457323648,
+      "sha256": "972f91147a167f0c041f1b158d67985a82c0f6a852e68cdf70e46030cf08b1bc",
+      "recommended_steps": null
+    },
+    {
+      "file": "acestep-v15-base-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-base",
+      "precision": "BF16",
+      "estimated_bytes": 4791642016,
+      "sha256": "ef880d77ffec8e6638f268c6237b73a8965af24bdd10fd5cfc27432c9d19ee57",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-base-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-base",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 1445710208,
+      "sha256": "942ec6a7bc11a40809af5f337063f2af2acc63e4fcd4a92b0cb42dc2bc7c41e8",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-base-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-base",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 1700140160,
+      "sha256": "b7a5c6d1b0729ab8630c96fabc14a47640a708e9bddff60666d8d07279aa57a7",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-base-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-base",
+      "precision": "Q6_K",
+      "estimated_bytes": 1970472000,
+      "sha256": "08cf80fcc73f518c9eddfdc1e0ddcb786dc04f7d260479482794f371925b0207",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-base-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-base",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549527936,
+      "sha256": "10329f321010cedc3571c24b6371d002ce49238f48be47def4a1c76bf27ee150",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-sft-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sft",
+      "precision": "BF16",
+      "estimated_bytes": 4791642016,
+      "sha256": "82db4849bfa9fd6438f049a5bce3fbd57b70f57e7433238db2d97becd0eee282",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-sft-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sft",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 1445710208,
+      "sha256": "2531bb61b9e5017fbc8875446e02f54b052eeec41ba3200dd72c6061b59b33d0",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-sft-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sft",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 1700140160,
+      "sha256": "ad8fd75d58c53b3e6a6b23c2660df8f65d96603118a2a5e3c67a744c470efb82",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-sft-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sft",
+      "precision": "Q6_K",
+      "estimated_bytes": 1970472000,
+      "sha256": "8ebf354d21058283fc65f377ceb3488901159cfc96866dd23f2c49347535061b",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-sft-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sft",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549527936,
+      "sha256": "17f1984e48aaab27b3eb8ccbf0b754a6656e677884c60ea7003845cfc0059b70",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-sftturbo50-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sftturbo50",
+      "precision": "BF16",
+      "estimated_bytes": 4791642016,
+      "sha256": "af24191ae7748e16e5d1860dbe37e581baea5a5d39a7bd479ca09c84fa023fc7",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-sftturbo50-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-sftturbo50",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549527936,
+      "sha256": "3fab14cf0d8efa249edf49b6fd0392bac54f1a80514567a5ae4164853339ecb3",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo",
+      "precision": "BF16",
+      "estimated_bytes": 4791642080,
+      "sha256": "c7b463b728cdce2f3d4e5205fc5747d0344ebfea37f19542f5236cd8a76cf462",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 1445710272,
+      "sha256": "55b4d8514850f3d0f82536f37e99673aaf48df802b5ae5b153eea32a2e2daa5e",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 1700140224,
+      "sha256": "a241c9a721e3704cb04b17ce6a40c9aa714d3ee5cf49c2219972020eb761f5a4",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo",
+      "precision": "Q6_K",
+      "estimated_bytes": 1970472064,
+      "sha256": "693fc82977d9af2b5569238e363c11ae9b055d464f036d51127fba4eab016693",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549528000,
+      "sha256": "288f708a61cfc241013a98a62f98ba331f83fe34d0d3559acdd9b0f6a2f7cd6b",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-continuous-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-continuous",
+      "precision": "BF16",
+      "estimated_bytes": 4791642080,
+      "sha256": "ead4b8717f7297f96cda6dc3d37d69504b007cbb6d79e1c8c931337019bfc377",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-continuous-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-continuous",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 1445710240,
+      "sha256": "695a304965672025cb55574ff3c78f4da2ad5239fc7ff678a275b93aecac26b5",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-continuous-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-continuous",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 1700140192,
+      "sha256": "23d66597916bc9da2a214481dadb2bb301e12b7e50bac59372486e2ff7fc4f6b",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-continuous-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-continuous",
+      "precision": "Q6_K",
+      "estimated_bytes": 1970472032,
+      "sha256": "84fcd2612530ad1d8ec57a46e786db378f6af78e1071c3ee70d4396fc8909282",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-continuous-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-continuous",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549527968,
+      "sha256": "ed50670ad55ab53bd1c753529e3b6a8e58512e1c5f4df15426948c73fd407abf",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift1-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift1",
+      "precision": "BF16",
+      "estimated_bytes": 4791642048,
+      "sha256": "6c626ac0c282961f1494e6cfa5f1c79956e4fc4b1000e51f29cdc048a06f512c",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift1-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift1",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 1445710240,
+      "sha256": "a65d44d12fb88ce99cf3e93197a02592bb3065121417a3d3efced254b63ca6bd",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift1-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift1",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 1700140192,
+      "sha256": "b68ae397c326b92316c967e0cb9deea904c0d10e16321052376aa9cef988f033",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift1-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift1",
+      "precision": "Q6_K",
+      "estimated_bytes": 1970472032,
+      "sha256": "4c8bb2652ea5bbd28b716059757e9789627d16424f73c0a3374e872e7c12ee5d",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift1-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift1",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549527968,
+      "sha256": "3cc621a46b0d4906c0bce09c7b8d563bdc1aa39a4b4856271045bae12287027c",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift3-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift3",
+      "precision": "BF16",
+      "estimated_bytes": 4791642048,
+      "sha256": "8e4c08ccb89030a5be5c21a24d59109341aa79b2fb17d04f790e169705eb112c",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift3-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift3",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 1445710240,
+      "sha256": "0d1facb7069f1ad2236408ca8018a21d38424d2526ef488dc3775261c19a9b03",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift3-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift3",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 1700140192,
+      "sha256": "33a15a34f90fbdf1d161d3d1a760cd064cd4a454b2103f108123c0e6a3abd404",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift3-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift3",
+      "precision": "Q6_K",
+      "estimated_bytes": 1970472032,
+      "sha256": "ef550c4441b1a39ff89e79f6cf5f88676b4a5766f6b684b618763f1de7a1e0a9",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-turbo-shift3-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-turbo-shift3",
+      "precision": "Q8_0",
+      "estimated_bytes": 2549527968,
+      "sha256": "21cc9ec83378c71a28aef4a5c1bacab3fe5025e9de8f76487656b6f9de330d21",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-base-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-base",
+      "precision": "BF16",
+      "estimated_bytes": 9978530784,
+      "sha256": "3ebd8e3ff0951dfe9f424a7f7a8e829f05875669b5939bde5c16cf09a940d982",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-base-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-base",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 2989922656,
+      "sha256": "13b08ac84e0cdca8ac770d6bc12842046113c9479ddcedd2672ac87ac458ff78",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-base-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-base",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 3527566432,
+      "sha256": "c8d639af9f37dca6b02255ef736e6ebbac9318287c9d043db4a30dddc3a2fc3c",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-base-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-base",
+      "precision": "Q6_K",
+      "estimated_bytes": 4098812960,
+      "sha256": "44f14805faffa9ee3a28ba02a69915dcc0f0d44218c91292d1e2c0896ac4ee82",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-base-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-base",
+      "precision": "Q8_0",
+      "estimated_bytes": 5305828704,
+      "sha256": "45d05b88ccbfa0ea27208ea618d7f0749b2be040b457cfa661d37646ea39f207",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-sft-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sft",
+      "precision": "BF16",
+      "estimated_bytes": 9978530784,
+      "sha256": "c998effb0c3b447202c49242fd9ebf55ea7afccf766d4b4dd4ecedaed92bcbbb",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-sft-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sft",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 2989922656,
+      "sha256": "fa144d3ea8a892a11a43753070e40bb2105c5bfddb57c99d542fda22297bb1b5",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-sft-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sft",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 3527566432,
+      "sha256": "e7c5fdfa5075d666def2585b76f6537bba478ceedc54eec4d041538ce2fe3842",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-sft-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sft",
+      "precision": "Q6_K",
+      "estimated_bytes": 4098812960,
+      "sha256": "b7af16f54b3181c5f0e4558410245cfa4d73dd2f0635cd7d14a76668fc49660c",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-sft-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sft",
+      "precision": "Q8_0",
+      "estimated_bytes": 5305828704,
+      "sha256": "d7b06fadab214375ef5ebcfa44bf4a10489ea364b119f5b9ecbcd870408bdab9",
+      "recommended_steps": 80
+    },
+    {
+      "file": "acestep-v15-xl-sftturbo50-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sftturbo50",
+      "precision": "BF16",
+      "estimated_bytes": 9978530816,
+      "sha256": "aef16e967740eeb1f91e145504fe9699fb31c423759fd4bc190683e535f3ba2c",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-sftturbo50-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sftturbo50",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 2989922720,
+      "sha256": "7f7619d78037f9cfbe7b7816f758dc99f2841f48010da12eed732a8faef2eb0d",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-sftturbo50-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sftturbo50",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 3527566496,
+      "sha256": "3d4db8b6ec02c1fd15889bb61be65ce474e3b291fa0ff53fe7be90cd819d3e6b",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-sftturbo50-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sftturbo50",
+      "precision": "Q6_K",
+      "estimated_bytes": 4098813024,
+      "sha256": "d43bad21c85c7a250815367b4c5f7fafdf6b8f7d21f9f27d8a3c47171cf79e7f",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-sftturbo50-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-sftturbo50",
+      "precision": "Q8_0",
+      "estimated_bytes": 5305828768,
+      "sha256": "ec6bef50f2aec3176aafa4836401394913f567ceb7a4d53a459948a8b5294e51",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-turbo-BF16.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-turbo",
+      "precision": "BF16",
+      "estimated_bytes": 9978530816,
+      "sha256": "10d445a71653a8fef9a16a8457d9fb66da432ac500b357cce028f36c489c1b63",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-turbo-Q4_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-turbo",
+      "precision": "Q4_K_M",
+      "estimated_bytes": 2989922688,
+      "sha256": "475e60e8644b1f91eebc0cd25f24c060bed06e64a862b4e60ffafe634c740478",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-turbo-Q5_K_M.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-turbo",
+      "precision": "Q5_K_M",
+      "estimated_bytes": 3527566464,
+      "sha256": "108dbf1b1a5cfe41c46b23ee7481a1c6f6d21f7254bed4ac15ff8f307df69d3d",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-turbo-Q6_K.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-turbo",
+      "precision": "Q6_K",
+      "estimated_bytes": 4098812992,
+      "sha256": "e1f6665567e9bc0331b8dfd95c2b43a84e8bf114075c9b16abdd25ae97dc58fe",
+      "recommended_steps": 8
+    },
+    {
+      "file": "acestep-v15-xl-turbo-Q8_0.gguf",
+      "provider": "ace-step",
+      "role": "synthesis",
+      "family": "acestep-v15-xl-turbo",
+      "precision": "Q8_0",
+      "estimated_bytes": 5305828736,
+      "sha256": "4f1044fb646374fb5730e10f64325766883eb2fc02a643c1b403f2d61f39dc19",
+      "recommended_steps": 8
+    },
+    {
+      "file": "vae-BF16.gguf",
+      "provider": "ace-step",
+      "role": "dependency",
+      "family": "vae",
+      "precision": "BF16",
+      "estimated_bytes": 337420928,
+      "sha256": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8",
+      "recommended_steps": null
+    }
+  ]
+}
