@@ -2,13 +2,14 @@
 export function desktopTarget(platform, arch) {
   if (platform === "macos" && (arch === "arm64" || arch === "x64")) {
     const cpuOnly = arch === "x64";
+    const minimumSystemVersion = cpuOnly ? "13.3" : "14.0";
     return {
-      platform, arch, cpuOnly, minimumSystemVersion: cpuOnly ? "13.3" : "26.0",
+      platform, arch, cpuOnly, minimumSystemVersion,
       cmake: [
         `-DGGML_METAL=${cpuOnly ? "OFF" : "ON"}`, "-DGGML_BACKEND_DL=ON", "-DGGML_NATIVE=OFF",
         ...(cpuOnly ? ["-DGGML_CPU_ALL_VARIANTS=ON"] : []),
         `-DCMAKE_OSX_ARCHITECTURES=${cpuOnly ? "x86_64" : "arm64"}`,
-        `-DCMAKE_OSX_DEPLOYMENT_TARGET=${cpuOnly ? "13.3" : "26.0"}`,
+        `-DCMAKE_OSX_DEPLOYMENT_TARGET=${minimumSystemVersion}`,
         "-DCMAKE_BUILD_RPATH=@loader_path", "-DCMAKE_INSTALL_RPATH=@loader_path",
       ],
     };
