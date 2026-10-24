@@ -3,27 +3,18 @@ import { backend } from "./backend";
 import { bytes, element } from "./dom";
 import { applyI18n, t } from "./i18n.js";
 import { modelName, modelOptions, profile } from "./model-options";
-import type { DownloadProgress, HeartOptions, ModelCatalog, ModelSelection } from "./types";
+import type { DownloadProgress, ModelCatalog, ModelSelection } from "./types";
 
 let catalog: ModelCatalog | undefined;
 let chosen: ModelSelection | undefined;
 let draft: ModelSelection;
 let downloading = false;
 let initialized = false;
-let codecGuidance = 1.25;
 const dialog = () => element<HTMLDialogElement>("#modelPicker");
 const picker = <T extends HTMLElement>(id: string) => element<T>(`#${id}`);
 
 export function generationModels(): ModelSelection | undefined {
   return chosen ? { ...chosen } : undefined;
-}
-export function heartOptions(): HeartOptions | undefined {
-  if(chosen?.provider!=="heartmula")return undefined;
-  return {temperature:Number(picker<HTMLInputElement>("heartTemperature").value),cfg_scale:Number(picker<HTMLInputElement>("heartCfg").value),top_k:Number(picker<HTMLInputElement>("heartTopK").value),codec_steps:Number(picker<HTMLInputElement>("heartSteps").value),codec_guidance:codecGuidance};
-}
-export function restoreHeartOptions(options?: HeartOptions): void {
-  codecGuidance=options?.codec_guidance??1.25;
-  for(const [id,value] of Object.entries({heartTemperature:options?.temperature??1,heartCfg:options?.cfg_scale??1.5,heartTopK:options?.top_k??50,heartSteps:options?.codec_steps??10}))picker<HTMLInputElement>(id).value=String(value);
 }
 
 // Reuse the saved profile in memory without modifying the song or its sampling values.
@@ -34,19 +25,7 @@ export function restoreSongModels(selection?: ModelSelection): void {
 }
 
 function compact(): void {
-  picker("currentModels").textContent = chosen ? `${chosen.provider==="heartmula"?"HeartMuLa · ":""}${modelName(chosen.synthesis)}${chosen.language ? ` · ${modelName(chosen.language)}` : ""}` : t("models");
-  const heart=chosen?.provider==="heartmula";
-  document.body.dataset.provider=heart?"heartmula":"ace-step";
-  picker("heartControls").hidden=!heart;
-  for(const input of picker("heartControls").querySelectorAll<HTMLInputElement>("input")) { input.disabled=!heart;input.required=heart; }
-  picker("lyricsDice").hidden=heart;
-  picker("lyricsBox").title=t(heart?"heart_lyrics":"lyrics_tip");
-  picker<HTMLInputElement>("fileInput").disabled=heart;
-  const record=picker<HTMLButtonElement>("recBtn");record.disabled=heart&&record.getAttribute("aria-pressed")!=="true";
-  record.title=t(heart?"heart_analysis":"rec_aria");
-  picker("dropzone").title=t(heart?"heart_analysis":"drop_title");
-  picker("dropzone").setAttribute("aria-disabled",String(heart));
-  picker("dropzone").tabIndex=heart?-1:0;
+  picker("currentModels").textContent = chosen ? `${modelName(chosen.synthesis)} · ${modelName(chosen.language)}` : t("models");
 }
 
 async function refresh(): Promise<void> {
@@ -69,14 +48,10 @@ function render(): void {
   provider.replaceChildren(...catalog.providers.map(p => new Option(`${p.name}${p.status === "planned" ? ` · ${t("picker_planned")}` : ""}`, p.id)));
   provider.value = draft.provider;
   const planned = !catalog.providers.some(p => p.id === draft.provider && p.status === "available");
-  const heart=draft.provider==="heartmula";
-  picker("modelProviderHint").hidden = !planned && !heart;
-  picker("modelProviderHint").textContent=t(heart?"heart_hint":"picker_provider_hint");
   const only = picker<HTMLInputElement>("modelsCompatible").checked;
   for (const role of ["synthesis", "language"] as const) {
     const select = picker<HTMLSelectElement>(role === "synthesis" ? "modelSynthesis" : "modelLanguage");
     select.replaceChildren();
-    if(heart&&role==="language") { select.add(new Option(t("heart_integrated"),""));select.disabled=true;continue; }
     const groups = new Map<string, HTMLOptGroupElement>();
     for (const model of modelOptions(catalog, draft, role, only)) {
       let group = groups.get(model.family);
@@ -95,7 +70,7 @@ function render(): void {
   picker("modelMemoryHint").hidden = planned;
   picker("modelRamWarning").hidden = planned || state.compatible;
   picker("modelCpuHint").hidden = planned || !catalog.hardware.cpu_only;
-  picker("modelDependencies").textContent = heart?t("heart_integrated"):planned ? "" : `${t("picker_dependencies")}: ${state.models.filter(m => m.role === "dependency").map(m => `${m.file} (${m.verified ? t("picker_installed") : m.present ? t("picker_verify") : t("picker_missing")})`).join(" · ")}`;
+  picker("modelDependencies").textContent = planned ? "" : `${t("picker_dependencies")}: ${state.models.filter(m => m.role === "dependency").map(m => `${m.file} (${m.verified ? t("picker_installed") : m.present ? t("picker_verify") : t("picker_missing")})`).join(" · ")}`;
   const title=catalog.title_model;
   picker("titleModelStatus").textContent=`Qwen3 0.6B Q8 · ${bytes(title.estimated_bytes)} · ${t(title.verified?"picker_installed":title.present?"picker_verify":"picker_missing")}`;
   const titleButton=picker<HTMLButtonElement>("titleModelDownload");
@@ -111,7 +86,7 @@ function render(): void {
   picker<HTMLInputElement>("modelsCompatible").disabled = downloading;
   picker<HTMLButtonElement>("modelCancel").hidden = !downloading;
   picker<HTMLButtonElement>("modelRecommended").disabled = downloading || !state.valid;
-  picker("modelStepHint").textContent = state.steps ? `${t(heart?"heart_steps":"iterations")}: ${state.steps}` : "";
+  picker("modelStepHint").textContent = state.steps ? `${t("iterations")}: ${state.steps}` : "";
 }
 
 async function open(): Promise<void> {
@@ -157,11 +132,7 @@ export async function initializeModelPicker(): Promise<void> {
   picker<HTMLButtonElement>("modelApply").onclick = () => { void apply(); };
   picker<HTMLButtonElement>("modelCancel").onclick = () => { void backend.cancelModelDownload().catch(error => { picker("modelError").textContent = String(error); }); };
   picker<HTMLButtonElement>("modelHardwareTest").onclick = () => { if (!downloading) { dialog().close(); document.dispatchEvent(new Event("manage-models")); } };
-  picker<HTMLSelectElement>("modelProvider").onchange = () => {
-    const id=picker<HTMLSelectElement>("modelProvider").value;
-    const provider=catalog!.providers.find(p=>p.id===id)!;
-    draft=chosen?.provider===id?{...chosen}:catalog!.profiles?.[id]?{...catalog!.profiles[id]}:{provider:id,synthesis:provider.default_synthesis||"",language:provider.default_language||""};render();
-  };
+  picker<HTMLSelectElement>("modelProvider").onchange = () => { draft.provider = picker<HTMLSelectElement>("modelProvider").value; render(); };
   for (const role of ["synthesis", "language"] as const) {
     picker<HTMLSelectElement>(role === "synthesis" ? "modelSynthesis" : "modelLanguage").onchange = (event) => { draft[role] = (event.target as HTMLSelectElement).value; render(); };
   }
@@ -170,7 +141,7 @@ export async function initializeModelPicker(): Promise<void> {
     if (!catalog) return;
     const steps = profile(catalog, draft).steps;
     if (steps && chosen?.synthesis === draft.synthesis && chosen.provider === draft.provider) {
-      const input = chosen.provider==="heartmula"?picker<HTMLInputElement>("heartSteps"):element<HTMLInputElement>('#genForm [name="inference_steps"]');
+      const input = element<HTMLInputElement>('#genForm [name="inference_steps"]');
       input.value = String(steps); input.dispatchEvent(new Event("input", { bubbles: true }));
       picker("modelProgressText").textContent = `${t("iterations")}: ${steps}`;
       picker("modelProgressArea").hidden = false;

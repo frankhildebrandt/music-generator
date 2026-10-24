@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "revision": "666ac70204440867d8c01ba4b119cc79c95b370a",
   "base_url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a",
   "providers": [
@@ -8,25 +8,7 @@
       "name": "ACE-Step 1.5",
       "status": "available",
       "adapter": "acestep.cpp",
-      "source": "https://github.com/ServeurpersoCom/acestep.cpp",
-      "integrated_language_model": false,
-      "supports_analysis": true,
-      "max_duration_seconds": 600,
-      "default_synthesis": "acestep-v15-sft-Q8_0.gguf",
-      "default_language": "acestep-5Hz-lm-0.6B-Q8_0.gguf"
-    },
-    {
-      "id": "heartmula",
-      "name": "HeartMuLa",
-      "status": "available",
-      "adapter": "audio.cpp",
-      "source": "https://github.com/0xShug0/audio.cpp",
-      "integrated_language_model": true,
-      "supports_analysis": false,
-      "max_duration_seconds": 240,
-      "memory_reserve_bytes": 17179869184,
-      "default_synthesis": "heartmula-q8_0.gguf",
-      "default_language": ""
+      "source": "https://github.com/ServeurpersoCom/acestep.cpp"
     }
   ],
   "models": [
@@ -649,28 +631,6 @@
       "estimated_bytes": 337420928,
       "sha256": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8",
       "recommended_steps": null
-    },
-    {
-      "file": "heartmula-q8_0.gguf",
-      "provider": "heartmula",
-      "role": "synthesis",
-      "family": "HeartMuLa-3B-happy-new-year + HeartCodec",
-      "precision": "Q8_0",
-      "estimated_bytes": 7659762592,
-      "sha256": "5c3e42171ec012ba7420e3841e2a36e68e36177863b5e76793393afecd10cfbd",
-      "recommended_steps": 10,
-      "url": "https://huggingface.co/audio-cpp/audio.cpp-gguf/resolve/ef1ab2598f6d4d101486e4c5b9e605c687f20642/HeartMuLa-GGUF/heartmula-q8_0.gguf"
-    },
-    {
-      "file": "heartmula-f16.gguf",
-      "provider": "heartmula",
-      "role": "synthesis",
-      "family": "HeartMuLa-3B-happy-new-year + HeartCodec",
-      "precision": "F16",
-      "estimated_bytes": 11204759552,
-      "sha256": "77d47b5c4ffd93ac839c95761c881dac7f0732ef144ea74ab1e7d4bbb9c1fdf3",
-      "recommended_steps": 10,
-      "url": "https://huggingface.co/audio-cpp/audio.cpp-gguf/resolve/ef1ab2598f6d4d101486e4c5b9e605c687f20642/HeartMuLa-GGUF/heartmula-f16.gguf"
     }
   ]
 }

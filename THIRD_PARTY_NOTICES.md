@@ -13,14 +13,6 @@ The GGUF models are downloaded separately from the pinned Hugging Face revision 
 
 Linux AppImage media support includes the GStreamer base/good plugins supplied by the build distribution. Additional proprietary codecs and GStreamer ugly plugins are not deliberately bundled.
 
-## HeartMuLa native provider
-
-- audio.cpp, Copyright 2026 ShugoAI LLC, Apache License 2.0: https://github.com/0xShug0/audio.cpp (pinned source and archive hashes in `models/heartmula-engine.json`). The packaged HeartMuLa CLI includes its upstream license and collected third-party notices; macOS additionally links this project's security-scoped bookmark bridge.
-- HeartMuLa-3B-happy-new-year and HeartCodec by the HeartMuLa contributors, Apache License 2.0: https://github.com/HeartMuLa/heartlib. Native GGUF packaging by audio-cpp: https://huggingface.co/audio-cpp/audio.cpp-gguf. Weights download separately through the verified model catalog; Python reference code is not part of the runtime.
-- ggml, MIT license: https://github.com/ggml-org/ggml. Additional native runtime dependency licenses are retained under the packaged HeartMuLa runtime's `licenses` directory.
-- Windows app-local Vulkan loader by Khronos/LunarG/Valve, MIT/Apache-2.0: https://vulkan.lunarg.com/. The pinned runtime-components ZIP and SHA-256 are in `models/heartmula-engine.json`; `LICENSE-Vulkan-Runtime.txt` is shipped beside the DLL. No runtime installer is executed.
-- Linux app-local Vulkan loader: https://github.com/KhronosGroup/Vulkan-Loader. Its license is retained in `scripts/desktop/licenses/Vulkan-Loader.txt` and beside the packaged loader. CI builds against the pinned Linux Vulkan SDK; final loader bytes are included in the runtime checksums.
-
 ## Shared local title model
 
 - llama.cpp v0.7.0 (MIT): https://github.com/ggml-org/llama.cpp. The statically linked CPU-only `music-title` helper uses the pinned source revision and archive checksum in `models/title-model.json`. Its runtime checksums and build recipe are in `engine/title/TITLE_RUNTIME.json`; the llama.cpp/ggml and nlohmann/json MIT license texts accompany the helper.

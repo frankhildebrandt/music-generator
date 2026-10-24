@@ -212,24 +212,7 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
                 .await?;
                 let _ = app.emit("models-changed", ());
             }
-            let (audio, ext, mut meta) = if selection.provider == "heartmula" {
-                state.stop_engine().await;
-                state.restore_setup()?;
-                if !crate::setup::models_valid_for(&state, &settings, &cancel).await? {
-                    return Err(message(
-                        "HeartMuLa model is missing or invalid. Open the ModelPicker",
-                    ));
-                }
-                crate::heartmula::generate(
-                    &state.resources,
-                    &state.db.root,
-                    &params,
-                    &settings,
-                    &cancel,
-                    progress,
-                )
-                .await?
-            } else {
+            let (audio, ext, mut meta) = {
                 let client = state.start_engine(&settings, &cancel).await?;
                 client
                     .generate(

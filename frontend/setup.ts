@@ -10,8 +10,7 @@ let configuration: Bootstrap;
 let onReady: () => Promise<void>;
 
 function request(): SetupRequest {
-  const heart = element<HTMLSelectElement>("#setupProvider").value === "heartmula";
-  return { lm: element<HTMLSelectElement>("#setupLm").value, xl: !heart && element<HTMLInputElement>("#setupXl").checked, models_dir: element<HTMLInputElement>("#setupModels").value.trim(), songs_dir: element<HTMLInputElement>("#setupSongs").value.trim(), ...(heart ? { selection: {provider:"heartmula",synthesis:element<HTMLSelectElement>("#setupHeartModel").value,language:""} } : {}) };
+  return { lm: element<HTMLSelectElement>("#setupLm").value, xl: element<HTMLInputElement>("#setupXl").checked, models_dir: element<HTMLInputElement>("#setupModels").value.trim(), songs_dir: element<HTMLInputElement>("#setupSongs").value.trim() };
 }
 
 export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Promise<void> {
@@ -23,8 +22,6 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     element("#setupContent").innerHTML = `
       <form id="setupForm"><fieldset id="setupFields">
         <label class="field"><span class="lbl" data-i18n="language"></span><select id="setupLanguage"></select></label>
-        <label class="field"><span class="lbl" data-i18n="picker_provider"></span><select id="setupProvider"><option value="ace-step">ACE-Step 1.5</option><option value="heartmula">HeartMuLa</option></select></label>
-        <label class="field" id="setupHeartField" hidden><span class="lbl">HeartMuLa + HeartCodec</span><select id="setupHeartModel"><option value="heartmula-q8_0.gguf">HeartMuLa 3B Q8_0</option><option value="heartmula-f16.gguf">HeartMuLa 3B F16</option></select><span class="small" data-i18n="heart_hint"></span></label>
         <section class="hardware-card"><h2 data-i18n="desktop_hardware"></h2><p id="hardwareInfo"></p><p id="intelCpuHint" class="small" data-i18n="desktop_intel_cpu_hint" hidden></p></section>
         <section class="import-card"><button type="button" class="sek" id="importLibrary" data-i18n="desktop_import"></button><p class="small" data-i18n="desktop_import_hint"></p><p id="importStatus" role="status"></p></section>
         <label class="field"><span class="lbl" data-i18n="desktop_models_folder"></span><div class="path-picker"><input id="setupModels" required><button type="button" class="sek" data-setup-pick="setupModels" data-i18n="desktop_browse"></button></div></label>
@@ -43,7 +40,6 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     language.onchange = () => { setLang(language.value); void updateEstimate(); };
     element("#setupForm").addEventListener("change", () => { void updateEstimate(); });
     element("#setupForm").addEventListener("submit", (e) => { e.preventDefault(); void configure(); });
-    element("#setupForm").addEventListener("keydown", (e) => { if(e.key==="Enter" && e.target instanceof HTMLSelectElement)e.preventDefault(); });
     element("#setupBack").onclick = () => { void onReady(); };
     element("#cancelSetup").onclick = () => { void backend.cancelSetup(); };
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-setup-pick]")) button.onclick = async () => {
@@ -72,8 +68,6 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     initialized = true;
   }
   element<HTMLSelectElement>("#setupLanguage").value = LANG;
-  element<HTMLSelectElement>("#setupProvider").value = data.settings.model_provider || "ace-step";
-  element<HTMLSelectElement>("#setupHeartModel").value = data.settings.model_provider === "heartmula" ? data.settings.synthesis_model : "heartmula-q8_0.gguf";
   element<HTMLInputElement>("#setupModels").value = data.settings.models_dir;
   element<HTMLInputElement>("#setupSongs").value = data.settings.songs_dir;
   element<HTMLSelectElement>("#setupLm").value = ["0.6B", "1.7B", "4B"].find((size) => data.settings.lm_model.includes(`-${size}-`)) || data.hardware.recommended_lm;
@@ -89,11 +83,7 @@ let estimateSequence = 0;
 async function updateEstimate(): Promise<void> {
   const sequence = ++estimateSequence; const selection = request();
   element("#lmRecommendation").textContent = `${t("desktop_recommended")}: ${configuration.hardware.recommended_lm}`;
-  const heart = Boolean(selection.selection);
-  element("#setupHeartField").hidden = !heart;
-  element<HTMLSelectElement>("#setupLm").disabled = heart;
-  element<HTMLInputElement>("#setupXl").disabled = heart;
-  const models: {file:string;estimated_bytes:number}[] = heart ? configuration.catalog.models.filter(m=>m.file===selection.selection!.synthesis && m.provider==="heartmula") : configuration.manifest.models.filter((m) => m.kind === "required" || m.kind === selection.lm || (m.kind === "xl" && selection.xl));
+  const models: {file:string;estimated_bytes:number}[] = configuration.manifest.models.filter((m) => m.kind === "required" || m.kind === selection.lm || (m.kind === "xl" && selection.xl));
   models.push(configuration.title_model);
   element("#modelList").replaceChildren(...models.map((model) => { const row = document.createElement("div"); row.textContent = `${model.file} · ~${bytes(model.estimated_bytes)}`; return row; }));
   try {

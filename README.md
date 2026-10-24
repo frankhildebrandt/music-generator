@@ -17,12 +17,12 @@ Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind 
 
 - Bestehende Bedienung, zwölf Sprachen, Bibliothek, Favoriten, Ordner und Varianten.
 - Echtzeit-Fortschritt mit Modellladephasen, Sprachmodell, gemessenen DiT-Schritten und VAE-Decodierung.
-- **IT und VAR (ACE-Step):** IT sind die Iterationen der Klangerzeugung (Standard 80), VAR die Varianz des Sprachmodells (Standard 1,2). Mehr Schritte brauchen mehr Zeit; höhere Varianz erzeugt freiere Ergebnisse, niedrigere hält sich enger an Stil und Prompt. Für andere Modellfamilien zeigt der ModelPicker eine ausdrückliche Schritte-Empfehlung. Gespeicherte Songwerte bleiben erhalten. HeartMuLa verwendet eigene Codec- und Temperaturwerte.
+- **IT und VAR (ACE-Step):** IT sind die Iterationen der Klangerzeugung (Standard 80), VAR die Varianz des Sprachmodells (Standard 1,2). Mehr Schritte brauchen mehr Zeit; höhere Varianz erzeugt freiere Ergebnisse, niedrigere hält sich enger an Stil und Prompt. Für andere Modellfamilien zeigt der ModelPicker eine ausdrückliche Schritte-Empfehlung. Gespeicherte Songwerte bleiben erhalten.
 - Mikrofonideen und Audioanalyse, Waveform-Player und native WAV-/TXT-/ZIP-Exporte.
 - Wahlweise MP3-Export mit 192 kbit/s für Einzeldateien und ZIPs; die Bibliothek behält das Original-WAV.
 - Songlänge von 10 Sekunden bis 10 Minuten; oberhalb von fünf Minuten Hinweise auf hohen Zeit- und Speicherbedarf. Lange Songs sind auf Intel-Macs und Rechnern mit 8 GB noch nicht praktisch geprüft.
 - Sprachmodell wahlweise automatisch oder nur auf CPU; die Synthese kann weiterhin die Grafikkarte nutzen.
-- **Automatische Songtitel:** Titel leer lassen; ein kleines gemeinsames lokales Textmodell benennt den fertigen Song für ACE-Step und HeartMuLa. Lyrics und deren Sprache haben Vorrang vor dem Prompt. Rund 640 MB zusätzlicher Download im Assistenten oder ModelPicker; danach offline. Eigene Titel und vorhandene Songs bleiben erhalten.
+- **Automatische Songtitel:** Titel leer lassen; ein kleines gemeinsames lokales Textmodell benennt den fertigen Song für ACE-Step. Lyrics und deren Sprache haben Vorrang vor dem Prompt. Rund 640 MB zusätzlicher Download im Assistenten oder ModelPicker; danach offline. Eigene Titel und vorhandene Songs bleiben erhalten.
 - Fortsetzbare Modelldownloads mit SHA-256-Prüfung; Sprachmodelle 0.6B, 1.7B und 4B, optional XL.
 - Übernahme einer alten Installation; Originaldaten bleiben erhalten.
 - Modelle und Songs außerhalb der App, mit wählbaren Speicherorten. Updates durch Austausch des Bundles.
