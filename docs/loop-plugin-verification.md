@@ -1,6 +1,16 @@
-# LoopForge verification — 0.2.0
+# LoopForge verification — 0.2.1
 
 Manufacturer: Alphatester x KRGSH. Technical bundle names and parameter IDs retained.
+
+## UI alignment update — 0.2.1
+
+Macro titles and values, navigation tabs and action buttons now share centered alignment. Input values stay left-aligned. Single-line text is measured and ellipsized at complete UTF-8 boundaries, with logarithmic fitting for long prompts. Compact buttons retain a usable text rectangle instead of losing their height to padding.
+
+Keyboard pages draw neutral partial white-key backing at black-note edges. Sound names and peak waveforms occupy the unobscured part of white keys; loaded black keys now display their sound name and waveform too. Cached stereo peak bins replace isolated sample reads, with display-only scaling and stronger contrast. Note labels, context marks and playback state have separate space. All playable hits retain the same 16 MIDI notes per page.
+
+The current four-sound user bank was saved separately before reopening 0.2.1. Native visual checks covered PLAY, Coverart, EDIT/groups and GENERATE at 100%, plus 75% scaling and pages with black first/last notes. Local standalone/VST3/CLAP builds, three DSP suites, VST3 validator 47/47, CLAP scan/render/recall and package checks passed. Audio processing and parameter IDs are unchanged. macOS window/menu captions now read LoopForge.
+
+The preceding 0.2.0 commit passed the complete Windows x64, macOS x64 and macOS arm64 CI matrix ([run 40048476597](https://github.com/frankhildebrandt/music-generator/actions/runs/40048476597)). CI for this update runs separately; practical DAW acceptance limits below still apply.
 
 ## Current change
 

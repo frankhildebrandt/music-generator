@@ -1,7 +1,7 @@
 #define PLUG_NAME "LoopForge"
 #define PLUG_MFR "Alphatester x KRGSH"
-#define PLUG_VERSION_HEX 0x00000200
-#define PLUG_VERSION_STR "0.2.0"
+#define PLUG_VERSION_HEX 0x00000201
+#define PLUG_VERSION_STR "0.2.1"
 #define PLUG_UNIQUE_ID 'MgLp'
 #define PLUG_MFR_ID 'AKRG'
 #define PLUG_URL_STR "https://github.com/frankhildebrandt/music-generator"

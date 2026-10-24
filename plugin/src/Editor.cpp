@@ -21,20 +21,49 @@ IText LoopEditor::text(float size, IColor color) const {
   return IText(size, color, "Roboto", EAlign::Near, EVAlign::Middle);
 }
 void LoopEditor::label(IGraphics &g, const std::string &value, IRECT r,
-                       float size, IColor color) {
-  g.DrawText(text(size, color), value.c_str(), r);
+                       float size, IColor color, EAlign align) {
+  if (r.W() <= 0 || r.H() <= 0)
+    return;
+  auto style = text(size, color);
+  style.mAlign = align;
+  auto fits = [&](const std::string &s) {
+    IRECT measured;
+    g.MeasureText(style, s.c_str(), measured);
+    return measured.W() <= r.W();
+  };
+  std::string display = value;
+  if (!fits(display)) {
+    // Fit long prompts in logarithmic steps without splitting UTF-8 glyphs.
+    auto boundary = [&](size_t end) {
+      while (end && end < value.size() &&
+             (static_cast<unsigned char>(value[end]) & 0xc0) == 0x80)
+        --end;
+      return end;
+    };
+    size_t low = 0, high = value.size();
+    while (low < high) {
+      const size_t mid = low + (high - low + 1) / 2;
+      if (fits(value.substr(0, boundary(mid)) + "…"))
+        low = mid;
+      else
+        high = mid - 1;
+    }
+    display = value.substr(0, boundary(low)) + "…";
+  }
+  g.DrawText(style, display.c_str(), r);
 }
 void LoopEditor::button(IGraphics &g, IRECT r, const std::string &title,
-                        const std::string &action, bool active) {
+                        const std::string &action, bool active, EAlign align) {
   g.FillRoundRect(active ? Mint : Panel, r, 4);
   g.DrawRoundRect(active ? Mint : Line, r, 5);
-  label(g, title, r.GetPadded(-8), 12, active ? Background : White);
+  label(g, title, {r.L + 8, r.T + 2, r.R - 8, r.B - 2}, 12,
+        active ? Background : White, align);
   hits.push_back({r, action});
 }
 void LoopEditor::input(IGraphics &g, IRECT r, const std::string &title,
                        const std::string &value, const std::string &action) {
   label(g, title, r.GetFromTop(18), 10, Muted);
-  button(g, r.GetReducedFromTop(20), value, action);
+  button(g, r.GetReducedFromTop(20), value, action, false, EAlign::Near);
 }
 void LoopEditor::entry(const std::string &id, const std::string &value,
                        IRECT r) {

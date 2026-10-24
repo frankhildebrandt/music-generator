@@ -39,11 +39,12 @@ void LoopEditor::stereoWave(IGraphics &g, IRECT r, bool editing) {
     const bool bar = std::fmod(beat, p.barBeats) < .001;
     g.DrawLine(bar ? Line : IColor(255, 34, 43, 47), x, content.T, x,
                content.B);
-    if (bar)
-      label(g,
-            beat >= slot.beats ? "END"
-                               : std::to_string(int(beat / p.barBeats) + 1),
-            {x + 2, r.T + 3, x + 37, r.T + 20}, 9, Muted);
+    if (bar) {
+      const bool end = beat >= slot.beats;
+      label(g, end ? "END" : std::to_string(int(beat / p.barBeats) + 1),
+            {end ? x - 35 : x + 2, r.T + 3, end ? x : x + 37, r.T + 20}, 10,
+            Muted, end ? EAlign::Far : EAlign::Near);
+    }
   }
   for (int ch = 0; ch < 2; ++ch) {
     const float center = content.T + (ch + .5f) * content.H() / 2;
@@ -127,7 +128,8 @@ void LoopEditor::knobs(IGraphics &g, IRECT r, bool vertical) {
     const double value = p.GetParam(p.selected * 8 + param)->Value(),
                  norm = p.GetParam(p.selected * 8 + param)->ToNormalized(value);
     label(g, "M" + std::to_string(n + 1) + "  " + names[param],
-          {cx - 63, cy - radius - 25, cx + 70, cy - radius - 5}, 10, Muted);
+          {cx - 88, cy - radius - 27, cx + 88, cy - radius - 7}, 11, Muted,
+          EAlign::Center);
     g.DrawArc(Line, cx, cy, radius + 4, -135, 135, nullptr, 5);
     g.DrawArc(Mint, cx, cy, radius + 4, -135, float(-135 + norm * 270), nullptr,
               4);
@@ -149,8 +151,8 @@ void LoopEditor::knobs(IGraphics &g, IRECT r, bool vertical) {
                   (param == Pitch                          ? " st"
                    : param == Lowpass || param == Highpass ? " Hz"
                                                            : "");
-    label(g, display, {cx - 43, cy + radius + 6, cx + 60, cy + radius + 25},
-          11);
+    label(g, display, {cx - 88, cy + radius + 8, cx + 88, cy + radius + 28}, 12,
+          White, EAlign::Center);
     hits.push_back(
         {{cx - radius - 7, cy - radius - 3, cx + radius + 7, cy + radius + 4},
          "param" + std::to_string(param)});
@@ -183,7 +185,7 @@ void LoopEditor::performance(IGraphics &g) {
     knobs(g, {40, 400, 1016, 508}, false);
     button(g, {1017, 421, 1099, 449}, "Map", "mapping", mappingOpen);
   } else {
-    IRECT art(24, 173, 603, 468);
+    IRECT art(24, 173, 603, 458);
     g.FillRoundRect(Background, art, 4);
     const auto &doc = p.bank.document;
     if (doc.contains("artwork")) {
@@ -226,14 +228,14 @@ void LoopEditor::performance(IGraphics &g) {
       label(g, p.bank.document.value("name", "LOOPFORGE"),
             {art.L + 24, art.B - 80, art.R - 20, art.B - 30}, 32);
     }
-    button(g, {24, 473, 603, 499}, "Loopbank artwork · Import PNG / JPEG",
+    button(g, {24, 462, 603, 485}, "Loopbank artwork · Import PNG / JPEG",
            "artwork");
     label(g, "MACROS  ·  Selected sound", {627, 169, 970, 195}, 13);
     button(g, {1020, 168, 1098, 194}, "Map", "mapping", mappingOpen);
     knobs(g, {624, 218, 1090, 497}, true);
   }
   const double pos = p.playPosition();
-  const float y = coverView ? 508 : 368;
+  const float y = coverView ? 503 : 368;
   button(g, {24, y - 11, 70, y + 19}, pos >= 0 ? "II" : ">", "masterplay");
   g.FillRoundRect(Line, {82, y, 433, y + 5}, 2);
   if (pos >= 0)
@@ -248,7 +250,8 @@ void LoopEditor::performance(IGraphics &g) {
   for (int n = 0; n < Slots; ++n)
     if (p.queued(n) && (slot.group == 0 || p.bank[n].group == slot.group))
       next = "NEXT: " + noteName(n) + " / " + p.bank[n].name + " · " + timing();
-  label(g, next, {650, y - 9, 1090, y + 15}, 11, Gold);
+  label(g, next, {650, y - 9, 1090, y + 15}, 11,
+        next == "No queued switch" ? Muted : Gold);
   button(g, {23, 528, 132, 553},
          slot.group || slot.mode == Mode::Toggle ? "Toggle"
          : slot.mode == Mode::Gate               ? "Gate"
@@ -263,7 +266,8 @@ void LoopEditor::performance(IGraphics &g) {
   button(g, {470, 528, 611, 553},
          slot.group ? groupName(slot.group) : "Sound group: Off",
          "assignGroup");
-  button(g, {619, 528, 737, 553}, "Output " + std::to_string(slot.bus),
+  button(g, {619, 528, 737, 553},
+         slot.bus ? "Stereo " + std::to_string(slot.bus + 1) : "Master",
          "busSelect");
   button(g, {745, 528, 846, 553}, "Edit loop", "view1");
   button(g, {854, 528, 960, 553}, "Import", "import");

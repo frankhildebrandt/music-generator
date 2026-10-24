@@ -1,4 +1,4 @@
-# LoopForge 0.2.0
+# LoopForge 0.2.1
 
 Instrument von **Alphatester x KRGSH** für VST3, CLAP und als Standalone-App. Die Oberfläche übernimmt das bereitgestellte LoopForge-Design mit gemeinsamer Sound-Idee, PLAY / GENERATE / EDIT, Stereo-Waveforms und durchgehend sichtbarem Keyboard. Die technischen Bundle-Namen und Plugin-IDs bleiben für vorhandene Projekte erhalten. Bank öffnen/speichern, Umbenennen, Audioimport, Modellprüfung, Skalierung und Host-Sync befinden sich im Bank-/Einstellungsmenü oben.
 

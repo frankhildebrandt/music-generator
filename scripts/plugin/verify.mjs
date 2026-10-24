@@ -13,7 +13,7 @@ const folder = path.resolve(
   process.argv[2] ??
     path.join(
       root,
-      `release/Music-Generator-Loops-0.2.0-${platform}-${architecture}`,
+      `release/Music-Generator-Loops-0.2.1-${platform}-${architecture}`,
     ),
 );
 const sums = JSON.parse(

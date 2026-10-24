@@ -277,7 +277,7 @@ void LoopEditor::groups(IGraphics &g) {
       continue;
     button(g, {855, y, 1071, y + 29},
            noteName(note) + "  " + p.bank[note].name.substr(0, 13),
-           "slot" + std::to_string(note), p.selected == note);
+           "slot" + std::to_string(note), p.selected == note, EAlign::Near);
     label(g,
           p.queued(note)          ? "Q"
           : p.position(note) >= 0 ? ">"

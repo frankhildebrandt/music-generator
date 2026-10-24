@@ -47,6 +47,12 @@ class LoopEditor final : public IControl {
   IRECT waveBounds{24, 188, 820, 374};
   std::shared_ptr<const Audio> waveAudio;
   std::array<std::array<float, 4>, 2048> waveBins{};
+  struct KeyWave {
+    std::weak_ptr<const Audio> audio;
+    std::array<std::array<float, 2>, 64> bins{};
+    float peak = 0;
+  };
+  std::array<KeyWave, Slots> keyWaves;
   double settingsScroll = 0, takeScroll = 0, groupScroll = 0,
          templateScroll = 0;
   int takeDrag = -1;
@@ -63,9 +69,10 @@ class LoopEditor final : public IControl {
 public:
   IText text(float size = 13, IColor color = White) const;
   void label(IGraphics &g, const std::string &value, IRECT r, float size = 13,
-             IColor color = White);
+             IColor color = White, EAlign align = EAlign::Near);
   void button(IGraphics &g, IRECT r, const std::string &title,
-              const std::string &action, bool active = false);
+              const std::string &action, bool active = false,
+              EAlign align = EAlign::Center);
   void input(IGraphics &g, IRECT r, const std::string &title,
              const std::string &value, const std::string &action);
   void entry(const std::string &id, const std::string &value, IRECT r);
@@ -89,6 +96,7 @@ public:
   void DrawDetail(IGraphics &g);
   void navigation(IGraphics &g);
   void keyboard(IGraphics &g);
+  void keyWave(IGraphics &g, IRECT bounds, int note, IColor color);
   void performance(IGraphics &g);
   void generation(IGraphics &g);
   void scrollBar(IGraphics &g, IRECT viewport, double scroll, double content,
