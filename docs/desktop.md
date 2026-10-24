@@ -43,6 +43,8 @@ Settings → Export selects lossless WAV or MP3 at 192 kbit/s for both individua
 
 Songs can be 10 seconds to 10 minutes long. Above five minutes the form shows a localized time/memory warning. The language model may occasionally return extra audio codes; the outgoing synthesis payload is capped at the requested duration × 5 and at 3000 codes (600 seconds). This does not rewrite saved song parameters. Synthesis failures inspect only new lines in the combined stdout/stderr engine log; memory exhaustion and the model's maximum-length error get specific explanations. Earlier jobs' memory errors are ignored. Ten-minute generation remains untested on Intel Macs and 8 GiB machines; start with a short song on those systems.
 
+Since 0.2.7, new generations normalize to the actual audio peak instead of the engine's percentile clipping. Rust sends `peak_clip: 0` to both generation stages and reapplies it after LM enrichment. Existing library audio and stored parameters are retained. This addresses that normalization step; it is not a claim that every possible audible distortion has been eliminated.
+
 - macOS: `~/Library/Containers/de.freicon.music-generator/Data/Library/Application Support/de.freicon.music-generator/`
 - Windows: `%LOCALAPPDATA%\de.freicon.music-generator\`
 - Linux: `$XDG_DATA_HOME/de.freicon.music-generator/` (normally `~/.local/share/…`)
@@ -54,6 +56,8 @@ Packaged macOS builds enable Apple's App Sandbox. Network client/server entitlem
 The current ad-hoc test signatures have no stable Developer ID identity. Replacing the app with a different test build can require selecting external folders again; model and song files remain intact. Folder grants survive restarting the same build, which has been tested. Stable signing and notarization remain a separate release step.
 
 Earlier unsandboxed desktop test builds used `~/Library/Application Support/de.freicon.music-generator/`. To retain that library, select that directory using the first-run import button; it copies the database and songs into an empty sandbox library and reuses verified models after authorization. Existing files remain in place. Legacy browser-project imports still use the same button.
+
+The studio and Settings include a [ModelPicker](model-picker.md) for 52 ACE-Step synthesis weights and eight language weights, with a RAM-budget filter and verified resumable downloads. Provider metadata prepares HeartMuLa without enabling its missing inference adapter. New jobs retain a model snapshot; existing songs keep their saved values.
 
 The app does not write into the program bundle. Replace the complete app/bundle for updates; models and library remain available. Setup → Version checks releases in this fork and opens the platform's new bundle. The app does not perform Git pulls or replace its own running files. Setup → Models and hardware test can download another model or repeat the test. Changing the song folder copies files first and switches the saved path only after successful copying; queued/running songs must finish or be cancelled before moving.
 

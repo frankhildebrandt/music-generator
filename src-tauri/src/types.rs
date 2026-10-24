@@ -7,6 +7,8 @@ pub struct Settings {
     pub models_dir: String,
     pub songs_dir: String,
     pub lm_model: String,
+    pub model_provider: String,
+    pub synthesis_model: String,
     pub dit: String,
     pub lm_device: String,
     pub export_format: String,
@@ -24,6 +26,8 @@ impl Default for Settings {
             models_dir: String::new(),
             songs_dir: String::new(),
             lm_model: String::new(),
+            model_provider: "ace-step".into(),
+            synthesis_model: String::new(),
             dit: "standard".into(),
             lm_device: "auto".into(),
             export_format: "wav".into(),
@@ -46,6 +50,7 @@ impl Settings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GenerateRequest {
+    pub model_selection: Option<crate::catalog::Selection>,
     pub prompt: String,
     pub style: String,
     pub caption: String,
@@ -69,6 +74,7 @@ pub struct GenerateRequest {
 impl Default for GenerateRequest {
     fn default() -> Self {
         Self {
+            model_selection: None,
             prompt: String::new(),
             style: String::new(),
             caption: String::new(),

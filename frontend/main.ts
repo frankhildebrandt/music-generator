@@ -1,15 +1,18 @@
 import "./desktop-i18n";
+import "./model-i18n";
 import { applyI18n, t } from "./i18n.js";
 import { backend } from "./backend";
 import { initializeDesktop } from "./desktop";
 import { element } from "./dom";
 import { showSetup } from "./setup";
 import type { Bootstrap } from "./types";
+import { initializeModelPicker } from "./model-picker";
 
 let bootstrap: Bootstrap;
 async function showStudio(): Promise<void> {
   element("#setupScreen").hidden = true; element("#studio").hidden = false;
   await import("./studio.js");
+  await initializeModelPicker();
   document.dispatchEvent(new Event("studio-ready"));
 }
 

@@ -42,6 +42,18 @@ fn stamp(path: &Path) -> Result<(u64, u128)> {
 }
 
 impl ModelVerifier {
+    /// Read the existing proof without hashing large files when opening the picker.
+    pub fn is_verified(&self, path: &Path, expected: &str) -> bool {
+        let Ok(path) = path.canonicalize() else {
+            return false;
+        };
+        let Ok((length, modified)) = stamp(&path) else {
+            return false;
+        };
+        self.cache.entries.get(path.to_string_lossy().as_ref())
+            == Some(&(expected.to_owned(), length, modified))
+    }
+
     pub fn open(root: &Path) -> Self {
         let file = root.join("verified-models.json");
         let cache = std::fs::read(&file)

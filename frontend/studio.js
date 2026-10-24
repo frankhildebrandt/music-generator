@@ -2,6 +2,7 @@ import { STYLE_TAGS, SECTIONS, randomPrompt, randomStyle, randomTitle } from "./
 import { extractStyleTags } from "./style-tags";
 import { measureMelody, describeIdea, toWav } from "./melody";
 import { backend } from "./backend";
+import { generationModels, restoreSongModels } from "./model-picker";
 import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
 import { samplingForSong } from "./song-sampling";
@@ -134,6 +135,7 @@ function readForm() {
   const d = Object.fromEntries(new FormData(form));
   const num = (k, def) => (d[k] === "" || d[k] == null ? def : Number(d[k]));
   return {
+    model_selection: generationModels(),
     folder_id: curFolder && curFolder !== "none" ? curFolder : null,
     title: d.title || "", prompt: d.prompt || "", style: d.style || "", lyrics: form.instrumental.checked ? "" : d.lyrics || "", instrumental: form.instrumental.checked, keep_caption: form.keep_caption.checked,
     duration: Number(form.duration.value), bpm: Number(form.bpm.value) <= Number(form.bpm.min) ? 0 : Number(form.bpm.value), keyscale: d.keyscale || "", timesignature: d.timesignature || "", vocal_language: form.instrumental.checked ? "" : d.vocal_language || "en",
@@ -169,6 +171,7 @@ function setSelect(sel, val, add = false) {
 
 function fillForm(s) {
   const p = s.params;
+  restoreSongModels(p.model_selection);
   form.title.value = s.title || "";
   form.style.value = p.style ?? p.caption;   // ältere Songs haben nur einen Text
   form.prompt.value = p.prompt ?? ""; syncStyleChips();
@@ -208,7 +211,7 @@ async function analyzeFile(file, idea = null) {   // idea = Messwerte einer Mikr
   if (!file) return;
   dzState("busy", t("analyzing", file.name));
   try {
-    const r = await backend.analyze(file);
+    const r = await backend.analyze(file, generationModels());
     form.prompt.value = idea ? describeIdea(idea, r.caption, r.keyscale) : r.caption || "";
     form.title.value = randomTitle();
    
@@ -680,16 +683,15 @@ async function checkHealth() {
 const dlg = $("#settingsDlg"), sf = $("#settingsForm");
 $("#btnSettings").onclick = async () => {
   const s = await backend.settings();
-  for (const k of ["timeout_minutes", "songs_dir", "dit", "lm_device", "export_format"]) sf[k].value = s[k];
+  for (const k of ["timeout_minutes", "songs_dir", "lm_device", "export_format"]) sf[k].value = s[k];
   sf.export_format.querySelector("option[value=mp3]").disabled = !s.mp3_available;
   $("#expHint").hidden = s.mp3_available;
   $("#settingsIntelHint").hidden = !s.cpu_only;
-  sf.dit.querySelector('option[value="xl"]').disabled = !s.dit_xl_available;   // XL nur wählbar, wenn die Datei da ist
-  $("#ditHint").hidden = s.dit_xl_available;
   sf.songs_dir.placeholder = s.songs_dir_default;   // Standard als Platzhalter, leer lassen = Standard
   dlg.showModal();
 };
-const saveSettings = () => backend.saveSettings({ timeout_minutes: Number(sf.timeout_minutes.value), songs_dir: sf.songs_dir.value.trim(), dit: sf.dit.value, lm_device: sf.lm_device.value, export_format: sf.export_format.value }).catch((err) => { alert(err.message === "mp3_failed" ? t("mp3_failed") : err.message); $("#btnSettings").click(); });
+const saveSettings = () => backend.saveSettings({ timeout_minutes: Number(sf.timeout_minutes.value), songs_dir: sf.songs_dir.value.trim(), lm_device: sf.lm_device.value, export_format: sf.export_format.value }).catch((err) => { alert(err.message === "mp3_failed" ? t("mp3_failed") : err.message); $("#btnSettings").click(); });
+$("#settingsModelPicker").onclick = () => { dlg.close("cancel"); document.dispatchEvent(new Event("open-model-picker")); };
 // Anordnung: untereinander oder Generator links / Bibliothek rechts
 function setLayout(l) {
   document.querySelector(".wrap").classList.toggle("side", l !== "stack");
