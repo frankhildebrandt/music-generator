@@ -1,4 +1,5 @@
 import { appendFile, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { architecture, download, exists, files, hash, platform, root, run, target } from "./common.mjs";
@@ -6,7 +7,7 @@ import { architecture, download, exists, files, hash, platform, root, run, targe
 const pin = JSON.parse(await readFile(path.join(root,"models/heartmula-engine.json"),"utf8"));
 export const heartFolder = path.join(root,"src-tauri/resources/engine/heartmula");
 const exe = platform === "windows" ? "audiocpp_cli.exe" : "audiocpp_cli";
-async function recipe() { return (await hash(fileURLToPath(import.meta.url))) + ":" + (await hash(path.join(root,"scripts/desktop/engine-sandbox.mm"))); }
+async function recipe() { return (await hash(fileURLToPath(import.meta.url))) + ":" + (await hash(path.join(root,"scripts/desktop/engine-sandbox.mm"))) + ":" + (await hash(path.join(root,"scripts/desktop/licenses/Vulkan-Loader.txt"))); }
 export async function verifyHeartmula(folder = heartFolder, checkRecipe = true) {
   const proof = JSON.parse(await readFile(path.join(folder,"HEART_RUNTIME.json"),"utf8"));
   if (proof.revision !== pin.revision || proof.platform !== platform || proof.arch !== architecture || !proof.files[exe]) throw Error("HeartMuLa runtime target/revision mismatch");
@@ -65,6 +66,14 @@ export async function prepareHeartmula() {
     const license=components.find(f=>path.basename(f)==="VulkanRT-License.txt");
     if(!loader||!license)throw Error("Pinned Windows Vulkan loader/license missing");
     await cp(loader,path.join(heartFolder,"vulkan-1.dll"));await cp(license,path.join(heartFolder,"LICENSE-Vulkan-Runtime.txt"));
+  }
+  if(platform==="linux") {
+    const dependencies=execFileSync("ldd",[path.join(built,exe)],{encoding:"utf8"});
+    const loader=dependencies.match(/libvulkan\.so\.1\s+=>\s+(\/[^\n]+?)\s+\(/)?.[1];
+    if(!loader)throw Error("HeartMuLa requires a resolvable Vulkan loader for app-local packaging");
+    await cp(loader,path.join(heartFolder,"libvulkan.so.1"),{dereference:true});
+    await cp(path.join(root,"scripts/desktop/licenses/Vulkan-Loader.txt"),path.join(heartFolder,"LICENSE-Vulkan-Loader.txt"));
+    await run("patchelf",["--set-rpath","$ORIGIN",path.join(heartFolder,exe)]);
   }
   if(platform!=="windows")for(const file of await files(path.join(source,"external")))if(/^(LICENSE|COPYING|NOTICE)/i.test(path.basename(file))){const dest=path.join(heartFolder,"licenses",path.relative(source,file));await mkdir(path.dirname(dest),{recursive:true});await cp(file,dest);}
   if(platform==="macos")await run("codesign",["--force","--sign","-","--entitlements",path.join(root,"src-tauri/Engine.entitlements"),path.join(heartFolder,exe)]);
