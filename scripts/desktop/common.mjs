@@ -53,7 +53,7 @@ export async function recordHashes(folder, metadata) {
 
 export async function engineRecipeHash() {
   const digest = createHash("sha256");
-  for (const name of ["prepare-engine.mjs", "targets.mjs"]) digest.update(await readFile(path.join(root, "scripts/desktop", name)));
+  for (const name of ["prepare-engine.mjs", "targets.mjs", "patches/acestep-macos-compat.patch"]) digest.update(await readFile(path.join(root, "scripts/desktop", name)));
   return digest.digest("hex");
 }
 

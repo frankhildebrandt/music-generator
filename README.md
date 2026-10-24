@@ -6,7 +6,7 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 
 | Plattform | Bundle |
 | --- | --- |
-| macOS 26+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
+| macOS 14+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
 | macOS 13.3+, Intel x64 (experimentell) | Eigenes DMG und ZIP, ausschließlich CPU |
 | Windows 10/11, x64 | ZIP mit EXE, Engine und WebView2 |
 | Linux, x64 | AppImage mit Vulkan/CPU-Engine |

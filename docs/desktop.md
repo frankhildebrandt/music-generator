@@ -6,7 +6,7 @@ Download the bundle for your platform from https://github.com/frankhildebrandt/m
 
 | Platform | Bundle | Requirements |
 | --- | --- | --- |
-| macOS | `Music-Generator-VERSION-macos-arm64.dmg` or `.zip` | Apple Silicon, macOS 26+ |
+| macOS | `Music-Generator-VERSION-macos-arm64.dmg` or `.zip` | Apple Silicon, macOS 14+ |
 | macOS Intel (experimental) | `Music-Generator-VERSION-macos-x64.dmg` or `.zip` | Intel x64, macOS 13.3+, at least 8 GiB RAM; CPU only |
 | Windows | `Music-Generator-VERSION-windows-x64.zip` | Windows 10/11 x64, current GPU driver |
 | Linux | `Music-Generator-VERSION-linux-x64.AppImage` | x64; Ubuntu 22.04 or compatible newer distribution, current GPU driver |
@@ -16,6 +16,8 @@ Extract the complete ZIP and open Music Generator. Keep the Windows EXE, `engine
 On macOS you can instead open the DMG and drag Music Generator onto its Applications shortcut (or copy it into another folder). Eject the disk image and open the copied app. The DMG contains the same sealed `.app` as the ZIP and does not run an installer. Both downloads include a SHA-256 file. CI verifies the read-only disk image, copies its app into a relocated folder, ejects the image and tests the copied app's signature, engine files, engine startup and shutdown.
 
 macOS uses its native red/yellow/green window controls on the left. Windows and Linux use the custom minimize/maximize/close controls on the right. The title bar is draggable, and the layout fills the window at every supported size.
+
+Apple Silicon builds target macOS 14.0 (Sonoma), including the Rust app, supervisor, ACE-Step engine and title helper. Metal remains enabled; Intel retains its separate 13.3 CPU target. ARM CI uses macOS 15 with a 14.0 deployment target. Bundle checks validate the minimum OS of every Mach-O binary and the app plist. Engine and title cache recipes include the target policy. Current Xcode also needs `scripts/desktop/patches/acestep-macos-compat.patch`, which selects the pinned engine's existing portable float parser below macOS 26. Runtime acceptance on macOS 14/15 remains separate from building on newer macOS.
 
 Intel Macs use a separate native x64 bundle; no Rosetta, Python, Node.js or local compilation is needed. Both language-model inference and synthesis run on the CPU, even when an old profile requests a separate CPU language model. One engine process handles both tasks to avoid duplicating model memory. The Intel engine excludes Metal and includes runtime-selected portable CPU variants rather than instructions tied to the build host. macOS 13.3 is the deployment target (including Accelerate's newer LAPACK API); native CI runs on macOS 15. Actual generation, GUI/audio and minimum-OS acceptance remain manual checks: this is experimental support, not a claim of tests on every Intel Mac or on macOS 13.3.
 

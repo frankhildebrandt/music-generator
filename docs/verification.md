@@ -1,3 +1,13 @@
+# macOS 14 release packages — 2026-10-25
+
+Built version 0.2.9 for Apple Silicon from the separated desktop base `6f5774d95218bc7c7dbb86658d9ed09511a807b7` plus the local macOS-14 target/cache/parser changes. HeartMuLa is absent from this source and from the sealed app/resource manifest.
+
+Both `Music-Generator-0.2.9-macos-arm64.zip` and `.dmg` pass `verify-bundle.mjs` (including `--dmg`): archive SHA-256, relocated resource/provenance checks, arm64 architecture and deployment target of every Mach-O, app plist, deep strict signatures, actual sandbox read/write denial in parent and engine, title-runtime startup, loopback engine health, supervised shutdown, MP3/ZIP export, unchanged original WAV and deleted export cache. All 22 packaged Mach-O files declare minimum macOS 14.0. The DMG additionally passes integrity, read-only mount, Applications shortcut, copy, detach and relocated-app tests.
+
+ESLint, TypeScript/Vite, 28 frontend tests, four desktop policy tests and 65 Rust tests with deployment target 14.0 pass. Builds and bundle checks ran on macOS 26.6.2 with the macOS 27 SDK. These local bundles are ad-hoc signed and not notarized. Actual GUI/audio and model inference acceptance on macOS 14/15 remains open.
+
+The checked files and logs were also copied to `release/local-0.2.9-macos14/`, with a detailed `verification-macos14.txt` report. ZIP SHA-256: `2996876cff777250efff3ffe4eba4d5f8c47f8df1e9755acb29181433161b1e8`. DMG SHA-256: `1768f872375a726aa90c81803c93f7442b705372b547ac32f2c8af6e51724bd6`.
+
 # Desktop provider separation — 2026-10-24
 
 The desktop branch now contains ACE-Step music generation and the shared local title model. The provider-specific runtime, model catalog entries, setup controls, sampling, tests, build requirements and notices have been extracted from this branch. Realtime progress, automatic titles, model snapshots and existing saved-song behavior remain covered by the desktop suite.

@@ -7,7 +7,7 @@ const pin = JSON.parse(await readFile(path.join(root, "models/title-model.json")
 export const titleFolder = path.join(root, "src-tauri/resources/engine/title");
 const exe = platform === "windows" ? "music-title.exe" : "music-title";
 async function recipe() {
-  const sources = [fileURLToPath(import.meta.url), "scripts/desktop/title-runtime/CMakeLists.txt", "scripts/desktop/title-runtime/title.cpp", "scripts/desktop/engine-sandbox.mm", "src-tauri/Engine.entitlements"];
+  const sources = [fileURLToPath(import.meta.url), "scripts/desktop/targets.mjs", "scripts/desktop/title-runtime/CMakeLists.txt", "scripts/desktop/title-runtime/title.cpp", "scripts/desktop/engine-sandbox.mm", "src-tauri/Engine.entitlements"];
   return (await Promise.all(sources.map(file => hash(path.isAbsolute(file) ? file : path.join(root, file))))).join(":");
 }
 export async function verifyTitle(folder = titleFolder, checkRecipe = true) {
