@@ -15,3 +15,5 @@ const messages: Record<string,string[]>={
  zh:["HeartMuLa 根据风格标签和输入的歌词或纯音乐选项生成音乐，最长4分钟。速度和调性仅作风格提示。编解码参数与 ACE-Step 独立。","已包含语言模型和 HeartCodec","编解码步数","温度","CPU 选项作用于整个 HeartMuLa 流程。","音频分析需要 ACE-Step，请在模型选择器中切换。","请输入歌词或为 HeartMuLa 启用纯音乐。","HeartMuLa 每首歌曲最长240秒。"]
 };
 for(const [lang,values] of Object.entries(messages))Object.assign(I18N[lang as keyof typeof I18N],Object.fromEntries(keys.map((k,i)=>["heart_"+k,values[i]])));
+
+for(const lang of Object.keys(messages))Object.assign(I18N[lang as keyof typeof I18N],{desktop_progress_heartmula:"HeartMuLa / HeartCodec"});

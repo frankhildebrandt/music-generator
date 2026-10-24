@@ -15,6 +15,7 @@ async function showStudio(): Promise<void> {
   await import("./studio.js");
   await initializeModelPicker();
   document.dispatchEvent(new Event("studio-ready"));
+  requestAnimationFrame(() => element<HTMLInputElement>('#genForm input[name="title"]').focus({preventScroll:true}));
 }
 
 async function start(): Promise<void> {

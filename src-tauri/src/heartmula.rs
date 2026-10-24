@@ -191,7 +191,7 @@ pub async fn generate(
     params: &Value,
     settings: &Settings,
     cancel: &CancellationToken,
-    progress: impl Fn(String),
+    progress: impl Fn(crate::engine::progress::Progress),
 ) -> Result<(Vec<u8>, String, Value)> {
     if cancel.is_cancelled() {
         return Err(Error::Cancelled);
@@ -226,7 +226,7 @@ pub async fn generate(
                 }
                 break;
             }
-            progress(format!("HeartMuLa / HeartCodec · {}:{:02}", started.elapsed().as_secs()/60, started.elapsed().as_secs()%60));
+            let mut update=crate::engine::progress::Progress::new("heartmula"); update.elapsed_seconds=started.elapsed().as_secs(); progress(update);
             tokio::select! { _ = cancel.cancelled() => return Err(Error::Cancelled), _ = tokio::time::sleep(Duration::from_millis(500)) => {} }
         }
         let bytes = tokio::fs::read(output).await?;

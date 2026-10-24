@@ -46,6 +46,7 @@ function compact(): void {
   record.title=t(heart?"heart_analysis":"rec_aria");
   picker("dropzone").title=t(heart?"heart_analysis":"drop_title");
   picker("dropzone").setAttribute("aria-disabled",String(heart));
+  picker("dropzone").tabIndex=heart?-1:0;
 }
 
 async function refresh(): Promise<void> {

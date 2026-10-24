@@ -199,6 +199,7 @@ pub fn delete_folder(state: Desktop<'_>, app: AppHandle, id: String) -> Result<(
 pub fn queue(state: Desktop<'_>) -> Result<Value> {
     let mut queue = state.db.queue()?;
     queue["active"] = json!(state.operation.try_lock().is_err());
+    queue["progress"] = json!(*state.progress.lock().unwrap());
     Ok(queue)
 }
 
