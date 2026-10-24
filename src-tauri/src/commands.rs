@@ -40,7 +40,7 @@ pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
         "Startup setup check finished"
     );
     Ok(
-        json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"catalog":crate::catalog::catalog(),"error":null,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
+        json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"catalog":crate::catalog::catalog(),"title_model":crate::titles::manifest().model,"error":null,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
     )
 }
 

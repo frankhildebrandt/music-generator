@@ -16,6 +16,7 @@ pub mod power;
 pub mod sandbox;
 pub mod setup;
 pub mod state;
+pub mod titles;
 pub mod types;
 mod updates;
 pub mod verification;
@@ -96,6 +97,7 @@ pub fn run() {
             commands::remember_folder,
             model_commands::model_catalog,
             model_commands::use_models,
+            model_commands::download_title_model,
             model_commands::cancel_model_download
         ])
         .build(tauri::generate_context!())

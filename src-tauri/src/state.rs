@@ -189,7 +189,30 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
             let progress = |progress: Progress| {
                 state.report_progress(&app, &sid, progress);
             };
-            let (audio, ext, meta) = if selection.provider == "heartmula" {
+            // Existing installations lazily fetch only this shared model for blank titles.
+            // Explicit titles require neither a title download nor title inference.
+            if state
+                .db
+                .song(&sid)?
+                .title
+                .as_deref()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
+                state.report_progress(&app, &sid, Progress::new("title_download"));
+                crate::titles::install(
+                    &state.db.root,
+                    std::path::Path::new(&settings.models_dir),
+                    &cancel,
+                    |p| {
+                        let _ = app.emit("model-download-progress", p);
+                    },
+                )
+                .await?;
+                let _ = app.emit("models-changed", ());
+            }
+            let (audio, ext, mut meta) = if selection.provider == "heartmula" {
                 state.stop_engine().await;
                 state.restore_setup()?;
                 if !crate::setup::models_valid_for(&state, &settings, &cancel).await? {
@@ -218,6 +241,43 @@ pub async fn worker(state: Arc<AppState>, app: AppHandle) {
                     )
                     .await?
             };
+            if state
+                .db
+                .song(&sid)?
+                .title
+                .as_deref()
+                .unwrap_or("")
+                .trim()
+                .is_empty()
+            {
+                // Free resident music weights before loading the CPU-only text model.
+                state.stop_engine().await;
+                state.restore_setup()?;
+                state.report_progress(&app, &sid, Progress::new("title"));
+                let input = crate::titles::request(&params, &meta);
+                match crate::titles::generate(
+                    &state.resources,
+                    &state.db.root,
+                    std::path::Path::new(&settings.models_dir),
+                    &input,
+                    &cancel,
+                    progress,
+                )
+                .await
+                {
+                    Ok(title) => {
+                        meta["generated_title"] = serde_json::json!(title);
+                        meta["title_model"] = serde_json::json!(crate::titles::manifest().revision);
+                    }
+                    Err(crate::error::Error::Cancelled) => {
+                        return Err(crate::error::Error::Cancelled)
+                    }
+                    Err(error) => {
+                        tracing::warn!("Automatic title: {error}");
+                        meta["title_generation_error"] = serde_json::json!(error.to_string());
+                    }
+                }
+            }
             state.report_progress(&app, &sid, Progress::new("saving"));
             let dir = PathBuf::from(settings.songs_dir);
             tokio::fs::create_dir_all(&dir).await?;

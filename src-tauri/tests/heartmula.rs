@@ -142,7 +142,8 @@ fn first_run_heartmula_does_not_download_ace_step_starter_weights() {
         songs_dir: "/songs".into(),
     };
     let plan = music_generator::setup::plan(&request).unwrap();
-    assert_eq!(plan.len(), 1);
+    assert_eq!(plan.len(), 2);
+    assert_eq!(plan[1].0.kind, "titles");
     assert_eq!(plan[0].0.file, "heartmula-q8_0.gguf");
     assert!(plan[0].1.contains("audio-cpp/audio.cpp-gguf/resolve/"));
 }

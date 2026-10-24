@@ -20,3 +20,8 @@ Linux AppImage media support includes the GStreamer base/good plugins supplied b
 - ggml, MIT license: https://github.com/ggml-org/ggml. Additional native runtime dependency licenses are retained under the packaged HeartMuLa runtime's `licenses` directory.
 - Windows app-local Vulkan loader by Khronos/LunarG/Valve, MIT/Apache-2.0: https://vulkan.lunarg.com/. The pinned runtime-components ZIP and SHA-256 are in `models/heartmula-engine.json`; `LICENSE-Vulkan-Runtime.txt` is shipped beside the DLL. No runtime installer is executed.
 - Linux app-local Vulkan loader: https://github.com/KhronosGroup/Vulkan-Loader. Its license is retained in `scripts/desktop/licenses/Vulkan-Loader.txt` and beside the packaged loader. CI builds against the pinned Linux Vulkan SDK; final loader bytes are included in the runtime checksums.
+
+## Shared local title model
+
+- llama.cpp v0.7.0 (MIT): https://github.com/ggml-org/llama.cpp. The statically linked CPU-only `music-title` helper uses the pinned source revision and archive checksum in `models/title-model.json`. Its runtime checksums and build recipe are in `engine/title/TITLE_RUNTIME.json`; the llama.cpp/ggml and nlohmann/json MIT license texts accompany the helper.
+- Qwen3-0.6B-GGUF (Apache-2.0): https://huggingface.co/Qwen/Qwen3-0.6B-GGUF. Model weights are downloaded separately to the selected model folder, never fetched by the inference helper. The exact Q8 model revision, byte size and SHA-256 are pinned in `models/title-model.json`. Upstream license: https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/blob/main/LICENSE.

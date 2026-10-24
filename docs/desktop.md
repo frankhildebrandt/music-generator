@@ -23,6 +23,14 @@ Expect many minutes per song on older Intel CPUs. Start with a ten-second song, 
 
 These first builds are unsigned test builds. macOS Gatekeeper and Windows SmartScreen can display warnings. There is no installer or requirement to install Python, Node.js, Git, compilers or package managers. GPU drivers are supplied by the operating system/vendor, not by this app. Windows ships WebView2 app-locally. On Windows 10 the app applies Microsoft's required read/execute permissions to that runtime directory; application data is not included in this permission change. Extract onto a local writable drive, not a network share.
 
+## Automatic song titles
+
+Leave the title empty to name the finished song with a shared local Qwen3-0.6B Q8 text model, for both ACE-Step and HeartMuLa. Actual generated lyrics take priority over the music prompt, including their language; instrumental songs use the prompt. Manual titles, later renames and saved generation parameters remain unchanged. Audio analysis no longer inserts a random title. The title dice still explicitly chooses a random title.
+
+The assistant downloads the approximately 640 MB title model alongside the chosen music models. Existing installations keep their saved fast startup: download/verify the title model separately in the ModelPicker, or let the first blank-title job fetch it. Download failures occur before music generation and can be retried; cancellation and partial downloads use the same checksum-verified resume path as music weights. Once downloaded, naming works offline. A manual title needs neither the title model nor its download. Downloading it does not change the active provider or sampling settings.
+
+After music generation the app releases resident music weights, then runs a bounded CPU-only native `music-title` subprocess. It uses the same macOS sandbox inheritance and owned-process shutdown mechanism as the music engines. It has no network client or Python/Node dependency. If title inference fails, the song is still saved with a visible warning and can be renamed manually. Existing completed songs are never renamed or backfilled. The immutable model URL, revision and SHA-256, plus the pinned llama.cpp source archive hash, are recorded in `models/title-model.json`.
+
 ## First-run assistant
 
 1. Choose the interface language. The app keeps all twelve existing languages.

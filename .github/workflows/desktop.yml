@@ -77,7 +77,7 @@ jobs:
           path: |
             src-tauri/resources/engine
             src-tauri/resources/WebView2
-          key: desktop-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('models/*.json', 'scripts/desktop/prepare-engine.mjs', 'scripts/desktop/prepare-heartmula.mjs', 'scripts/desktop/licenses/*', 'scripts/desktop/common.mjs', 'scripts/desktop/targets.mjs', 'scripts/desktop/engine-sandbox.mm', 'src-tauri/Engine.entitlements') }}
+          key: desktop-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('models/*.json', 'scripts/desktop/prepare-engine.mjs', 'scripts/desktop/prepare-heartmula.mjs', 'scripts/desktop/prepare-title.mjs', 'scripts/desktop/title-runtime/*', 'scripts/desktop/licenses/*', 'scripts/desktop/common.mjs', 'scripts/desktop/targets.mjs', 'scripts/desktop/engine-sandbox.mm', 'src-tauri/Engine.entitlements') }}
       - run: npm run bundle
       - name: Verify relocated portable bundle
         run: node scripts/desktop/verify-bundle.mjs

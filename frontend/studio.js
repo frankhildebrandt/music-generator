@@ -220,7 +220,7 @@ async function analyzeFile(file, idea = null) {   // idea = Messwerte einer Mikr
     if(generationModels()?.provider==="heartmula")throw new Error(t("heart_analysis"));
     const r = await backend.analyze(file, generationModels());
     form.prompt.value = idea ? describeIdea(idea, r.caption, r.keyscale) : r.caption || "";
-    form.title.value = randomTitle();
+    // Keep explicit titles; blank titles are named from the finished song locally.
    
     // Nur echter Text außerhalb von [Strukturmarkern] zählt als Gesang — sonst schreibt das
     // Modell manchmal Dinge wie "[Acoustic guitar intro]" gefolgt von "[Instrumental]".
@@ -427,6 +427,7 @@ function render() {
     if (s.status === "error") state = `<div class="s err" title="${esc(s.message)}">${t("error")} · ${esc(shortErr(s.message))}</div>`;
     if (s.status === "done" && !played.has(s.id)) { const tm = genTime(s); if (tm) state = `<div class="s took">${t("created_in")} ${tm}</div>`; }
     // Vom Modell geschriebener Text (nur bei Songs mit Gesang)
+    if (s.status === "done" && m.title_generation_error) state += `<div class="s err" title="${esc(m.title_generation_error)}">${t("title_failed")}</div>`;
     const lyr = s.status === "done" && s.lyrics !== "[Instrumental]" && /[^\s\[\]]/.test((m.lyrics || "").replace(/\[[^\]]*\]/g, "")) ? m.lyrics.trim() : "";
     const actions = [
       s.status === "done" && `<button class="sek icon ${s.favorite ? "on" : ""}" data-a="fav" title="${t("fav")}">${s.favorite ? "★" : "☆"}</button>`,

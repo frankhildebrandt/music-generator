@@ -29,6 +29,10 @@ New jobs store `model_selection` (provider, synthesis filename, language filenam
 
 The first-run assistant offers ACE-Step starter profiles or direct HeartMuLa setup. Choosing HeartMuLa does not download ACE-Step dependencies. The ACE-Step starter path retains Q8 language models, Standard SFT and optional XL. Use the ModelPicker for the wider ACE-Step catalog afterwards.
 
+## Shared automatic-title model
+
+The picker also shows the Qwen3-0.6B Q8 text model, its approximately 640 MB footprint, verification state and a separate download/verify button. This common auxiliary asset is independent of music-provider profiles. Downloading it never switches the provider or changes existing songs or sampling controls. The assistant includes it for either provider; existing installations can fetch it here or lazily for their first blank-title job. It uses the shared resumable, checksum-verified downloader and cancellation control. See [automatic titles](desktop.md#automatic-song-titles) for lyric priority, offline behavior and error handling.
+
 ## Additional providers / HeartMuLa
 
 HeartMuLa is available through its own native audio.cpp adapter, with integrated HeartCodec, separate sampling controls, its own pinned asset URLs and per-provider remembered selections. See [HeartMuLa](heartmula.md) for supported inputs, memory estimates, limits, packaging and verification. Provider metadata controls integrated language models, analysis availability and defaults; backend dispatch independently validates the adapter and asset roles.

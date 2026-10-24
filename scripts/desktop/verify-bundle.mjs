@@ -1,3 +1,4 @@
+import { verifyTitle } from "./prepare-title.mjs";
 import { verifyHeartmula } from "./prepare-heartmula.mjs";
 import assert from "node:assert/strict";
 import { once } from "node:events";
@@ -45,6 +46,8 @@ try {
   const engine = path.dirname(record);
   await verifyEngine(engine);
   await verifyHeartmula(path.join(engine,"heartmula"),false);
+  await verifyTitle(path.join(engine,"title"),false);
+  if(platform!=="macos") { const text=execFileSync(path.join(engine,"title",platform==="windows"?"music-title.exe":"music-title"),["--self-test"],{encoding:"utf8",timeout:30000});assert(text.includes("music-title=ready"),"Title runtime did not start"); }
   if(platform==="linux")assert(await exists(path.join(engine,"heartmula/libvulkan.so.1")),"App-local HeartMuLa Vulkan loader is missing");
   if(platform!=="macos") { const native=execFileSync(path.join(engine,"heartmula",platform==="windows"?"audiocpp_cli.exe":"audiocpp_cli"),["--list-devices"],{cwd:path.join(engine,"heartmula"),encoding:"utf8",timeout:30000});assert(native.includes("available_devices="),"HeartMuLa runtime did not start"); }
   const app = extracted.find(file => path.basename(file) === (platform === "windows" ? "Music Generator.exe" : "music-generator"));

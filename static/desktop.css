@@ -35,6 +35,9 @@ html[data-platform=macos] .titlebar nav { display: none; }
 .picker-fields .field { margin: 0; min-width: 0; }
 .picker-fields select { width: 100%; min-width: 0; text-overflow: ellipsis; }
 #modelPicker p { overflow-wrap: anywhere; }
+.title-model-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 16px 0; }
+.title-model-card h3 { margin: 0 0 8px; font-size: 14px; }
+.title-model-card button { max-width: 100%; white-space: normal; }
 #modelProgress { width: 100%; accent-color: var(--accent2); }
 #modelFolder { opacity: .75; }
 body[data-provider=heartmula] #advBox .field:has([name=inference_steps]), body[data-provider=heartmula] #advBox .field:has([name=lm_temperature]) { display: none; }

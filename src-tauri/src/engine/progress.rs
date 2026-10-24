@@ -28,6 +28,8 @@ impl Progress {
             "lm" => "LM",
             "dit" => "DiT",
             "vae" => "VAE",
+            "title_download" => "Preparing title model",
+            "title" => "Generating song title",
             "saving" => "Saving audio",
             "heartmula" => "HeartMuLa / HeartCodec",
             _ => "Synth",

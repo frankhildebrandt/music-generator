@@ -3,6 +3,7 @@ import path from "node:path";
 import { prepareEngine, engineFolder } from "./prepare-engine.mjs";
 import { finalizeLinux } from "./finalize-linux.mjs";
 import { createMacDiskImage } from "./macos-dmg.mjs";
+import { recordTitle } from "./prepare-title.mjs";
 import { recordHeartmula } from "./prepare-heartmula.mjs";
 import { architecture, download, exists, files, hash, platform, recordHashes, root, run, target as desktop, verifyEngine } from "./common.mjs";
 
@@ -30,10 +31,11 @@ if (platform === "macos") {
   for (const file of await files(bundledEngine)) {
     const bytes = await readFile(file);
     if (bytes.length < 4 || ![0xfeedfacf,0xcffaedfe,0xcafebabe].includes(bytes.readUInt32BE(0))) continue;
-    const entitlements = ["ace-server", "mp3-codec", "audiocpp_cli"].includes(path.basename(file)) ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
+    const entitlements = ["ace-server", "mp3-codec", "audiocpp_cli", "music-title"].includes(path.basename(file)) ? ["--entitlements",path.join(root,"src-tauri/Engine.entitlements")] : [];
     await run("codesign",["--force","--sign",identity,...entitlements,file]);
   }
   await recordHeartmula(path.join(bundledEngine,"heartmula"));
+  await recordTitle(path.join(bundledEngine,"title"));
   const { files: preparedFiles, ...provenance } = await verifyEngine(engineFolder);
   await recordHashes(bundledEngine,{...provenance,prepared_files:preparedFiles});
   await run("codesign",["--force","--sign",identity,"--entitlements",path.join(root,"src-tauri/Engine.entitlements"),helper]);

@@ -46,6 +46,21 @@ pub fn run(forbidden: &Path) -> Result<()> {
         } else if engine.client.synth == engine.client.lm { return Err(message("CPU-only language model did not start a separate process")); }
         drop(engine);
         verify_exports(&resources, &root).await?;
+        let title = crate::titles::probe(&resources,&CancellationToken::new()).await?;
+        if !title.contains("[Desktop Sandbox] Unselected file access denied") || !title.contains("music-title=ready") { return Err(message("Title runtime sandbox enforcement was not confirmed")); }
+        println!("App Sandbox: native title runtime starts; unselected file access denied.");
+        // Optional real-model acceptance; fixture must already be inside this app's container.
+        if let Some(model)=std::env::var_os("MUSIC_TITLE_SMOKE_MODEL") {
+            let pin=crate::titles::manifest();
+            std::fs::copy(model,root.join("models").join(&pin.model.file))?;
+            for (lyrics,prompt) in [("[Verse]\nWir tragen das Licht durch die Straßen der Nacht\nHaben aus Scherben ein Morgen gemacht\n[Chorus]\nUnd wenn die Sterne versinken im Meer\nBleibt uns die Hoffnung, sie trägt uns noch mehr","A tropical party with sunny beaches and cheerful reggae."),("","An instrumental journey through a rainy neon city at midnight")] {
+                let input=serde_json::json!({"lyrics":lyrics,"prompt":prompt});
+                let title=crate::titles::generate(&resources,&root,&root.join("models"),&input,&CancellationToken::new(),|_|{}).await?;
+                println!("App Sandbox: real local title model: {title}");
+            }
+            if std::fs::read_dir(root.join("title-work"))?.next().is_some() { return Err(message("Title request files were not removed")); }
+        }
+
         let heart = crate::heartmula::probe(&resources,&CancellationToken::new()).await?;
         if !heart.contains("[Desktop Sandbox] Unselected file access denied") { return Err(message("HeartMuLa sandbox enforcement was not confirmed")); }
         println!("App Sandbox: native HeartMuLa runtime starts; unselected file access denied.");

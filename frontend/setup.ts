@@ -93,7 +93,8 @@ async function updateEstimate(): Promise<void> {
   element("#setupHeartField").hidden = !heart;
   element<HTMLSelectElement>("#setupLm").disabled = heart;
   element<HTMLInputElement>("#setupXl").disabled = heart;
-  const models = heart ? configuration.catalog.models.filter(m=>m.file===selection.selection!.synthesis && m.provider==="heartmula") : configuration.manifest.models.filter((m) => m.kind === "required" || m.kind === selection.lm || (m.kind === "xl" && selection.xl));
+  const models: {file:string;estimated_bytes:number}[] = heart ? configuration.catalog.models.filter(m=>m.file===selection.selection!.synthesis && m.provider==="heartmula") : configuration.manifest.models.filter((m) => m.kind === "required" || m.kind === selection.lm || (m.kind === "xl" && selection.xl));
+  models.push(configuration.title_model);
   element("#modelList").replaceChildren(...models.map((model) => { const row = document.createElement("div"); row.textContent = `${model.file} · ~${bytes(model.estimated_bytes)}`; return row; }));
   try {
     const estimate = await backend.estimate(selection); if (sequence !== estimateSequence) return;

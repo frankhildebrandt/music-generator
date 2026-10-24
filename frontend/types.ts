@@ -34,13 +34,14 @@ export interface Bootstrap {
   catalog: { models: Omit<CatalogModel,"verified"|"present"|"partial_bytes">[]; providers: ModelProvider[] };
   needs_setup: boolean; settings: Settings; version: string; data_dir: string; error: string | null;
   hardware: { ram_bytes: number; gpu: string; vram_bytes: number | null; recommended_lm: string; vae_chunk: number | null; platform: string; cpu_only: boolean };
+  title_model: Model;
   manifest: { version: number; base_url: string; models: Model[] };
 }
 export interface SetupRequest { lm: string; xl: boolean; models_dir: string; songs_dir: string; selection?: ModelSelection }
 export interface DownloadProgress { file: string; phase: "downloading" | "verifying"; downloaded: number; total: number; bytes_per_second: number }
 
 export interface JobProgress {
-  job_id: string; sequence: number; phase: "starting" | "loading" | "lm" | "synth" | "dit" | "vae" | "saving" | "heartmula";
+  job_id: string; sequence: number; phase: "starting" | "loading" | "lm" | "synth" | "dit" | "vae" | "saving" | "heartmula" | "title" | "title_download";
   step: number | null; total_steps: number | null; elapsed_seconds: number;
 }
 
@@ -50,7 +51,9 @@ export interface CatalogModel {
   precision: string; estimated_bytes: number; sha256: string; recommended_steps: number | null;
   verified: boolean; present: boolean; partial_bytes: number;
 }
+export interface TitleModel extends Model { verified: boolean; present: boolean; partial_bytes: number }
 export interface ModelCatalog {
+  title_model: TitleModel;
   profiles?: Record<string,ModelSelection>;
   version: number; revision: string; models: CatalogModel[];
   providers: ModelProvider[];
