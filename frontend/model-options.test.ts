@@ -37,11 +37,13 @@ it("includes base dependencies, resumed bytes and verification in download readi
   expect(profile(c, s).verified).toBe(true);
 });
 
-it("never offers unknown providers or arbitrary filenames through the ACE-Step adapter", () => {
+it("rejects removed providers and keeps only ACE-Step assets selectable", () => {
   const c = catalog();
-  expect(profile(c, { ...selection(), provider: "unsupported-provider" }).valid).toBe(false);
+  const removed = { provider: "heartmula", synthesis: "heartmula-q8_0.gguf", language: "" };
+  expect(c.providers.map(provider => provider.id)).toEqual(["ace-step"]);
+  expect(profile(c, removed).valid).toBe(false);
+  expect(modelOptions(c, removed, "synthesis", false)).toHaveLength(0);
   expect(profile(c, { ...selection(), synthesis: "../model.gguf" }).valid).toBe(false);
-  expect(modelOptions(c, { ...selection(), provider: "unsupported-provider" }, "synthesis", false)).toEqual([]);
 });
 
 it("provides turbo's eight steps without changing the caller's selection", () => {

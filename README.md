@@ -9,9 +9,9 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 | macOS 14+, Apple Silicon | DMG und ZIP mit `Music Generator.app` |
 | macOS 13.3+, Intel x64 (experimentell) | Eigenes DMG und ZIP, ausschließlich CPU |
 | Windows 10/11, x64 | ZIP mit EXE, Engine und WebView2 |
-| Linux, x64 | AppImage mit Vulkan/CPU-Engine |
+| Linux, x64 | AppImage mit Vulkan/CPU-Engine; separate CUDA-Ausgabe für NVIDIA |
 
-Intel-Macs verwenden das separate `macos-x64`-Bundle. Sprachmodell und Klangerzeugung rechnen auf der CPU; ein Song kann viele Minuten dauern. Mit 10 Sekunden, dem 0.6B-Sprachmodell und dem Standard-Klangmodell beginnen. Der Assistent prüft den Engine-Start und überspringt den GPU-Test. Native Builds werden auf macOS 15 geprüft; echte Generierung auf weiteren Intel-Macs und der Mindestversion bleibt manuell abzunehmen. Die Intel-/CPU-Hinweise des ursprünglichen Installers bleiben unter [docs/legacy/](docs/legacy/NOTICE.md) historische Dokumentation.
+Intel-Macs verwenden das separate `macos-x64`-Bundle. Sprachmodell und Klangerzeugung rechnen auf der CPU; ein Song kann viele Minuten dauern. Mit 10 Sekunden, dem 0.6B-Sprachmodell und dem Standard-Klangmodell beginnen. Der Assistent prüft den Engine-Start und überspringt den GPU-Test. Native Builds werden auf macOS 15 geprüft; echte Generierung auf weiteren Intel-Macs und der Mindestversion bleibt manuell abzunehmen.
 
 Die ersten Bundles sind unsignierte Testausgaben. Betriebssystem-Warnungen sind möglich. Downloads werden unter [Releases](https://github.com/frankhildebrandt/music-generator/releases) veröffentlicht; lokal gebaute Pakete liegen in `release/`.
 
@@ -57,9 +57,9 @@ Die plattformspezifischen Pipelines stehen in `.github/workflows/desktop.yml`. B
 | `models/` | Versionierte Modell-/Engine- und WebView2-Downloadmanifeste |
 | `scripts/desktop/` | Vorbereitung der Engine und fertige Plattformpakete |
 | `static/` | Styles, Bilder und vendorter Waveform-Player |
-| `docs/legacy/` | Frühere Browser-/Installer-Dokumentation, gilt nicht für Desktop |
+| `docs/legacy/` | Archivierter Ubuntu-Installer mit historischem Kontext, gilt nicht für Desktop |
 
-Der Python-Webserver und die Installations-/ON/OFF-Skripte wurden durch den Desktopbetrieb abgelöst. Die historischen PDF-Dokumentwerkzeuge sind keine Laufzeitabhängigkeit der App.
+Der Python-Webserver und die Installations-/ON/OFF-Skripte wurden durch den Desktopbetrieb abgelöst. Die alten Installationsanleitungen und PDF-Dokumentwerkzeuge wurden entfernt.
 
 ## Lizenz
 

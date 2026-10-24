@@ -76,7 +76,7 @@ if (platform === "macos") {
   await run(process.execPath,[cli,"build","--bundles","appimage"]);
   const folder = path.join(target,"bundle/appimage"); const file = (await readdir(folder)).find(n=>n.endsWith(".AppImage"));
   if (!file) throw new Error("AppImage was not generated");
-  artifact = path.join(output,`${name}-linux-x64.AppImage`);
+  artifact = path.join(output,`${name}-${desktop.artifactSuffix}`);
   await finalizeLinux(path.join(folder,file), artifact, engineFolder);
 }
 artifacts.push(artifact);

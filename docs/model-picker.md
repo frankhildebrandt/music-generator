@@ -1,6 +1,6 @@
 # ModelPicker
 
-The studio's **Choose models** button displays the current synthesis/language pair. The same picker is available in Settings.
+The studio's **Choose models** button displays the current synthesis/language pair. The same picker is available in Settings. The initial picker shipped in [0.2.8](https://github.com/frankhildebrandt/music-generator/releases/tag/v0.2.8-test.1). ACE-Step is the supported music provider.
 
 Choose a provider, synthesis model and language model, then select **Use selection**, **Verify and use**, or **Download and use**. Missing base files are included automatically. The default filter shows combinations within the estimated physical RAM budget; turn it off to inspect the complete catalog. An existing choice stays visible even when it exceeds the budget. A newly selected combination above the estimate cannot be activated. This is resource guidance rather than an inference certification: longer songs, dedicated GPU memory, driver support and runtime buffers can impose further limits. Intel Macs use CPU inference and retain their performance warning.
 
@@ -17,7 +17,7 @@ The estimate sums both selected model weights, the fixed text encoder and VAE, p
 | Language | 0.6B and 1.7B in BF16/Q8_0; 4B in BF16/Q8_0/Q6_K/Q5_K_M (8 files) |
 | Fixed dependencies | Qwen3-Embedding-0.6B-Q8_0 and vae-BF16 (2 files) |
 
-There are 60 selectable generative weights and two fixed dependencies. No nonexistent Q4 language model is invented. BF16 text encoding is deliberately not selectable: both bundled server revisions use `text_enc[0]`, with no per-request text-encoder selector. Downloading both encoders would make selection ambiguous. The optional BF16 encoder in the source repository is not a separate music-generation model. Imported folders containing additional text encoders still follow the engine's own registry order; use a model folder with only the supported Q8 encoder for reproducible text encoding.
+ACE-Step has 60 selectable generative weights and two fixed dependencies. No nonexistent Q4 language model is invented. BF16 text encoding is deliberately not selectable: both bundled server revisions use `text_enc[0]`, with no per-request text-encoder selector. Downloading both encoders would make selection ambiguous. The optional BF16 encoder in the source repository is not a separate music-generation model. Imported folders containing additional text encoders still follow the engine's own registry order; use a model folder with only the supported Q8 encoder for reproducible text encoding.
 
 Turbo families offer eight recommended iterations; SFT/Base retain the app's 80-iteration default. Switching models does not alter sampling controls. **Apply recommended steps** is an explicit action for the currently selected model and updates only the new-song form. The range supports individual values from 1 to 200, including saved eight-step songs.
 
@@ -27,11 +27,11 @@ The existing Rust streaming downloader provides checked HTTP ranges, `.part` res
 
 New jobs store `model_selection` (provider, synthesis filename, language filename) in their parameter JSON. Worker execution and retries resolve that snapshot rather than a later global default. Reusing a new song restores its profile without changing that song or its sampling values. Analysis also sends the selected model filenames in the engine's multipart `request` field alongside the original audio. Existing settings fall back to their original Standard/XL and language model. Existing database rows and audio are not rewritten; older jobs without a snapshot retain their previous settings-based behavior.
 
-The first-run assistant remains a small starter setup with Q8 language models and Standard SFT, plus an optional XL download. Running it again deliberately establishes that starter profile (preserving a previous XL choice when XL remains checked); use the ModelPicker for the wider catalog afterwards.
+The first-run assistant offers ACE-Step starter profiles with Q8 language models, Standard SFT and optional XL. Use the ModelPicker for the wider ACE-Step catalog afterwards.
 
 ## Shared automatic-title model
 
-The picker also shows the Qwen3-0.6B Q8 text model, its approximately 640 MB footprint, verification state and a separate download/verify button. This common auxiliary asset is independent of music-provider profiles. Downloading it never switches the provider or changes existing songs or sampling controls. The assistant includes it with the starter music models; existing installations can fetch it here or lazily for their first blank-title job. It uses the shared resumable, checksum-verified downloader and cancellation control. See [automatic titles](desktop.md#automatic-song-titles) for lyric priority, offline behavior and error handling.
+The picker also shows the Qwen3-0.6B Q8 text model, its approximately 640 MB footprint, verification state and a separate download/verify button. This common auxiliary asset is independent of music-provider profiles. Downloading it never switches the provider or changes existing songs or sampling controls. The assistant includes it with the music models; existing installations can fetch it here or lazily for their first blank-title job. It uses the shared resumable, checksum-verified downloader and cancellation control. See [automatic titles](desktop.md#automatic-song-titles) for lyric priority, offline behavior and error handling.
 
 ## Verification
 

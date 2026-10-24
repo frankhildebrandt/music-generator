@@ -201,6 +201,27 @@ pub fn memory_bytes(models: &[Asset]) -> u64 {
     weights.saturating_add(reserve * 1024 * 1024 * 1024)
 }
 
+/// Restore a supported profile in memory; keep old songs, files and stored settings intact.
+pub fn restore_supported_profile(settings: &mut Settings) -> Result<()> {
+    if settings.model_provider == "ace-step" {
+        return Ok(());
+    }
+    let selection = settings
+        .model_profiles
+        .get("ace-step")
+        .filter(|profile| required(profile).is_ok())
+        .cloned()
+        .unwrap_or_else(|| {
+            Selection::from_settings(&Settings {
+                lm_model: crate::manifest::lm_file("0.6B"),
+                ..Default::default()
+            })
+        });
+    selection.apply(settings)?;
+    settings.setup_complete = false;
+    Ok(())
+}
+
 pub fn compatible(selection: &Selection, hardware: &Hardware) -> Result<bool> {
     Ok(memory_bytes(&required(selection)?) <= hardware.ram_bytes)
 }

@@ -20,7 +20,11 @@ pub async fn check() -> Result<Value> {
         .trim_start_matches('v');
     let version = semver::Version::parse(latest).map_err(|e| message(e.to_string()))?;
     let current = semver::Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
-    let suffix = asset_suffix(std::env::consts::OS, std::env::consts::ARCH);
+    let suffix = asset_suffix(
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        env!("MUSIC_GENERATOR_LINUX_BACKEND"),
+    );
     let asset = release["assets"].as_array().and_then(|assets| {
         assets
             .iter()
@@ -36,7 +40,7 @@ pub async fn check() -> Result<Value> {
     )
 }
 
-fn asset_suffix(os: &str, arch: &str) -> &'static str {
+fn asset_suffix(os: &str, arch: &str, linux_backend: &str) -> &'static str {
     if os == "macos" {
         if arch == "x86_64" {
             "macos-x64.zip"
@@ -45,6 +49,8 @@ fn asset_suffix(os: &str, arch: &str) -> &'static str {
         }
     } else if os == "windows" {
         "windows-x64.zip"
+    } else if linux_backend == "cuda" {
+        "linux-x64-cuda.AppImage"
     } else {
         "linux-x64.AppImage"
     }
@@ -54,9 +60,35 @@ fn asset_suffix(os: &str, arch: &str) -> &'static str {
 mod tests {
     #[test]
     fn updates_select_the_correct_architecture() {
-        assert_eq!(super::asset_suffix("macos", "x86_64"), "macos-x64.zip");
-        assert_eq!(super::asset_suffix("macos", "aarch64"), "macos-arm64.zip");
-        assert_eq!(super::asset_suffix("windows", "x86_64"), "windows-x64.zip");
-        assert_eq!(super::asset_suffix("linux", "x86_64"), "linux-x64.AppImage");
+        assert_eq!(
+            super::asset_suffix("macos", "x86_64", "vulkan"),
+            "macos-x64.zip"
+        );
+        assert_eq!(
+            super::asset_suffix("macos", "aarch64", "cuda"),
+            "macos-arm64.zip"
+        );
+        assert_eq!(
+            super::asset_suffix("windows", "x86_64", "cuda"),
+            "windows-x64.zip"
+        );
+        assert_eq!(
+            super::asset_suffix("linux", "x86_64", "vulkan"),
+            "linux-x64.AppImage"
+        );
+    }
+
+    #[test]
+    fn linux_updates_keep_the_installed_backend_when_both_assets_exist() {
+        let names = [
+            "Music-Generator-0.3.0-linux-x64.AppImage",
+            "Music-Generator-0.3.0-linux-x64-cuda.AppImage",
+        ];
+        for backend in ["vulkan", "cuda"] {
+            let suffix = super::asset_suffix("linux", "x86_64", backend);
+            let matching: Vec<_> = names.iter().filter(|name| name.ends_with(suffix)).collect();
+            assert_eq!(matching.len(), 1);
+            assert_eq!(matching[0].contains("-cuda.AppImage"), backend == "cuda");
+        }
     }
 }

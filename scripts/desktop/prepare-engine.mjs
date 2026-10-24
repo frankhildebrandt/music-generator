@@ -3,13 +3,15 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { prepareTitle } from "./prepare-title.mjs";
+import { prepareTitle, recordTitle, verifyTitle } from "./prepare-title.mjs";
+import { cudaBuildOptions, prepareCuda } from "./prepare-cuda.mjs";
+import { copyCudaRuntime, relocateLinuxRuntime } from "./linux-runtime.mjs";
 import { architecture, download, engineRecipeHash, exists, files, hash, manifest, platform, recordHashes, root, run, target, verifyEngine } from "./common.mjs";
 
 export const engineFolder = path.join(root, "src-tauri/resources/engine");
 
 export async function prepareEngine() {
-  try { const {files: _files, ...proof} = await verifyEngine(engineFolder); await prepareTitle(); await recordHashes(engineFolder,proof); console.log("Engine resources verified."); return; } catch { /* Rebuild incomplete or changed resources. */ }
+  try { await verifyEngine(engineFolder); await verifyTitle(); console.log("Engine resources verified."); return; } catch { /* Rebuild incomplete or changed resources. */ }
   const source = manifest.engines[platform];
   const cache = path.join(root, ".cache/desktop"); await mkdir(cache, { recursive: true });
   const work = await mkdtemp(path.join(tmpdir(), "music-engine-"));
@@ -29,7 +31,8 @@ export async function prepareEngine() {
         await writeFile(cmake,(await readFile(cmake,"utf8")).replace("LANGUAGES C CXX)","LANGUAGES C CXX OBJC OBJCXX)"));
         await appendFile(cmake, '\ntarget_sources(ace-server PRIVATE desktop-sandbox.mm)\ntarget_link_libraries(ace-server PRIVATE "-framework Foundation")\n');
       }
-      const options = platform === "macos" ? target.cmake : ["-DGGML_VULKAN=ON", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DCMAKE_BUILD_RPATH=$ORIGIN", "-DCMAKE_INSTALL_RPATH=$ORIGIN"];
+      const options = [...target.cmake];
+      if (target.backend === "cuda") options.push(...await cudaBuildOptions());
       await run("cmake", ["-S", sourceDir, "-B", built, "-DCMAKE_BUILD_TYPE=Release", ...options]);
       await run("cmake", ["--build", built, "--config", "Release", "-j", "2"]);
       for (const file of await files(sourceDir)) if (/^(LICENSE|COPYING)/i.test(path.basename(file))) await cp(file, path.join(built, `LICENSE-${path.relative(sourceDir,file).replaceAll(path.sep,"-")}`));
@@ -51,14 +54,15 @@ export async function prepareEngine() {
       if (platform === "linux" && /\.so(?:\.\d+)*$/.test(file) && path.dirname(dest) !== engineFolder) await cp(file, path.join(engineFolder,path.basename(file)), { dereference: true });
     }
     if (platform === "macos") await relocateMac();
-    if (platform === "linux") {
-      for (const file of await files(engineFolder)) {
-        if (path.basename(file).startsWith("ace-") || /\.so(?:\.\d+)*$/.test(file)) await run("patchelf",["--set-rpath","$ORIGIN",file]);
-      }
-    }
     if (platform === "windows") await copyWindowsCrt();
     await prepareTitle();
-    await recordHashes(engineFolder, { platform, arch: architecture, revision: source.revision, source: source.url || source.repository, source_revision: source.source_revision || source.revision, archive_sha256: source.sha256 || null, sandbox_patch_sha256: platform === "macos" ? await hash(path.join(root,"scripts/desktop/engine-sandbox.mm")) : null, recipe_sha256: await engineRecipeHash() });
+    if (platform === "linux") {
+      if (target.backend === "cuda") await copyCudaRuntime(engineFolder, await prepareCuda());
+      await relocateLinuxRuntime(engineFolder);
+      // Relocation changes helper bytes after their initial provenance was written.
+      await recordTitle();
+    }
+    await recordHashes(engineFolder, { platform, arch: architecture, backend: target.backend, revision: source.revision, source: source.url || source.repository, source_revision: source.source_revision || source.revision, archive_sha256: source.sha256 || null, sandbox_patch_sha256: platform === "macos" ? await hash(path.join(root,"scripts/desktop/engine-sandbox.mm")) : null, recipe_sha256: await engineRecipeHash() });
     await verifyEngine(engineFolder);
     console.log(`Prepared ${platform} engine ${source.revision}.`);
   } finally { await rm(work, { recursive: true, force: true }); }

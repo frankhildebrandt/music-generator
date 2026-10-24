@@ -40,6 +40,7 @@ export async function showSetup(data: Bootstrap, ready: () => Promise<void>): Pr
     language.onchange = () => { setLang(language.value); void updateEstimate(); };
     element("#setupForm").addEventListener("change", () => { void updateEstimate(); });
     element("#setupForm").addEventListener("submit", (e) => { e.preventDefault(); void configure(); });
+    element("#setupForm").addEventListener("keydown", (e) => { if(e.key==="Enter" && e.target instanceof HTMLSelectElement)e.preventDefault(); });
     element("#setupBack").onclick = () => { void onReady(); };
     element("#cancelSetup").onclick = () => { void backend.cancelSetup(); };
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-setup-pick]")) button.onclick = async () => {

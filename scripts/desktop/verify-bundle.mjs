@@ -8,12 +8,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { architecture, exists, files, hash, platform, root, run, target, verifyEngine } from "./common.mjs";
 import { verifyMacSandbox } from "./verify-macos-sandbox.mjs";
+import { verifyLinuxRuntime } from "./linux-runtime.mjs";
 
 // Exercise the distributed files from a relocated directory, without loading any models.
 const output = path.join(root, "release");
 const diskImage = process.argv.includes("--dmg");
 assert(!diskImage || platform === "macos", "DMG verification requires macOS");
-const suffix = diskImage ? `-macos-${architecture}.dmg` : platform === "linux" ? "-linux-x64.AppImage" : `-${platform}-${architecture}.zip`;
+const suffix = diskImage ? `-macos-${architecture}.dmg` : platform === "linux" ? `-${target.artifactSuffix}` : `-${platform}-${architecture}.zip`;
 const { version } = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const filename = `Music-Generator-${version}${suffix}`;
 const artifact = path.join(output, filename);
@@ -46,6 +47,7 @@ try {
   await verifyEngine(engine);
   await verifyTitle(path.join(engine,"title"),false);
   if(platform!=="macos") { const text=execFileSync(path.join(engine,"title",platform==="windows"?"music-title.exe":"music-title"),["--self-test"],{encoding:"utf8",timeout:30000});assert(text.includes("music-title=ready"),"Title runtime did not start"); }
+  if(platform==="linux")await verifyLinuxRuntime(engine,target.backend,path.join(work,"squashfs-root"));
   const app = extracted.find(file => path.basename(file) === (platform === "windows" ? "Music Generator.exe" : "music-generator"));
   assert(app, "Application executable is missing");
   if (platform === "macos") await run("codesign", ["--verify", "--deep", "--strict", path.dirname(path.dirname(path.dirname(app)))]);
