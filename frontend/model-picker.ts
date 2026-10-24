@@ -19,7 +19,7 @@ export function generationModels(): ModelSelection | undefined {
 
 // Reuse the saved profile in memory without modifying the song or its sampling values.
 export function restoreSongModels(selection?: ModelSelection): void {
-  if (!selection) return;
+  if (!selection || selection.provider !== "ace-step") return;
   chosen = { ...selection };
   compact();
 }

@@ -26,9 +26,15 @@ jobs:
           - os: ubuntu-22.04
             name: linux-x64
             arch: x64
+            linux_backend: vulkan
+          - os: ubuntu-22.04
+            name: linux-x64-cuda
+            arch: x64
+            linux_backend: cuda
     runs-on: ${{ matrix.os }}
     env:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_min }}
+      MUSIC_GENERATOR_LINUX_BACKEND: ${{ matrix.linux_backend || 'vulkan' }}
       APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -54,7 +60,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build curl unzip patchelf libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev libvulkan-dev libfuse2 gstreamer1.0-plugins-base gstreamer1.0-plugins-good
       - name: Pinned Vulkan SDK for Ubuntu 22.04
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.linux_backend == 'vulkan'
         run: |
           curl --fail --location --retry 3 https://sdk.lunarg.com/sdk/download/1.4.309.0/linux/vulkansdk-linux-x86_64-1.4.309.0.tar.xz -o "$RUNNER_TEMP/vulkan.tar.xz"
           echo "616a25a9d8b33336e83957f97ca273b8e95461649723354300d02c26ae52a1f6  $RUNNER_TEMP/vulkan.tar.xz" | sha256sum --check
@@ -77,10 +83,24 @@ jobs:
           path: |
             src-tauri/resources/engine
             src-tauri/resources/WebView2
-          key: desktop-runtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('models/*.json', 'scripts/desktop/prepare-engine.mjs', 'scripts/desktop/patches/*', 'scripts/desktop/prepare-title.mjs', 'scripts/desktop/title-runtime/*', 'scripts/desktop/licenses/*', 'scripts/desktop/common.mjs', 'scripts/desktop/targets.mjs', 'scripts/desktop/engine-sandbox.mm', 'src-tauri/Engine.entitlements') }}
+          key: desktop-runtime-${{ matrix.name }}-${{ hashFiles('models/*.json', 'scripts/desktop/*.mjs', 'scripts/desktop/patches/*', 'scripts/desktop/title-runtime/*', 'scripts/desktop/licenses/*', 'scripts/desktop/engine-sandbox.mm', 'src-tauri/Engine.entitlements') }}
+      - name: Space for the CUDA compiler and runtime libraries
+        if: matrix.linux_backend == 'cuda'
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+      - uses: actions/cache@v4
+        if: matrix.linux_backend == 'cuda'
+        with:
+          path: .cache/desktop/cuda
+          key: cuda-linux-x64-${{ hashFiles('models/cuda-linux.json', 'scripts/desktop/prepare-cuda.mjs') }}
+      - name: Prepare pinned CUDA compiler (no GPU or driver installation)
+        if: matrix.linux_backend == 'cuda'
+        run: node scripts/desktop/prepare-cuda.mjs
       - run: npm run bundle
       - name: Verify relocated portable bundle
         run: node scripts/desktop/verify-bundle.mjs
+      - name: Record NVIDIA hardware acceptance requirement
+        if: matrix.linux_backend == 'cuda'
+        run: echo 'CPU startup and dependency checks passed on a runner without an NVIDIA GPU. Real CUDA generation still requires NVIDIA hardware acceptance.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify macOS disk image
         if: runner.os == 'macOS'
         run: node scripts/desktop/verify-bundle.mjs --dmg

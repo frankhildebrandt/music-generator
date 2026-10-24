@@ -143,23 +143,23 @@ fn failed_titling_keeps_the_finished_audio_and_survives_restart() {
 }
 
 #[test]
-fn starter_setup_includes_exactly_one_pinned_title_model() {
-    for xl in [false, true] {
-        let plan = music_generator::setup::plan(&music_generator::setup::SetupRequest {
-            lm: "0.6B".into(),
+fn starter_model_choices_share_exactly_one_pinned_title_model() {
+    for (lm, xl) in [("0.6B", false), ("1.7B", true), ("4B", false)] {
+        let request = music_generator::setup::SetupRequest {
+            lm: lm.into(),
             xl,
             models_dir: "/models".into(),
             songs_dir: "/songs".into(),
-        })
-        .unwrap();
-        let model = plan
+        };
+        let plan = music_generator::setup::plan(&request).unwrap();
+        let models = plan
             .iter()
-            .filter(|(m, _)| m.kind == "titles")
+            .filter(|(model, _)| model.kind == "titles")
             .collect::<Vec<_>>();
-        assert_eq!(model.len(), 1);
-        assert_eq!(model[0].0.file, titles::manifest().model.file);
-        assert!(model[0].1.contains(&titles::manifest().revision));
-        assert_eq!(model[0].0.sha256.len(), 64);
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].0.file, titles::manifest().model.file);
+        assert!(models[0].1.contains(&titles::manifest().revision));
+        assert_eq!(models[0].0.sha256.len(), 64);
     }
 }
 

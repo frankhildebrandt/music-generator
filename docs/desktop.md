@@ -9,7 +9,8 @@ Download the bundle for your platform from https://github.com/frankhildebrandt/m
 | macOS | `Music-Generator-VERSION-macos-arm64.dmg` or `.zip` | Apple Silicon, macOS 14+ |
 | macOS Intel (experimental) | `Music-Generator-VERSION-macos-x64.dmg` or `.zip` | Intel x64, macOS 13.3+, at least 8 GiB RAM; CPU only |
 | Windows | `Music-Generator-VERSION-windows-x64.zip` | Windows 10/11 x64, current GPU driver |
-| Linux | `Music-Generator-VERSION-linux-x64.AppImage` | x64; Ubuntu 22.04 or compatible newer distribution, current GPU driver |
+| Linux Vulkan/CPU | `Music-Generator-VERSION-linux-x64.AppImage` | x64; Ubuntu 22.04 or compatible newer distribution, current GPU driver |
+| Linux NVIDIA CUDA/CPU | `Music-Generator-VERSION-linux-x64-cuda.AppImage` | x64; same Linux baseline, supported NVIDIA GPU and driver 570.124.06+ for CUDA |
 
 Extract the complete ZIP and open Music Generator. Keep the Windows EXE, `engine` and `WebView2` directories together. On Linux run `chmod +x Music-Generator-*.AppImage` once and open the AppImage. If FUSE is unavailable, run `./Music-Generator-VERSION-linux-x64.AppImage --appimage-extract`, then `./squashfs-root/AppRun`.
 
@@ -17,7 +18,9 @@ On macOS you can instead open the DMG and drag Music Generator onto its Applicat
 
 macOS uses its native red/yellow/green window controls on the left. Windows and Linux use the custom minimize/maximize/close controls on the right. The title bar is draggable, and the layout fills the window at every supported size.
 
-Apple Silicon builds target macOS 14.0 (Sonoma), including the Rust app, supervisor, ACE-Step engine and title helper. Metal remains enabled; Intel retains its separate 13.3 CPU target. ARM CI uses macOS 15 with a 14.0 deployment target. Bundle checks validate the minimum OS of every Mach-O binary and the app plist. Engine and title cache recipes include the target policy. Current Xcode also needs `scripts/desktop/patches/acestep-macos-compat.patch`, which selects the pinned engine's existing portable float parser below macOS 26. Runtime acceptance on macOS 14/15 remains separate from building on newer macOS.
+Apple Silicon builds target macOS 14.0 (Sonoma), including the Rust app, supervisor, ACE-Step engine and title helper. Metal acceleration remains enabled. The CI runner is macOS 15; its OS/SDK version is separate from the deployment target. Bundle verification rejects any Mach-O binary whose minimum OS exceeds the target and checks the app's `LSMinimumSystemVersion`. Engine recipe hashes include the target policy so cached binaries built for macOS 26 are rebuilt. A successful build on newer macOS does not replace GUI/audio and real generation acceptance on macOS 14 and 15. Existing release downloads must be rebuilt before they gain this compatibility.
+
+The pinned ACE-Step source needs one compatibility patch with current Xcode: floating-point `std::from_chars` is available only on macOS 26+, even when the newer libc++ headers declare it. The macOS preparation step applies `scripts/desktop/patches/acestep-macos-compat.patch` to select the engine's existing locale-independent parser for older deployment targets. Patch changes invalidate the engine cache; an upstream source mismatch fails the build rather than silently omitting the fix.
 
 Intel Macs use a separate native x64 bundle; no Rosetta, Python, Node.js or local compilation is needed. Both language-model inference and synthesis run on the CPU, even when an old profile requests a separate CPU language model. One engine process handles both tasks to avoid duplicating model memory. The Intel engine excludes Metal and includes runtime-selected portable CPU variants rather than instructions tied to the build host. macOS 13.3 is the deployment target (including Accelerate's newer LAPACK API); native CI runs on macOS 15. Actual generation, GUI/audio and minimum-OS acceptance remain manual checks: this is experimental support, not a claim of tests on every Intel Mac or on macOS 13.3.
 
@@ -27,7 +30,7 @@ These first builds are unsigned test builds. macOS Gatekeeper and Windows SmartS
 
 ## Automatic song titles
 
-Leave the title empty to name the finished song with a shared local Qwen3-0.6B Q8 text model for ACE-Step. Actual generated lyrics take priority over the music prompt, including their language; instrumental songs use the prompt. Manual titles, later renames and saved generation parameters remain unchanged. Audio analysis no longer inserts a random title. The title dice still explicitly chooses a random title.
+Leave the title empty to name the finished song with a shared local Qwen3-0.6B Q8 text model. Actual generated lyrics take priority over the music prompt, including their language; instrumental songs use the prompt. Manual titles, later renames and saved generation parameters remain unchanged. Audio analysis no longer inserts a random title. The title dice still explicitly chooses a random title.
 
 The assistant downloads the approximately 640 MB title model alongside the chosen music models. Existing installations keep their saved fast startup: download/verify the title model separately in the ModelPicker, or let the first blank-title job fetch it. Download failures occur before music generation and can be retried; cancellation and partial downloads use the same checksum-verified resume path as music weights. Once downloaded, naming works offline. A manual title needs neither the title model nor its download. Downloading it does not change the active provider or sampling settings.
 
@@ -67,7 +70,12 @@ Packaged macOS builds enable Apple's App Sandbox. Network client/server entitlem
 
 The current ad-hoc test signatures have no stable Developer ID identity. Replacing the app with a different test build can require selecting external folders again; model and song files remain intact. Folder grants survive restarting the same build, which has been tested. Stable signing and notarization remain a separate release step.
 
-The package identifier is `de.alphatester.music-generator` on every platform. Builds with a different package identifier use a separate profile and, on macOS, a separate App Sandbox container. To migrate, use **Import existing library** in an empty installation and select the previous app's directory containing `music.db` through the native folder dialog. Use the previous app's storage location; it is not necessarily the current profile path listed above.
+The package identifier is now `de.alphatester.music-generator` on every platform. macOS therefore creates a new App Sandbox container. On the first launch after this rename, use **Import existing library** to authorize and copy the previous profile into the empty new library. Select the directory containing `music.db`:
+
+- Previous sandboxed macOS builds: `~/Library/Containers/de.freicon.music-generator/Data/Library/Application Support/de.freicon.music-generator/`.
+- Earlier unsandboxed macOS builds: `~/Library/Application Support/de.freicon.music-generator/`.
+- Previous Windows builds: `%LOCALAPPDATA%\de.freicon.music-generator\`.
+- Previous Linux builds: `$XDG_DATA_HOME/de.freicon.music-generator/` (normally `~/.local/share/de.freicon.music-generator/`).
 
 Import copies SQLite/WAL data and songs, keeping original song parameters and source files. It does not merge populated libraries or change the previous installation. Existing models can be reused after checksum verification; authorize external model/song folders again through the native Browse dialog when required. The new app cannot silently inherit another identifier's sandbox permissions. Legacy browser-project imports still use the same button.
 
@@ -104,6 +112,8 @@ npm run bundle
 
 `release/` contains the platform bundle and its SHA-256 file. `npm run bundle` verifies/prepares the engine first. The Rust release build also refuses missing, mismatched or modified engine resources, including the required MP3 codec and native title runtime. `npm run build` builds only the frontend.
 
+The desktop app icons use the waveform and colors from `static/favicon.svg`, matching the studio header: beige bars (`#ddc8aa`) on an anthracite gradient (`#434445` to `#2b2c2c`). Generate them with `npm run tauri -- icon static/favicon.svg --output PATH`, then copy the five configured PNG/ICNS/ICO files into `src-tauri/icons/`.
+
 The preparation script builds the pinned Mac/Linux engine source revisions and checks the pinned Windows archive hash. The Mac revision adds the small `engine-sandbox.mm` bookmark bridge; its patch and build-recipe hashes are recorded alongside runtime-file hashes. Mac CPU code targets portable Apple Silicon or Intel variants and uses relative library paths. The app, supervisor and engine are signed from the inside out with separate parent/child entitlements. Linux builds Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
 
 The `Desktop bundles` GitHub Actions workflow builds each platform natively and uploads artifacts. A version tag, manual dispatch or push to `codex/desktop-bundles` triggers it; it does not automatically publish a GitHub Release. Linux uses a checksummed Vulkan SDK 1.4.309.0 for its shader compiler, since Ubuntu 22.04 does not provide `glslc` in its standard package archive.
@@ -113,6 +123,25 @@ After packaging, `node scripts/desktop/verify-bundle.mjs` checks the artifact ch
 Attach the tested artifacts and their SHA-256 files to a release tagged `vVERSION` for in-app update discovery. The version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` must match.
 
 For signed macOS releases configure the standard Tauri secrets `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`. Keep certificates and passwords out of source control. Windows signing can be added to the portable packaging step once a certificate is available; current Windows builds are unsigned.
+
+## Linux build variants
+
+The default Vulkan/CPU AppImage retains its filename and backend. The separate CUDA/CPU AppImage uses ACE-Step's CUDA backend and bundles only the pinned CUDA Runtime and cuBLAS/cuBLASLt libraries. End users need a compatible NVIDIA driver, not a CUDA Toolkit. This build targets SM 61, 75, 80, 86, 89, 90 and 120a; driver 570.124.06 or newer is the supported baseline for CUDA Toolkit 12.8.1 ([NVIDIA release notes](https://docs.nvidia.com/cuda/archive/12.8.1/cuda-toolkit-release-notes/index.html)). Choose the Vulkan/CPU image for other GPUs. CPU execution remains available in both variants.
+
+Build and verify natively on Linux x64:
+
+```sh
+MUSIC_GENERATOR_LINUX_BACKEND=vulkan npm run bundle
+MUSIC_GENERATOR_LINUX_BACKEND=vulkan node scripts/desktop/verify-bundle.mjs
+MUSIC_GENERATOR_LINUX_BACKEND=cuda npm run bundle
+MUSIC_GENERATOR_LINUX_BACKEND=cuda node scripts/desktop/verify-bundle.mjs
+```
+
+The CUDA compiler is installed only in `.cache/desktop/cuda/` from official component archives with pinned SHA-256 checksums. No NVIDIA driver is installed. Build targets, runtime provenance and CI cache keys separate the variants; switching the environment variable rebuilds incompatible resources. The app embeds its build variant so update checks keep the installed backend.
+
+Both CI jobs run on Ubuntu 22.04 without an NVIDIA GPU. Before packing and again after relocated extraction, package checks reject missing ELF dependencies, absolute build-machine search paths, CUDA libraries resolved outside the package and bundled NVIDIA driver/stub files. They also check variant-specific backend libraries and run the CPU supervisor/engine health and MP3/title-helper tests without a system CUDA Toolkit in the loader path. CUDA virtual-memory management is disabled to avoid a startup link dependency on `libcuda.so.1`; CUDA Runtime loads the installed driver when using a GPU. Real CUDA generation, GPU memory limits and the supported SM targets still require acceptance on NVIDIA hardware; a successful CPU CI run does not certify GPU inference.
+
+HeartMuLa has been removed from the application, model catalog, setup, runtime packages and build pipeline. Existing audio and downloaded model files are not deleted. A saved retired-provider selection restores an ACE-Step profile in memory and returns to the setup assistant; it does not rewrite old song parameters.
 
 ## Release acceptance
 

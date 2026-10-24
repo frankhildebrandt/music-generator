@@ -226,3 +226,79 @@ async fn activation_is_atomic_on_checksum_failure_and_cancellation_then_reuses_v
         assert_eq!(calls.load(Ordering::SeqCst), online_calls);
     }
 }
+
+#[test]
+fn retired_provider_settings_restore_ace_step_without_rewriting_old_songs_or_files() {
+    let root = tempfile::tempdir().unwrap();
+    let db = Database::open(root.path()).unwrap();
+    let ace = selection();
+    let mut settings = db.settings().unwrap();
+    settings
+        .model_profiles
+        .insert("ace-step".into(), ace.clone());
+    settings.model_provider = "heartmula".into();
+    settings.synthesis_model = "heartmula-q8_0.gguf".into();
+    settings.lm_model.clear();
+    settings.setup_complete = true;
+    db.save_settings(&settings).unwrap();
+    let file = root.path().join("preserved.gguf");
+    std::fs::write(&file, b"existing model").unwrap();
+    let request = GenerateRequest {
+        title: "Existing song".into(),
+        prompt: "ambient piano".into(),
+        ..Default::default()
+    };
+    let id = db.enqueue(&request).unwrap().remove(0);
+    let before = db.song(&id).unwrap().params;
+    let restored = db.settings().unwrap();
+    assert_eq!(Selection::from_settings(&restored), ace);
+    assert!(!restored.setup_complete);
+    assert_eq!(db.song(&id).unwrap().params, before);
+    assert_eq!(std::fs::read(file).unwrap(), b"existing model");
+    let raw: String = rusqlite::Connection::open(root.path().join("music.db"))
+        .unwrap()
+        .query_row(
+            "SELECT value FROM settings WHERE key='model_provider'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(raw, "\"heartmula\"");
+}
+
+#[test]
+fn removed_providers_are_absent_and_cannot_enter_the_queue() {
+    let catalog = catalog::catalog();
+    assert_eq!(catalog.providers.len(), 1);
+    assert!(catalog
+        .models
+        .iter()
+        .all(|model| model.provider == "ace-step"));
+    let root = tempfile::tempdir().unwrap();
+    let db = Database::open(root.path()).unwrap();
+    let request = GenerateRequest {
+        model_selection: Some(Selection {
+            provider: "heartmula".into(),
+            synthesis: "heartmula-q8_0.gguf".into(),
+            language: String::new(),
+        }),
+        ..Default::default()
+    };
+    assert!(db.enqueue(&request).is_err());
+    assert!(db.songs(&Default::default()).unwrap().is_empty());
+}
+
+#[test]
+fn retired_provider_without_a_saved_ace_profile_uses_verified_catalog_defaults() {
+    let mut settings = Settings {
+        model_provider: "retired-provider".into(),
+        setup_complete: true,
+        ..Default::default()
+    };
+    catalog::restore_supported_profile(&mut settings).unwrap();
+    let selection = Selection::from_settings(&settings);
+    assert_eq!(selection.provider, "ace-step");
+    assert_eq!(selection.language, "acestep-5Hz-lm-0.6B-Q8_0.gguf");
+    assert_eq!(catalog::required(&selection).unwrap().len(), 4);
+    assert!(!settings.setup_complete);
+}

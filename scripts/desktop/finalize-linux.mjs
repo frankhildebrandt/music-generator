@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { chmod, cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { download, files, root, run, verifyEngine } from "./common.mjs";
+import { download, files, root, run, target, verifyEngine } from "./common.mjs";
+import { verifyLinuxRuntime } from "./linux-runtime.mjs";
 
 // linuxdeploy rewrites/strips ELF resources; restore the verified engine before final packing.
 export async function finalizeLinux(image, destination, engine) {
@@ -16,6 +17,7 @@ export async function finalizeLinux(image, destination, engine) {
     await rm(bundledEngine, { recursive: true, force: true });
     await cp(engine, bundledEngine, { recursive: true });
     await verifyEngine(bundledEngine);
+    await verifyLinuxRuntime(bundledEngine, target.backend, appdir);
     const pinned = JSON.parse(await readFile(path.join(root, "models/appimage.json"), "utf8"));
     const tool = path.join(root, `.cache/desktop/appimagetool-${pinned.version}.AppImage`);
     await download(pinned.url, tool, pinned.sha256); await chmod(tool, 0o755);

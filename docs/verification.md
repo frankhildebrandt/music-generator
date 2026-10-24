@@ -1,3 +1,13 @@
+# Separate Linux CUDA build and ACE-Step-only application — 2026-10-25
+
+The Linux matrix now has independent Vulkan/CPU and NVIDIA CUDA/CPU jobs. The existing `linux-x64.AppImage` name is preserved; CUDA uses `linux-x64-cuda.AppImage`. Target flags, runtime provenance, cache keys, release-build validation and embedded update selection distinguish the variants. CUDA Toolkit 12.8.1 compiler components and Runtime/cuBLAS/cuBLASLt redistributables are pinned to official archive SHA-256 values in `models/cuda-linux.json`. The CUDA build disables direct VMM driver linkage and uses an explicit SM list, so the configured build and CPU package checks do not require a GPU or driver installation.
+
+HeartMuLa has been removed from the UI, catalog, adapter, setup, sampling controls, manifests, packaging and runtime probes. Regression tests reject its new job requests, restore supported settings without rewriting stored settings/song parameters, and preserve existing model files. Cached or bundled retired-provider resources are rejected. A freshly rebuilt arm64 macOS ZIP and DMG contain no HeartMuLa runtime and both pass portable resource, minimum-OS, signing, sandbox, CPU engine health/shutdown, title-helper and WAV/MP3/ZIP checks.
+
+Local checks passed on macOS 26.6.2: TypeScript/Vite, ESLint, 28 frontend tests, 12 desktop build/runtime-policy tests, 69 Rust tests plus doc-test phase, Rustfmt, Clippy with warnings as errors, script syntax and actionlint. Existing user-data checksums remain unchanged. The desktop tests cover distinct filenames/backend flags, cache separation, stale recipes, unrecorded/retired resources, relative loader paths, missing/external CUDA dependencies, forbidden driver stubs and runtime/license copying. The CUDA pin was compared with NVIDIA's official redistribution manifest, and the downloaded cudart archive layout was checked.
+
+The Linux jobs and ELF/AppImage verifiers are configured but have not run for this working tree. This host is macOS; the existing Linux Docker endpoint was unreachable. Native Linux builds, clean-system execution without a CUDA Toolkit, and real generation on supported NVIDIA hardware remain required before publishing the CUDA artifact. No Linux/CUDA AppImage or release was produced in this session.
+
 # macOS 14 release packages — 2026-10-25
 
 Built version 0.2.9 for Apple Silicon from the separated desktop base `6f5774d95218bc7c7dbb86658d9ed09511a807b7` plus the local macOS-14 target/cache/parser changes. HeartMuLa is absent from this source and from the sealed app/resource manifest.
@@ -112,7 +122,7 @@ Not verified on this host:
 - GPU/driver combinations other than this Mac; CPU fallback is covered by contract/self-test logic, not a hardware run on this host.
 - Physical microphone recording, actual VoiceOver/NVDA/JAWS operation and notarization/Developer ID signing.
 
-The existing browser-installation PDFs are historical and are not evidence for the desktop app. Follow the release acceptance checklist in desktop.md before publishing a supported cross-platform release.
+The old browser-installation PDFs have been removed. Follow the release acceptance checklist in desktop.md before publishing a supported cross-platform release.
 
 ## Shared automatic-title model (0.2.9 development)
 

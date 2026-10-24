@@ -13,6 +13,10 @@ The GGUF models are downloaded separately from the pinned Hugging Face revision 
 
 Linux AppImage media support includes the GStreamer base/good plugins supplied by the build distribution. Additional proprietary codecs and GStreamer ugly plugins are not deliberately bundled.
 
+## Linux CUDA AppImage
+
+The separate NVIDIA build bundles CUDA Runtime and cuBLAS/cuBLASLt from CUDA Toolkit 12.8.1 under the [NVIDIA CUDA EULA](https://docs.nvidia.com/cuda/archive/12.8.1/eula/index.html). Exact component versions, official archive URLs, SHA-256 checksums and runtime SONAMEs are pinned in `models/cuda-linux.json`. The component license files accompany the libraries under `engine/cuda/licenses/`. The NVIDIA driver, driver stubs and compiler are not distributed in the AppImage. The Vulkan/CPU build contains no CUDA redistributables.
+
 ## Shared local title model
 
 - llama.cpp v0.7.0 (MIT): https://github.com/ggml-org/llama.cpp. The statically linked CPU-only `music-title` helper uses the pinned source revision and archive checksum in `models/title-model.json`. Its runtime checksums and build recipe are in `engine/title/TITLE_RUNTIME.json`; the llama.cpp/ggml and nlohmann/json MIT license texts accompany the helper.

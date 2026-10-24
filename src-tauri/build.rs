@@ -1,4 +1,12 @@
 fn main() {
+    println!("cargo:rerun-if-env-changed=MUSIC_GENERATOR_LINUX_BACKEND");
+    let linux_backend =
+        std::env::var("MUSIC_GENERATOR_LINUX_BACKEND").unwrap_or_else(|_| "vulkan".to_owned());
+    assert!(
+        matches!(linux_backend.as_str(), "vulkan" | "cuda"),
+        "MUSIC_GENERATOR_LINUX_BACKEND must be vulkan or cuda"
+    );
+    println!("cargo:rustc-env=MUSIC_GENERATOR_LINUX_BACKEND={linux_backend}");
     if std::env::var("PROFILE").as_deref() == Ok("release") {
         use sha2::{Digest, Sha256};
         let root = std::path::Path::new("resources/engine");
@@ -17,6 +25,12 @@ fn main() {
             metadata["platform"], platform,
             "Engine platform does not match build target"
         );
+        if platform == "linux" {
+            assert_eq!(
+                metadata["backend"], linux_backend,
+                "Wrong Linux engine backend"
+            );
+        }
         let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
         assert_eq!(
             metadata["arch"],
@@ -38,6 +52,10 @@ fn main() {
         let files = metadata["files"]
             .as_object()
             .expect("Engine file checksums missing");
+        assert!(
+            files.keys().all(|file| !file.starts_with("heartmula/")),
+            "Retired provider resources must not be bundled"
+        );
         assert!(
             files.contains_key(executable),
             "Engine executable missing from manifest"
