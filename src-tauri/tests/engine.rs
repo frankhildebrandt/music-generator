@@ -213,6 +213,7 @@ async fn generation_chains_lm_and_synthesis_and_preserves_parameters() {
             post(|Json(request): Json<Value>| async move {
                 assert_eq!(request["lm_model"], "test.gguf");
                 assert_eq!(request["caption"], "piano");
+                assert_eq!(request["peak_clip"], 0);
                 assert!(request.get("variants").is_none());
                 Json(json!({"id":"lm"}))
             }),
@@ -223,6 +224,7 @@ async fn generation_chains_lm_and_synthesis_and_preserves_parameters() {
                 assert_eq!(request["audio_codes"], "1,2,3");
                 assert_eq!(request["output_format"], "wav16");
                 assert_eq!(request["synth_model"], "sft.gguf");
+                assert_eq!(request["peak_clip"], 0);
                 Json(json!({"id":"synth"}))
             }),
         )
@@ -239,7 +241,10 @@ async fn generation_chains_lm_and_synthesis_and_preserves_parameters() {
                     if query["id"] == "lm" {
                         (
                             [(CONTENT_TYPE, "application/json")],
-                            serde_json::to_vec(&json!([{"audio_codes":"1,2,3","bpm":90}])).unwrap(),
+                            serde_json::to_vec(
+                                &json!([{"audio_codes":"1,2,3","bpm":90,"peak_clip":10}]),
+                            )
+                            .unwrap(),
                         )
                     } else {
                         (
@@ -256,9 +261,11 @@ async fn generation_chains_lm_and_synthesis_and_preserves_parameters() {
         axum::serve(listener, app).await.unwrap();
     });
     let client = EngineClient::new(base.clone(), base, 0.1, 1.0).unwrap();
+    let params = json!({"caption":"piano","variants":2,"inference_steps":50,"lm_temperature":1.0,"peak_clip":17});
+    let original = params.clone();
     let (audio, ext, meta) = client
         .generate(
-            &json!({"caption":"piano","variants":2}),
+            &params,
             "test.gguf",
             "sft.gguf",
             &CancellationToken::new(),
@@ -269,6 +276,8 @@ async fn generation_chains_lm_and_synthesis_and_preserves_parameters() {
     assert_eq!(audio, b"RIFF\x00\xff\x01");
     assert_eq!(ext, "wav");
     assert_eq!(meta["bpm"], 90);
+    assert_eq!(meta["peak_clip"], 0);
+    assert_eq!(params, original);
     task.abort();
 }
 

@@ -154,7 +154,8 @@ impl EngineClient {
             "guidance_scale",
             "use_cot_caption",
         ];
-        let mut request = json!({"output_format":"wav16", "lm_model": lm_file, "synth_model": dit});
+        // Normalize to the actual peak instead of clipping percentile outliers.
+        let mut request = json!({"output_format":"wav16", "peak_clip":0, "lm_model": lm_file, "synth_model": dit});
         for field in FIELDS {
             if let Some(value) = params
                 .get(field)
@@ -182,6 +183,7 @@ impl EngineClient {
         // saved song parameters remain unchanged.
         limit_audio_codes(&mut enriched, params);
         enriched["output_format"] = json!("wav16");
+        enriched["peak_clip"] = json!(0);
         enriched["synth_model"] = json!(dit);
         let log = self.synth_log.as_deref().map(SynthesisLog::capture);
         let result = self

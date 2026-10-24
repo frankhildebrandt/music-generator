@@ -1,9 +1,11 @@
-# Upstream synchronization — 2026-10-23
+# Upstream synchronization — 2026-10-24
 
-Base: rabbitfiremediacreation/music-generator `main` at `ad6c98d9561002dfcd0623ff454557b5f52d7eba` (2026-10-23). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
+Base: rabbitfiremediacreation/music-generator `main` at `854afb993db6fcef959303a594166600eb29c0aa` (checked 2026-10-24). This commit and its ancestors are merged into the desktop branch. Applicable Python/browser changes are implemented through Rust/Tauri; the Intel-Mac follow-up is scoped below.
 
 | Original changes | Desktop implementation |
 | --- | --- |
+| `13b6da4`: disable percentile peak clipping | Rust sends numeric `peak_clip: 0` to both `/lm` and `/synth`, overriding any different value returned by LM metadata. Only outgoing request/result metadata changes; stored parameters and existing audio files remain intact. Both pinned engine revisions already parse this option, so engine resources stay pinned |
+| `854afb9`: Git initialization compatible with older Git versions | Python Git updater remains removed. Desktop updates use GitHub bundle downloads and bundle replacement, so neither `git init -b` nor Git itself runs on the user's machine |
 | `eec07cf`: generation time excludes queue waiting | Add nullable `started_at` through an idempotent SQLite migration; atomically set it when claiming each queue attempt. Frontend uses started-to-finished time, falling back to the existing created-to-finished display for old songs. Stored parameter JSON and old timestamps remain unchanged. Imports preserve new timestamps and migrate only the staged copy of old libraries |
 | `ad6c98d`: Ubuntu CUDA compiler selection | Updated original installer remains in `docs/legacy/ubuntu.sh`; portable desktop users do not run an installer or CMake |
 | `b5b1670`: actionable timeout messages in twelve languages; Ubuntu/Mint Vulkan installer | Rust job timeout reports the phase, rounded elapsed minutes and settings guidance in German/English; the localized song-list summary also recognizes older German/English timeout messages. Timeout still cancels the engine job and remains distinct from user cancellation and memory errors. Updated Ubuntu script and original README are historical sources under `docs/legacy/`; Linux AppImage already bundles Vulkan/CPU. No changes to saved song parameters, schema or timeout settings/defaults |
@@ -17,6 +19,12 @@ Base: rabbitfiremediacreation/music-generator `main` at `ad6c98d9561002dfcd0623f
 | `eb19a98`: Intel-Mac CPU synthesis, installer GPU-test bypass and Python log-based memory hint | Initial merge `30929e2` kept the Python backend and root installer/start scripts deleted, preserving the updated original README/PDFs and guide sources. Experimental desktop Intel support follows separately in 0.2.4 (below); the Python log-tail error hint is not introduced |
 
 The `eb19a98` conflict resolution changes documentation only relative to desktop commit `0021f3c`. Application, engine, manifests and build configuration remain unchanged. The published `v0.2.3-test.1` artifacts still correspond to `0021f3c`; this documentation merge does not replace them.
+
+## Release 0.2.7 — 2026-10-24
+
+The generation contract test verifies `peak_clip: 0` at both endpoints, even when stored input contains a different value and the LM responds with the engine default of 10. It checks the complete input remains unchanged, alongside preserved sampling values and binary audio output. Existing library migration/import/retry regressions continue passing. Local checks: 47 Rust tests, fifteen frontend tests, one Node build-policy test, TypeScript/Vite, ESLint, Rustfmt and Clippy. Windows omits three Unix-only tests (44 Rust tests).
+
+Compatibility was checked against the pinned [b7ba6d9 request parser](https://github.com/ServeurpersoCom/acestep.cpp/blob/b7ba6d9ce2f19ca7627fb8f340032c3ebe8ae253/src/request.cpp), [normalization implementation](https://github.com/ServeurpersoCom/acestep.cpp/blob/b7ba6d9ce2f19ca7627fb8f340032c3ebe8ae253/src/audio-io.h) and [6013134 Windows request parser](https://github.com/ServeurpersoCom/acestep.cpp/blob/6013134/src/request.cpp). Peak normalization avoids this engine's percentile clipping; no new acoustic measurement or platform-wide inference result is claimed. Existing generated files are not processed again. Version 0.2.7 is built afresh; earlier releases remain unchanged.
 
 ## Release 0.2.6 follow-up — 2026-10-23
 
