@@ -1,4 +1,5 @@
 pub mod audio_export;
+pub mod catalog;
 mod commands;
 pub mod db;
 pub mod download;
@@ -9,6 +10,7 @@ pub mod hardware;
 pub mod import;
 pub mod library;
 pub mod manifest;
+mod model_commands;
 pub mod power;
 pub mod sandbox;
 pub mod setup;
@@ -90,7 +92,10 @@ pub fn run() {
             commands::export_file,
             commands::check_update,
             commands::exit_app,
-            commands::remember_folder
+            commands::remember_folder,
+            model_commands::model_catalog,
+            model_commands::use_models,
+            model_commands::cancel_model_download
         ])
         .build(tauri::generate_context!())
         .expect("Unable to start Music Generator");

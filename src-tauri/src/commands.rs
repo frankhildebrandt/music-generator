@@ -113,10 +113,25 @@ pub fn get_song(state: Desktop<'_>, id: String) -> Result<Song> {
 }
 
 #[tauri::command]
-pub fn generate(state: Desktop<'_>, app: AppHandle, request: GenerateRequest) -> Result<Value> {
+pub fn generate(state: Desktop<'_>, app: AppHandle, mut request: GenerateRequest) -> Result<Value> {
     if !state.ready.load(Ordering::SeqCst) || state.is_setting_up() {
         return Err(message("Complete model setup before generating music"));
     }
+    let settings = state.db.settings()?;
+    let selection = request
+        .model_selection
+        .clone()
+        .unwrap_or_else(|| crate::catalog::Selection::from_settings(&settings));
+    if !crate::catalog::cached(
+        &selection,
+        std::path::Path::new(&settings.models_dir),
+        &crate::verification::ModelVerifier::open(&state.db.root),
+    )? {
+        return Err(message(
+            "Open the ModelPicker and download or verify the selected models first",
+        ));
+    }
+    request.model_selection = Some(selection);
     let ids = state.db.enqueue(&request)?;
     state.wake.notify_one();
     state.changed(&app);
@@ -225,8 +240,10 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
             .as_str()
             .ok_or_else(|| message("Invalid synthesis model"))?
             .into();
+        settings.synthesis_model.clear();
     }
-    if settings.dit == "xl"
+    if settings.synthesis_model.is_empty()
+        && settings.dit == "xl"
         && !PathBuf::from(&settings.models_dir)
             .join("acestep-v15-xl-sft-Q8_0.gguf")
             .is_file()
@@ -268,7 +285,12 @@ pub async fn save_settings(state: Desktop<'_>, app: AppHandle, values: Value) ->
 }
 
 #[tauri::command]
-pub async fn analyze(state: Desktop<'_>, data: Vec<u8>, filename: String) -> Result<Value> {
+pub async fn analyze(
+    state: Desktop<'_>,
+    data: Vec<u8>,
+    filename: String,
+    selection: Option<crate::catalog::Selection>,
+) -> Result<Value> {
     if data.len() > 60 * 1024 * 1024 {
         return Err(message("Audio files must be smaller than 60 MB"));
     }
@@ -283,11 +305,21 @@ pub async fn analyze(state: Desktop<'_>, data: Vec<u8>, filename: String) -> Res
     if !state.ready.load(Ordering::SeqCst) {
         return Err(message("Complete model setup first"));
     }
-    let settings = state.db.settings()?;
+    let mut settings = state.db.settings()?;
+    if let Some(selection) = selection {
+        selection.apply(&mut settings)?;
+    }
     let cancel = state.shutdown.child_token();
     let engine = state.start_engine(&settings, &cancel).await?;
     let _awake = crate::power::KeepAwake::new();
-    engine.analyze(data, filename, &cancel).await
+    engine
+        .analyze(
+            data,
+            filename,
+            &crate::catalog::Selection::from_settings(&settings),
+            &cancel,
+        )
+        .await
 }
 
 #[tauri::command]

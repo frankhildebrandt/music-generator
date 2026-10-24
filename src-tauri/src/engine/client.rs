@@ -214,13 +214,14 @@ impl EngineClient {
         &self,
         data: Vec<u8>,
         filename: String,
+        models: &crate::catalog::Selection,
         cancel: &CancellationToken,
     ) -> Result<Value> {
         let part = reqwest::multipart::Part::bytes(data).file_name(filename);
         let request = self
             .http
             .post(format!("{}/understand", self.lm))
-            .multipart(reqwest::multipart::Form::new().part("audio", part));
+            .multipart(reqwest::multipart::Form::new().part("audio", part).text("request", json!({"lm_model":models.language,"synth_model":models.synthesis,"vae":"vae-BF16.gguf"}).to_string()));
         let (ctype, body) = self
             .operation(&self.lm, "understand", request, cancel, |_| {})
             .await?;

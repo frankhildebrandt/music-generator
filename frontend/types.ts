@@ -1,5 +1,6 @@
 export interface Settings {
   models_dir: string; songs_dir: string; lm_model: string; dit: "standard" | "xl";
+  model_provider: string; synthesis_model: string;
   lm_device: "auto" | "cpu"; export_format: "wav" | "mp3"; mp3_available?: boolean;
   cpu_only?: boolean;
   poll_interval: number; timeout_minutes: number; mode: "single" | "split";
@@ -7,6 +8,7 @@ export interface Settings {
   songs_dir_default?: string; dit_xl_available?: boolean;
 }
 export interface Generation {
+  model_selection?: ModelSelection;
   prompt?: string; style?: string; caption?: string; lyrics?: string; instrumental?: boolean;
   keep_caption?: boolean; title?: string; duration?: number; bpm?: number; keyscale?: string;
   timesignature?: string; vocal_language?: string; seed?: number; variants?: number;
@@ -33,3 +35,15 @@ export interface Bootstrap {
 }
 export interface SetupRequest { lm: string; xl: boolean; models_dir: string; songs_dir: string }
 export interface DownloadProgress { file: string; phase: "downloading" | "verifying"; downloaded: number; total: number; bytes_per_second: number }
+export interface ModelSelection { provider: string; synthesis: string; language: string }
+export interface CatalogModel {
+  file: string; provider: string; role: "synthesis" | "language" | "dependency"; family: string;
+  precision: string; estimated_bytes: number; sha256: string; recommended_steps: number | null;
+  verified: boolean; present: boolean; partial_bytes: number;
+}
+export interface ModelCatalog {
+  version: number; revision: string; models: CatalogModel[];
+  providers: { id: string; name: string; status: "available" | "planned"; adapter: string | null; source: string }[];
+  selection: ModelSelection; hardware: Bootstrap["hardware"]; free_bytes: number | null;
+  models_dir: string; busy: boolean;
+}

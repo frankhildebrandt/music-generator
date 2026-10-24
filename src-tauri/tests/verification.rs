@@ -18,6 +18,8 @@ async fn verified_models_are_reused_after_reopening_the_cache() {
         Verification::Hashed
     );
     let mut reopened = ModelVerifier::open(root.path());
+    assert!(reopened.is_verified(&file, ABC));
+    assert!(!reopened.is_verified(&file, &"0".repeat(64)));
     assert_eq!(
         reopened
             .verify(&file, ABC, &cancel, |_, _| panic!(
@@ -67,6 +69,7 @@ async fn changed_models_and_manifest_checksums_are_rechecked() {
                 .set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(2)),
         )
         .unwrap();
+    assert!(!ModelVerifier::open(root.path()).is_verified(&file, ABC));
     assert_eq!(
         ModelVerifier::open(root.path())
             .verify(&file, ABC, &cancel, |_, _| {})

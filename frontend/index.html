@@ -54,6 +54,7 @@
 
   <section class="card" aria-labelledby="genHeading">
     <h2 id="genHeading" class="sr-only" data-i18n="gen_heading">Neuer Song</h2>
+    <div class="model-bar"><div><span class="lbl" data-i18n="picker_title">Modelle</span><span id="currentModels" class="small" role="status"></span></div><button type="button" id="openModels" class="sek" data-i18n="picker_choose">Modelle wählen</button></div>
     <form id="genForm">
       <div class="field"><div class="lblrow"><span class="lbl" id="lblTitle" title="Nur zum Wiederfinden, hat keinen Einfluss auf die Musik." data-i18n-title="title_tip" data-i18n="title">Titel</span>
         <button type="button" id="titleDice" class="dice" title="Zufälligen Titel würfeln" aria-label="Zufälligen Titel würfeln" data-i18n-title="title_dice" data-i18n-aria="title_dice"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg></button></div>
@@ -114,7 +115,7 @@
         <div class="field adv"><span class="lbl" title="Diffusionsschritte der Klangerzeugung. Mehr = langsamer, App-Standard: 80 (Modell-Vorgabe: 50)." data-i18n-title="iterations_tip" data-i18n="iterations">Iterationen</span>
           <div class="slider" data-fmt="int">
             <div class="fill"></div><div class="knob"><span></span></div>
-            <input name="inference_steps" type="range" min="10" max="100" step="5" value="80" aria-label="Iterationen" data-i18n-aria="iterations">
+            <input name="inference_steps" type="range" min="1" max="200" step="1" value="80" aria-label="Iterationen" data-i18n-aria="iterations">
           </div>
         </div>
         <div class="field adv"><span class="lbl" title="Wie mutig das Sprachmodell den Song plant. Niedriger = vorhersehbar, höher = abwechslungsreicher, zu hoch = zerfahren (App-Standard: 1.2; Modell-Vorgabe: 0.85)." data-i18n-title="variance_tip" data-i18n="variance">Varianz</span>
@@ -207,10 +208,7 @@
     <label class="field"><span class="lbl" data-i18n="timeout">Timeout (Min.)</span>
       <input name="timeout_minutes" type="number" min="1" max="600">
     </label>
-    <label class="field"><span class="lbl" title="" data-i18n-title="dit_tip" data-i18n="dit">Klangmodell</span>
-      <select name="dit"><option value="standard" data-i18n="dit_standard">Standard</option><option value="xl" data-i18n="dit_xl">XL</option></select>
-      <span class="small" id="ditHint" hidden data-i18n="desktop_xl_missing"></span>
-    </label>
+    <div class="field"><button type="button" class="sek" id="settingsModelPicker" data-i18n="picker_choose">Modelle wählen</button></div>
     <label class="field"><span class="lbl" title="Gilt für Download und ZIP. In der Bibliothek bleibt immer das verlustfreie WAV; MP3 wird beim Download daraus gemacht (192 kbit/s)." data-i18n-title="exp_tip" data-i18n="exp">Export</span>
       <select name="export_format"><option value="wav" data-i18n="exp_wav">WAV (verlustfrei)</option><option value="mp3" data-i18n="exp_mp3">MP3 (kleiner)</option></select>
       <span class="small" id="expHint" hidden data-i18n="exp_no_mp3">MP3-Wandler nicht gefunden, nur WAV möglich.</span>
@@ -238,6 +236,29 @@
       <button value="save" id="saveBtn" class="aktion" data-i18n="save">SPEICHERN</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="modelPicker" aria-labelledby="modelPickerHeading">
+  <div class="model-picker-head"><h2 id="modelPickerHeading" data-i18n="picker_title">Modelle</h2><button type="button" id="modelClose" class="sek" data-i18n="desktop_close">Schließen</button></div>
+  <p id="modelHardware" class="small"></p>
+  <div class="picker-fields">
+    <label class="field"><span class="lbl" data-i18n="picker_provider">Anbieter</span><select id="modelProvider"></select></label>
+    <label class="check-row"><input type="checkbox" id="modelsCompatible" checked><span data-i18n="picker_compatible">Nur passende Modelle</span></label>
+    <label class="field"><span class="lbl" data-i18n="dit">Klangmodell</span><select id="modelSynthesis"></select></label>
+    <label class="field"><span class="lbl" data-i18n="desktop_language_model">Sprachmodell</span><select id="modelLanguage"></select></label>
+  </div>
+  <p id="modelProviderHint" class="box" data-i18n="picker_provider_hint" hidden>HeartMuLa ist vorbereitet. Der Engine-Adapter folgt.</p>
+  <p id="modelEstimate" class="small"></p>
+  <p id="modelMemoryHint" class="small" data-i18n="picker_memory_hint">RAM-Schätzung inklusive Basisdateien und Reserve. Lange Songs können mehr benötigen.</p>
+  <p id="modelRamWarning" class="setup-error" data-i18n="picker_low_ram" hidden>Zu wenig RAM für diese Kombination.</p>
+  <p id="modelCpuHint" class="small" data-i18n="desktop_intel_cpu_hint" hidden></p>
+  <p id="modelDependencies" class="small"></p>
+  <p id="modelFolder" class="small"></p>
+  <div class="model-step-row"><span id="modelStepHint" class="small"></span><button type="button" id="modelRecommended" class="sek" data-i18n="picker_steps">Empfohlene Iterationen übernehmen</button></div>
+  <p class="small" data-i18n="picker_sampling_hint">Modellwechsel ändern keine Sampling-Werte. Empfehlungen gelten nur per Klick für das Formular.</p>
+  <div id="modelProgressArea" hidden><progress id="modelProgress" aria-label="Download" data-i18n-aria="picker_download"></progress><p id="modelProgressText" class="small" role="status" aria-live="polite"></p></div>
+  <p id="modelError" class="setup-error" role="alert"></p>
+  <div class="model-picker-actions"><button type="button" id="modelHardwareTest" class="sek" data-i18n="desktop_manage">Modelle und Hardwaretest</button><button type="button" id="modelCancel" class="sek" data-i18n="cancel" hidden>Abbrechen</button><button type="button" id="modelApply" class="aktion" data-i18n="picker_use">Auswahl verwenden</button></div>
 </dialog>
 
 </main>
