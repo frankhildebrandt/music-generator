@@ -42,6 +42,14 @@ fn main() {
             files.contains_key(executable),
             "Engine executable missing from manifest"
         );
+        assert!(
+            files.contains_key(if platform == "windows" {
+                "mp3-codec.exe"
+            } else {
+                "mp3-codec"
+            }),
+            "Required MP3 codec missing from resources"
+        );
         let heart: serde_json::Value = serde_json::from_slice(
             &std::fs::read(root.join("heartmula/HEART_RUNTIME.json"))
                 .expect("HeartMuLa runtime missing: run npm run engine:prepare"),
