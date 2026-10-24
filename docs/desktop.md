@@ -100,7 +100,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 npm run bundle
 ```
 
-`release/` contains the platform bundle and its SHA-256 file. `npm run bundle` verifies/prepares the engine first. The Rust release build also refuses missing, mismatched or modified engine resources. `npm run build` builds only the frontend.
+`release/` contains the platform bundle and its SHA-256 file. `npm run bundle` verifies/prepares the engine first. The Rust release build also refuses missing, mismatched or modified engine resources, including the required MP3 codec and native title runtime. `npm run build` builds only the frontend.
 
 The preparation script builds the pinned Mac/Linux engine source revisions and checks the pinned Windows archive hash. The Mac revision adds the small `engine-sandbox.mm` bookmark bridge; its patch and build-recipe hashes are recorded alongside runtime-file hashes. Mac CPU code targets portable Apple Silicon or Intel variants and uses relative library paths. The app, supervisor and engine are signed from the inside out with separate parent/child entitlements. Linux builds Vulkan and CPU variants; the CI image installs build dependencies, users do not. Windows includes app-local Visual C++ runtime DLLs from the build tools' redistributable directory and a Fixed Version WebView2 runtime pinned in `models/webview2.json`. Updating that manifest requires downloading the official Microsoft CAB and verifying its checksum. Ship a new bundle to update the fixed browser runtime.
 
