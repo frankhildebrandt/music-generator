@@ -143,25 +143,13 @@ fn failed_titling_keeps_the_finished_audio_and_survives_restart() {
 }
 
 #[test]
-fn both_setup_providers_share_exactly_one_pinned_title_model() {
-    let base = music_generator::setup::SetupRequest {
-        selection: None,
-        lm: "0.6B".into(),
-        xl: false,
-        models_dir: "/models".into(),
-        songs_dir: "/songs".into(),
-    };
-    for selection in [
-        None,
-        Some(music_generator::catalog::Selection {
-            provider: "heartmula".into(),
-            synthesis: "heartmula-q8_0.gguf".into(),
-            language: "".into(),
-        }),
-    ] {
+fn starter_setup_includes_exactly_one_pinned_title_model() {
+    for xl in [false, true] {
         let plan = music_generator::setup::plan(&music_generator::setup::SetupRequest {
-            selection,
-            ..base.clone()
+            lm: "0.6B".into(),
+            xl,
+            models_dir: "/models".into(),
+            songs_dir: "/songs".into(),
         })
         .unwrap();
         let model = plan

@@ -1,6 +1,8 @@
-# Native HeartMuLa follow-up — 0.2.9 development, 2026-10-24
+# Desktop provider separation — 2026-10-24
 
-The published 0.2.8 files remain unchanged. The new native provider is documented in [heartmula.md](heartmula.md), including pinned runtime/model hashes and explicit verification limits. A genuine Q8_0 Metal run produced a nonempty 4.08-second stereo 48-kHz PCM WAV. Final native CI and in-app generation evidence are recorded in the PR. No Python/Node runtime was introduced.
+The desktop branch now contains ACE-Step music generation and the shared local title model. The provider-specific runtime, model catalog entries, setup controls, sampling, tests, build requirements and notices have been extracted from this branch. Realtime progress, automatic titles, model snapshots and existing saved-song behavior remain covered by the desktop suite.
+
+Local macOS validation after separation: TypeScript/Vite, ESLint, 28 frontend tests, one Node build-policy test, 65 Rust tests, Rustfmt and Clippy with warnings as errors passed. This split has not yet received new native Windows/Linux/Intel bundle or GUI acceptance; earlier results below describe their historical source versions.
 
 # ModelPicker follow-up — 0.2.8 development, 2026-10-24
 

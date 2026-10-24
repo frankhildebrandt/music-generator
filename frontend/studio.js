@@ -2,7 +2,7 @@ import { STYLE_TAGS, SECTIONS, randomPrompt, randomStyle, randomTitle } from "./
 import { extractStyleTags } from "./style-tags";
 import { measureMelody, describeIdea, toWav } from "./melody";
 import { backend } from "./backend";
-import { generationModels, restoreSongModels, heartOptions, restoreHeartOptions } from "./model-picker";
+import { generationModels, restoreSongModels } from "./model-picker";
 import { t, LANG, setLang } from "./i18n.js";
 import { exportSong, exportFolder } from "./exports";
 import { samplingForSong } from "./song-sampling";
@@ -136,7 +136,6 @@ function readForm() {
   const num = (k, def) => (d[k] === "" || d[k] == null ? def : Number(d[k]));
   return {
     model_selection: generationModels(),
-    heartmula_options: heartOptions(),
     folder_id: curFolder && curFolder !== "none" ? curFolder : null,
     title: d.title || "", prompt: d.prompt || "", style: d.style || "", lyrics: form.instrumental.checked ? "" : d.lyrics || "", instrumental: form.instrumental.checked, keep_caption: form.keep_caption.checked,
     duration: Number(form.duration.value), bpm: Number(form.bpm.value) <= Number(form.bpm.min) ? 0 : Number(form.bpm.value), keyscale: d.keyscale || "", timesignature: d.timesignature || "", vocal_language: form.instrumental.checked ? "" : d.vocal_language || "en",
@@ -148,10 +147,6 @@ function readForm() {
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!form.prompt.value.trim() && !form.style.value.trim()) { form.prompt.focus(); return; }
-  if(generationModels()?.provider==="heartmula") {
-    if(Number(form.duration.value)>240){alert(t("heart_duration"));return;}
-    if(!form.instrumental.checked&&!form.lyrics.value.trim()){alert(t("heart_lyrics"));$("#lyricsBox").open=true;form.lyrics.focus();return;}
-  }
   const btn = $("#genBtn");
   if (btn.disabled) return;
   btn.classList.remove("fired"); void btn.offsetWidth; btn.classList.add("fired");   // Animation auch bei Enter/Alt+G
@@ -177,7 +172,6 @@ function setSelect(sel, val, add = false) {
 function fillForm(s) {
   const p = s.params;
   restoreSongModels(p.model_selection);
-  restoreHeartOptions(p.heartmula_options);
   form.title.value = s.title || "";
   form.style.value = p.style ?? p.caption;   // ältere Songs haben nur einen Text
   form.prompt.value = p.prompt ?? ""; syncStyleChips();
@@ -217,7 +211,6 @@ async function analyzeFile(file, idea = null) {   // idea = Messwerte einer Mikr
   if (!file) return;
   dzState("busy", t("analyzing", file.name));
   try {
-    if(generationModels()?.provider==="heartmula")throw new Error(t("heart_analysis"));
     const r = await backend.analyze(file, generationModels());
     form.prompt.value = idea ? describeIdea(idea, r.caption, r.keyscale) : r.caption || "";
     // Keep explicit titles; blank titles are named from the finished song locally.
@@ -411,8 +404,8 @@ function render() {
     const title = (s.title || s.caption.split(",").slice(0, 3).join(",")) + (s.letter ? ` ${s.letter}` : "");
     const meta = [
       m.bpm && `${m.bpm}BPM`,
-      p.heartmula_options ? `${p.heartmula_options.codec_steps} Codec` : p.inference_steps ? `${p.inference_steps}IT` : null,
-      p.heartmula_options ? `${p.heartmula_options.temperature} TEMP` : p.lm_temperature != null ? `${(+p.lm_temperature).toFixed(1)}VAR` : null,
+      p.inference_steps ? `${p.inference_steps}IT` : null,
+      p.lm_temperature != null ? `${(+p.lm_temperature).toFixed(1)}VAR` : null,
       m.keyscale, m.duration && fmt(m.duration),
     ].filter(Boolean).join(" · ");
     const playing = s.id === currentId && ws?.isPlaying();
@@ -474,7 +467,7 @@ $("#library").addEventListener("click", async (e) => {
   if (a === "retry") await backend.retry(id);
   if (a === "more") {
     const p = s.params;
-    await backend.generate({ ...p, instrumental: p.model_selection?.provider==="heartmula" ? p.instrumental===true || p.lyrics==="[Instrumental]" : false, keep_caption: p.use_cot_caption !== true, title: s.title || "", seed: -1, variants: 1, group_id: s.group_id, folder_id: s.folder_id });
+    await backend.generate({ ...p, instrumental: false, keep_caption: p.use_cot_caption !== true, title: s.title || "", seed: -1, variants: 1, group_id: s.group_id, folder_id: s.folder_id });
   }
   if (a === "del") {
     // Löschen in zwei Klicks: erster Klick macht aus ✕ ein ?, zweiter Klick auf dieselbe Stelle löscht.

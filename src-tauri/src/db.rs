@@ -141,13 +141,6 @@ impl Database {
     }
 
     pub fn enqueue(&self, req: &GenerateRequest) -> Result<Vec<String>> {
-        if req
-            .model_selection
-            .as_ref()
-            .is_some_and(|m| m.provider == "heartmula")
-        {
-            crate::heartmula::validate(&serde_json::to_value(req)?)?;
-        }
         if !(1..=50).contains(&req.variants)
             || !req.duration.is_finite()
             || !(0.0..=600.0).contains(&req.duration)
@@ -248,12 +241,7 @@ impl Database {
     }
 
     pub fn finish(&self, sid: &str, file: &str, meta: &Value) -> Result<bool> {
-        let engine = if meta["provider"] == "heartmula" {
-            "heartmula_audio_cpp"
-        } else {
-            "acestep_cpp"
-        };
-        Ok(self.lock().execute("UPDATE songs SET status='done',message=NULL,file=?1,result_meta=?2,engine=?5,finished_at=?3,title=CASE WHEN title IS NULL OR trim(title)='' THEN COALESCE(?6,title) ELSE title END WHERE id=?4 AND status='running'", params![file, meta.to_string(), now(), sid, engine, meta["generated_title"].as_str().and_then(nonempty)])? == 1)
+        Ok(self.lock().execute("UPDATE songs SET status='done',message=NULL,file=?1,result_meta=?2,engine='acestep_cpp',finished_at=?3,title=CASE WHEN title IS NULL OR trim(title)='' THEN COALESCE(?5,title) ELSE title END WHERE id=?4 AND status='running'", params![file, meta.to_string(), now(), sid, meta["generated_title"].as_str().and_then(nonempty)])? == 1)
     }
 
     pub fn fail(&self, sid: &str, error: &str) -> Result<()> {

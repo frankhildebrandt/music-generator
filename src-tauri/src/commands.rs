@@ -40,7 +40,7 @@ pub async fn bootstrap(state: Desktop<'_>, app: AppHandle) -> Result<Value> {
         "Startup setup check finished"
     );
     Ok(
-        json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"catalog":crate::catalog::catalog(),"title_model":crate::titles::manifest().model,"error":null,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
+        json!({"needs_setup":needs_setup,"settings":settings,"hardware":hardware,"manifest":crate::manifest::manifest(),"title_model":crate::titles::manifest().model,"error":null,"version":env!("CARGO_PKG_VERSION"),"data_dir":state.db.root}),
     )
 }
 
@@ -132,14 +132,6 @@ pub fn generate(state: Desktop<'_>, app: AppHandle, mut request: GenerateRequest
         ));
     }
     request.model_selection = Some(selection);
-    if request
-        .model_selection
-        .as_ref()
-        .is_some_and(|m| m.provider == "heartmula")
-        && request.heartmula_options.is_none()
-    {
-        request.heartmula_options = Some(crate::heartmula::Options::default());
-    }
     let ids = state.db.enqueue(&request)?;
     state.wake.notify_one();
     state.changed(&app);
