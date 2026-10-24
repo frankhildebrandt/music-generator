@@ -7,11 +7,12 @@ export function profileModels(catalog: ModelCatalog, selection: ModelSelection):
 
 export function profile(catalog: ModelCatalog, selection: ModelSelection) {
   const models = profileModels(catalog, selection);
+  const provider = catalog.providers.find(p=>p.id===selection.provider);
   const valid = catalog.providers.some(p => p.id === selection.provider && p.status === "available") &&
     models.some(m => m.role === "synthesis" && m.file === selection.synthesis) &&
-    models.some(m => m.role === "language" && m.file === selection.language);
+    (provider?.integrated_language_model ? selection.language === "" : models.some(m => m.role === "language" && m.file === selection.language));
   const memory = models.reduce((n, m) => n + m.estimated_bytes, 0) +
-    (selection.synthesis.includes("-xl-") ? 4 : 3) * 1024 ** 3;
+    (provider?.memory_reserve_bytes ?? (selection.synthesis.includes("-xl-") ? 4 : 3) * 1024 ** 3);
   return {
     models, valid, memory, compatible: valid && memory <= catalog.hardware.ram_bytes,
     verified: valid && models.every(m => m.verified),

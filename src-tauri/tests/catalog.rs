@@ -21,7 +21,7 @@ fn pinned_catalog_covers_all_generation_variants_and_matches_starter_checksums()
         catalog
             .models
             .iter()
-            .filter(|m| m.role == "synthesis")
+            .filter(|m| m.provider == "ace-step" && m.role == "synthesis")
             .count(),
         52
     );
@@ -48,7 +48,7 @@ fn pinned_catalog_covers_all_generation_variants_and_matches_starter_checksums()
         assert!(model.estimated_bytes > 0);
         assert_eq!(model.sha256.len(), 64);
         assert!(model.sha256.chars().all(|c| c.is_ascii_hexdigit()));
-        if model.role == "synthesis" {
+        if model.role == "synthesis" && model.provider == "ace-step" {
             assert_eq!(
                 model.recommended_steps,
                 Some(if model.family.contains("turbo") {
@@ -71,7 +71,7 @@ fn pinned_catalog_covers_all_generation_variants_and_matches_starter_checksums()
 }
 
 #[test]
-fn provider_role_and_path_validation_cannot_route_unsupported_weights_to_ace_step() {
+fn provider_role_and_path_validation_cannot_route_heartmula_weights_to_ace_step() {
     let mut s = selection();
     assert_eq!(catalog::required(&s).unwrap().len(), 4);
     s.synthesis = "../acestep-v15-sft-Q8_0.gguf".into();
@@ -79,7 +79,7 @@ fn provider_role_and_path_validation_cannot_route_unsupported_weights_to_ace_ste
     s.synthesis = s.language.clone();
     assert!(catalog::required(&s).is_err());
     s = selection();
-    s.provider = "unsupported-provider".into();
+    s.provider = "heartmula".into();
     assert!(catalog::required(&s).is_err());
     let mut settings = Settings::default();
     let before = serde_json::to_value(&settings).unwrap();

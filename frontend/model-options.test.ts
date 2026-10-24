@@ -37,11 +37,17 @@ it("includes base dependencies, resumed bytes and verification in download readi
   expect(profile(c, s).verified).toBe(true);
 });
 
-it("never offers unknown providers or arbitrary filenames through the ACE-Step adapter", () => {
+it("rejects mixed provider assets and requires the integrated HeartMuLa profile", () => {
   const c = catalog();
-  expect(profile(c, { ...selection(), provider: "unsupported-provider" }).valid).toBe(false);
+  expect(profile(c, { ...selection(), provider: "heartmula" }).valid).toBe(false);
   expect(profile(c, { ...selection(), synthesis: "../model.gguf" }).valid).toBe(false);
-  expect(modelOptions(c, { ...selection(), provider: "unsupported-provider" }, "synthesis", false)).toEqual([]);
+  expect(modelOptions(c, { ...selection(), provider: "heartmula" }, "synthesis", false)).toHaveLength(2);
+  const heart = { provider: "heartmula", synthesis: "heartmula-q8_0.gguf", language: "" };
+  expect(profile(c, heart).valid).toBe(true);
+  expect(profile(c, heart).models).toHaveLength(1);
+  expect(profile(c, heart).compatible).toBe(false);
+  c.hardware.ram_bytes=32*1024**3;
+  expect(profile(c, heart).compatible).toBe(true);
 });
 
 it("provides turbo's eight steps without changing the caller's selection", () => {

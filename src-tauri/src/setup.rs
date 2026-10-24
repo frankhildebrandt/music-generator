@@ -17,6 +17,8 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SetupRequest {
+    #[serde(default)]
+    pub selection: Option<crate::catalog::Selection>,
     pub lm: String,
     pub xl: bool,
     pub models_dir: String,
@@ -24,13 +26,28 @@ pub struct SetupRequest {
 }
 
 pub fn plan(request: &SetupRequest) -> Result<Vec<(manifest::Model, String)>> {
-    let mut selected = manifest::selected(&request.lm, request.xl)?
-        .into_iter()
-        .map(|m| {
-            let url = format!("{}/{}", manifest::manifest().base_url, m.file);
-            (m, url)
-        })
-        .collect::<Vec<_>>();
+    let mut selected = if let Some(selection) = &request.selection {
+        if selection.provider != "heartmula" {
+            return Err(message("Invalid setup provider"));
+        }
+        let catalog = crate::catalog::catalog();
+        catalog
+            .required(selection)?
+            .into_iter()
+            .map(|m| {
+                let url = m.url(&catalog);
+                (m.download(), url)
+            })
+            .collect::<Vec<_>>()
+    } else {
+        manifest::selected(&request.lm, request.xl)?
+            .into_iter()
+            .map(|m| {
+                let url = format!("{}/{}", manifest::manifest().base_url, m.file);
+                (m, url)
+            })
+            .collect::<Vec<_>>()
+    };
     let title = crate::titles::manifest();
     selected.push((title.model, title.url));
     Ok(selected)
@@ -93,7 +110,7 @@ pub async fn configure(
         if !state.shutdown.is_cancelled()
             && models_valid(&state, &state.shutdown).await.unwrap_or(false)
         {
-            // Restore readiness; the engine starts lazily on the next operation.
+            // Both providers start lazily; HeartMuLa has no persistent ACE-Step server.
             state.restore_setup()?;
         }
     }
@@ -107,6 +124,14 @@ async fn configure_inner(
     cancel: &CancellationToken,
 ) -> Result<Value> {
     let selected = plan(request)?;
+    if let Some(selection) = &request.selection {
+        if !crate::heartmula::executable(&state.resources).is_file() {
+            return Err(message("Bundled HeartMuLa engine is missing"));
+        }
+        if !crate::catalog::compatible(selection, &hardware::inspect())? {
+            return Err(message("HeartMuLa exceeds the estimated RAM budget"));
+        }
+    }
     let models = PathBuf::from(&request.models_dir);
     let songs = PathBuf::from(&request.songs_dir);
     if !models.is_absolute() || !songs.is_absolute() {
@@ -156,20 +181,31 @@ async fn configure_inner(
     settings.models_dir = models.to_string_lossy().into();
     settings.vae_chunk = hw.vae_chunk;
     settings.mode = "single".into();
-    // The wizard deliberately returns to the supported starter profile.
-    crate::catalog::Selection {
-        provider: "ace-step".into(),
-        synthesis: if request.xl && settings.dit == "xl" {
-            "acestep-v15-xl-sft-Q8_0.gguf"
-        } else {
-            "acestep-v15-sft-Q8_0.gguf"
+    if let Some(selection) = &request.selection {
+        if !crate::catalog::compatible(selection, &hw)? {
+            return Err(message("HeartMuLa exceeds the estimated RAM budget"));
         }
-        .into(),
-        language: manifest::lm_file(&request.lm),
+        selection.apply(&mut settings)?;
+    } else {
+        // The wizard deliberately chooses an ACE-Step starter profile while
+        // remembering the previous provider selection before replacing it.
+        crate::catalog::Selection {
+            provider: "ace-step".into(),
+            synthesis: if request.xl && settings.dit == "xl" {
+                "acestep-v15-xl-sft-Q8_0.gguf"
+            } else {
+                "acestep-v15-sft-Q8_0.gguf"
+            }
+            .into(),
+            language: manifest::lm_file(&request.lm),
+        }
+        .apply(&mut settings)?;
     }
-    .apply(&mut settings)?;
     let fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
-    if hw.cpu_only {
+    if settings.model_provider == "heartmula" {
+        let _ = app.emit("setup-stage", "starting");
+        crate::heartmula::probe(&state.resources, cancel).await?;
+    } else if hw.cpu_only {
         // The Intel engine contains no GPU backend. A GPU correctness benchmark is
         // inapplicable and can take minutes on older CPUs; verify server readiness.
         let _ = app.emit("setup-stage", "starting");

@@ -56,6 +56,12 @@
     <h2 id="genHeading" class="sr-only" data-i18n="gen_heading">Neuer Song</h2>
     <div class="model-bar"><div><span class="lbl" data-i18n="picker_title">Modelle</span><span id="currentModels" class="small" role="status"></span></div><button type="button" id="openModels" class="sek" data-i18n="picker_choose">Modelle wählen</button></div>
     <form id="genForm">
+      <details id="heartControls" hidden open><summary>HeartMuLa</summary><p class="small" data-i18n="heart_hint"></p><div class="picker-fields">
+        <label class="field"><span class="lbl" data-i18n="heart_steps">Codec-Schritte</span><input id="heartSteps" type="number" min="1" max="100" value="10"></label>
+        <label class="field"><span class="lbl" data-i18n="heart_temperature">Temperatur</span><input id="heartTemperature" type="number" min="0.05" max="3" step="0.05" value="1"></label>
+        <label class="field"><span class="lbl">CFG</span><input id="heartCfg" type="number" min="0.1" max="10" step="0.1" value="1.5"></label>
+        <label class="field"><span class="lbl">Top-k</span><input id="heartTopK" type="number" min="1" max="1000" value="50"></label>
+      </div><p class="small" data-i18n="heart_cpu"></p></details>
       <div class="field"><div class="lblrow"><span class="lbl" id="lblTitle" title="Nur zum Wiederfinden, hat keinen Einfluss auf die Musik." data-i18n-title="title_tip" data-i18n="title">Titel</span>
         <button type="button" id="titleDice" class="dice" title="Zufälligen Titel würfeln" aria-label="Zufälligen Titel würfeln" data-i18n-title="title_dice" data-i18n-aria="title_dice"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg></button></div>
         <input name="title" aria-labelledby="lblTitle" placeholder="optional" data-i18n-ph="title_ph">
@@ -247,6 +253,7 @@
     <label class="field"><span class="lbl" data-i18n="dit">Klangmodell</span><select id="modelSynthesis"></select></label>
     <label class="field"><span class="lbl" data-i18n="desktop_language_model">Sprachmodell</span><select id="modelLanguage"></select></label>
   </div>
+  <p id="modelProviderHint" class="box" data-i18n="picker_provider_hint" hidden>HeartMuLa ist vorbereitet. Der Engine-Adapter folgt.</p>
   <p id="modelEstimate" class="small"></p>
   <p id="modelMemoryHint" class="small" data-i18n="picker_memory_hint">RAM-Schätzung inklusive Basisdateien und Reserve. Lange Songs können mehr benötigen.</p>
   <p id="modelRamWarning" class="setup-error" data-i18n="picker_low_ram" hidden>Zu wenig RAM für diese Kombination.</p>
