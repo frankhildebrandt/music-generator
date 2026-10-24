@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key><string>MusicGeneratorLoops</string>
+  <key>CFBundleIdentifier</key><string>de.alphatester-krgsh.app.MusicGeneratorLoops</string>
+  <key>CFBundleName</key><string>LoopForge</string>
+  <key>CFBundleDisplayName</key><string>LoopForge</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.2.2</string>
+  <key>CFBundleVersion</key><string>0.2.2</string>
+  <key>NSHumanReadableCopyright</key><string>Copyright 2026 Alphatester x KRGSH</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
+  <key>LSMinimumSystemVersion</key><string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+  <key>NSMainNibFile</key><string>MusicGeneratorLoops-macOS-MainMenu</string>
+  <key>NSPrincipalClass</key><string>SWELLApplication</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>

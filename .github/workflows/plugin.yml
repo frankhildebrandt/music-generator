@@ -1,0 +1,92 @@
+name: Loop plugins
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'plugin/**'
+      - 'crates/**'
+      - 'scripts/plugin/**'
+      - 'scripts/desktop/**'
+      - 'src-tauri/**'
+      - 'models/**'
+      - 'package*.json'
+      - '.github/workflows/plugin.yml'
+  push:
+    branches: ['main']
+    paths:
+      - 'plugin/**'
+      - 'crates/**'
+      - 'scripts/plugin/**'
+      - 'scripts/desktop/**'
+      - 'src-tauri/**'
+      - 'models/**'
+      - 'package*.json'
+      - '.github/workflows/plugin.yml'
+permissions:
+  contents: read
+concurrency:
+  group: loop-plugins-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            name: macos-arm64
+            arch: arm64
+          - os: macos-15-intel
+            name: macos-x64
+            arch: x64
+          - os: windows-2022
+            name: windows-x64
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            crates/music-core
+            crates/loops-service
+            src-tauri
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - name: Verify native architecture
+        run: node -e "if(process.arch !== '${{ matrix.arch }}') throw new Error('Wrong native architecture')"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - run: cargo fmt --manifest-path crates/music-core/Cargo.toml --check
+      - run: cargo fmt --manifest-path crates/loops-service/Cargo.toml --check
+      - run: cargo test --manifest-path crates/music-core/Cargo.toml --locked
+      - run: cargo clippy --manifest-path crates/music-core/Cargo.toml --locked --all-targets -- -D warnings
+      - run: cargo clippy --manifest-path crates/loops-service/Cargo.toml --locked --all-targets -- -D warnings
+      - run: cargo test --manifest-path crates/loops-service/Cargo.toml --locked
+      - name: Build standalone, VST3, CLAP, service and engine packages
+        run: npm run plugin:build
+      - name: Run native plugin validators
+        run: npm run plugin:validate
+      - name: Verify package checksums and signatures
+        run: npm run plugin:verify
+      - name: Check desktop compatibility
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Music-Generator-Loops-${{ matrix.name }}
+          path: |
+            release/Music-Generator-Loops-*.zip
+            release/Music-Generator-Loops-*.zip.sha256
+          if-no-files-found: error
+          compression-level: 0

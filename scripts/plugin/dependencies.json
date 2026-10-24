@@ -1,0 +1,12 @@
+{
+  "iplug2": "39ea73aafe6f62fa0b52b9c633d2a480f5abb353",
+  "clap": "a47f6badb49d948fd009998f28309cdab78979c9",
+  "clap_helpers": "a380c978f429103e08afc1d17e9efbf3e3c96ee2",
+  "vst3": "9fad9770f2ae8542ab1a548a68c1ad1ac690abe0",
+  "stretch": "88061fd4eda56a2353c5d65c74aa3f4ccf76f9da",
+  "linear": "7bb1c8f36794d6980080ce817c91f8da8fe56a66",
+  "json_url": "https://raw.githubusercontent.com/nlohmann/json/v3.12.0/single_include/nlohmann/json.hpp",
+  "json_sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63",
+  "graphics_mac_sha256": "9bcff0d33ac6e9aea9e1b69a6834e04b277d084ffb616e923cbbd11f7a5f67f9",
+  "graphics_win_sha256": "90c91ac8a487f10c848a580aab1895def42f7ad4193eaa491a4896f577d25e31"
+}

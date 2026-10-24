@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>MusicGeneratorLoops</string>
+	<key>CFBundleGetInfoString</key>
+	<string>MusicGeneratorLoops v0.2.2 Copyright 2026 Alphatester x KRGSH</string>
+	<key>CFBundleIdentifier</key>
+	<string>de.alphatester-krgsh.vst3.MusicGeneratorLoops</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>MusicGeneratorLoops</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.2.2</string>
+	<key>CFBundleSignature</key>
+	<string>MgLp</string>
+	<key>CFBundleVersion</key>
+	<string>0.2.2</string>
+	<key>CSResourcesFileMapped</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+</dict>
+</plist>

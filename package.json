@@ -13,7 +13,12 @@
     "engine:prepare": "node scripts/desktop/prepare-engine.mjs",
     "bundle": "node scripts/desktop/build.mjs",
     "tauri": "tauri",
-    "lint": "eslint frontend"
+    "lint": "eslint frontend",
+    "plugin:prepare": "node scripts/plugin/prepare.mjs",
+    "plugin:build": "node scripts/plugin/build.mjs",
+    "test:plugin": "cmake -S plugin -B plugin/build-test -DLOOPS_DSP_ONLY=ON -DCMAKE_BUILD_TYPE=Release && cmake --build plugin/build-test --config Release && ctest --test-dir plugin/build-test -C Release --output-on-failure",
+    "plugin:validate": "node scripts/plugin/validate.mjs",
+    "plugin:verify": "node scripts/plugin/verify.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.0",
