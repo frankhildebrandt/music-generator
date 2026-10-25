@@ -1,13 +1,17 @@
 use crate::error::{message, Result};
 use serde_json::{json, Value};
 
+const RELEASE_REPOSITORY: &str = "rabbitfiremediacreation/music-generator-desktop";
+
 pub async fn check() -> Result<Value> {
     let client = reqwest::Client::builder()
         .user_agent("music-generator-desktop")
         .timeout(std::time::Duration::from_secs(20))
         .build()?;
     let response = client
-        .get("https://api.github.com/repos/frankhildebrandt/music-generator/releases/latest")
+        .get(format!(
+            "https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/latest"
+        ))
         .send()
         .await?;
     if response.status() == reqwest::StatusCode::NOT_FOUND {
@@ -30,14 +34,18 @@ pub async fn check() -> Result<Value> {
             .iter()
             .find(|a| a["name"].as_str().is_some_and(|n| n.ends_with(suffix)))
     });
-    let url = asset
-        .and_then(|a| a["browser_download_url"].as_str())
-        .filter(|u| {
-            u.starts_with("https://github.com/frankhildebrandt/music-generator/releases/download/")
-        });
+    let url = asset.and_then(release_asset_url);
     Ok(
         json!({"available":version>current && url.is_some(),"current":current.to_string(),"latest":latest,"url":url,"notes":release["body"]}),
     )
+}
+
+fn release_asset_url(asset: &Value) -> Option<&str> {
+    asset["browser_download_url"].as_str().filter(|url| {
+        url.starts_with(&format!(
+            "https://github.com/{RELEASE_REPOSITORY}/releases/download/"
+        ))
+    })
 }
 
 fn asset_suffix(os: &str, arch: &str, linux_backend: &str) -> &'static str {
@@ -58,6 +66,21 @@ fn asset_suffix(os: &str, arch: &str, linux_backend: &str) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn update_links_are_limited_to_the_desktop_release_repository() {
+        for (url, accepted) in [
+            ("https://github.com/rabbitfiremediacreation/music-generator-desktop/releases/download/v0.3.0/Music-Generator-0.3.0-macos-arm64.zip", true),
+            ("https://github.com/frankhildebrandt/music-generator/releases/download/v0.3.0/app.zip", false),
+            ("https://github.com/rabbitfiremediacreation/music-generator/releases/download/v0.3.0/app.zip", false),
+            ("https://github.com/rabbitfiremediacreation/music-generator-desktop-fake/releases/download/v0.3.0/app.zip", false),
+            ("http://github.com/rabbitfiremediacreation/music-generator-desktop/releases/download/v0.3.0/app.zip", false),
+        ] {
+            let asset = serde_json::json!({ "browser_download_url": url });
+            assert_eq!(super::release_asset_url(&asset).is_some(), accepted, "{url}");
+        }
+        assert!(super::release_asset_url(&serde_json::json!({})).is_none());
+    }
+
     #[test]
     fn updates_select_the_correct_architecture() {
         assert_eq!(
