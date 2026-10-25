@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "base_url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a",
+  "models": [
+    {
+      "file": "vae-BF16.gguf",
+      "estimated_bytes": 356515840,
+      "sha256": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8",
+      "kind": "required"
+    },
+    {
+      "file": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+      "estimated_bytes": 817889280,
+      "sha256": "972f23255e46adfe744a0eb9a0039f3c63988f65753b0968d776e8b27168c321",
+      "kind": "required"
+    },
+    {
+      "file": "acestep-v15-sft-Q8_0.gguf",
+      "estimated_bytes": 2673868800,
+      "sha256": "17f1984e48aaab27b3eb8ccbf0b754a6656e677884c60ea7003845cfc0059b70",
+      "kind": "required"
+    },
+    {
+      "file": "acestep-v15-xl-sft-Q8_0.gguf",
+      "estimated_bytes": 5305794560,
+      "sha256": "d7b06fadab214375ef5ebcfa44bf4a10489ea364b119f5b9ecbcd870408bdab9",
+      "kind": "xl"
+    },
+    {
+      "file": "acestep-5Hz-lm-0.6B-Q8_0.gguf",
+      "estimated_bytes": 744488960,
+      "sha256": "bdaf9e292d4470f31c19cafeaca1b74936a114667e3a85e5d33b65247e9908ec",
+      "kind": "0.6B"
+    },
+    {
+      "file": "acestep-5Hz-lm-1.7B-Q8_0.gguf",
+      "estimated_bytes": 2076180480,
+      "sha256": "726f99a82f050b32ebc5c5e36acaa9d7acd06bfe5e579a62b00e0d0d6d0b7ec6",
+      "kind": "1.7B"
+    },
+    {
+      "file": "acestep-5Hz-lm-4B-Q8_0.gguf",
+      "estimated_bytes": 4676648960,
+      "sha256": "972f91147a167f0c041f1b158d67985a82c0f6a852e68cdf70e46030cf08b1bc",
+      "kind": "4B"
+    }
+  ],
+  "engines": {
+    "macos": {
+      "revision": "b7ba6d9-sandbox1",
+      "source_revision": "b7ba6d9ce2f19ca7627fb8f340032c3ebe8ae253",
+      "repository": "https://github.com/ServeurpersoCom/acestep.cpp"
+    },
+    "windows": {
+      "revision": "6013134",
+      "url": "https://github.com/rabbitfiremediacreation/music-generator/releases/download/engine-win64-6013134/acestep-cpp-win64-6013134.zip",
+      "sha256": "647f4ffd1cb2f2e20ac3d54e92a45ed83d3cf9278e55e8b4da1c788fbfb74ac2"
+    },
+    "linux": {
+      "revision": "b7ba6d9ce2f19ca7627fb8f340032c3ebe8ae253",
+      "repository": "https://github.com/ServeurpersoCom/acestep.cpp"
+    }
+  }
+}

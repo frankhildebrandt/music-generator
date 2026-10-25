@@ -1,0 +1,5 @@
+# Historical installer source
+
+The upstream [Ubuntu installer](ubuntu.sh) is archived here only as historical source for the former Python/browser application; do not use it for desktop bundles. The root installer scripts, Python runtime, old installation guides and their PDF-generation sources have been removed. The separate experimental Intel desktop bundle introduced in 0.2.4 replaces the former Intel-Mac/CPU installation workflow. For current instructions use [the desktop documentation](../desktop.md) and [the repository README](../../README.md).
+
+The upstream Mac installer correction through `822bf511d74b944adbab3fe50858ccd492291d88` (2026-10-24) switches its historical prebuilt archive to `engine-macos-arm64-b7ba6d9-2` (SHA-256 `95daee3a8c54b3edf1e390992e01581edb8a1f0c29971532397be36fc5c47951`) and checks that `mp3-codec` is present before reusing it. The desktop app builds/ships its own pinned codec and tests native MP3/ZIP export; no installer is restored. Release builds reject a missing codec.
