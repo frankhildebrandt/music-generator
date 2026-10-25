@@ -1,6 +1,7 @@
 pub mod client;
 pub mod device;
 mod diagnostics;
+pub(crate) mod manager;
 pub mod process;
 pub mod progress;
 use crate::{

@@ -93,6 +93,14 @@ If an engine job exceeds its time limit, the app cancels that job and reports th
 
 Since 0.2.6, the creation-time display measures each attempt from queue claim to completion, excluding waiting behind earlier variants. An additive nullable `started_at` column stores the start; old completed songs retain their previous display using the existing creation timestamp. Retry and restart recovery record a fresh start when the job is claimed. Existing generation parameters and timestamps are preserved during migration. Import supports both schema versions without changing the original library.
 
+## Rust architecture
+
+`AppState` composes the database, runtime and engine manager. `runtime.rs` owns operation admission, cancellation, configured readiness and job progress behind private fields. Its owned operation permit clears transient state on return, error or task cancellation. Configuration blocks new queue entries; generation still allows more songs to be queued. Stopping an engine does not clear completed setup. `engine/manager.rs` owns resident processes and timing updates; health checks clone the client before awaiting network responses. `jobs.rs` owns the generation worker.
+
+`configuration.rs` provides the shared setup/settings commit path. Commands supply native folder authorization and publish UI events; setup supplies downloaded and hardware-tested settings, while normal edits use a typed `SettingsPatch`. Both validate and authorize before copying songs, then save the complete settings in one SQLite transaction. `configuration/library_move.rs` owns copying and rollback, while the database supplies queries and persistence. Copy or commit failures remove only this attempt's new copies and preserve originals. Originals are removed only after the settings commit. This handles reported errors; it is not a crash-atomic transaction across SQLite and the filesystem.
+
+Blocking configuration work owns its operation permit until completion, even if the awaiting task is aborted. Tests exercise this with a blocked SQLite writer, plus authorization failure, SQL rollback, task cancellation, scoped cancellation and stable readiness. No schema migration or frontend command-name changes are required.
+
 ## Build
 
 Development needs Node.js 24+, stable Rust, and Tauri's native build prerequisites. End users do not need these tools.

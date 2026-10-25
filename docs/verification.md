@@ -1,3 +1,11 @@
+# Runtime and configuration encapsulation — 2026-10-25
+
+Runtime operation admission, cancellation, progress and configured readiness now have a single owner. Owned permits clean up on errors and task aborts; engine ownership and the generation worker are separate modules. Releasing engine memory preserves configured readiness. Setup and settings share validation, native folder authorization and a complete settings commit, with file copying and rollback outside the database and async executor.
+
+Local validation passed: **92 Rust tests, 28 frontend tests, 14 desktop-script tests, TypeScript/Vite, ESLint, Rustfmt and Clippy with warnings as errors**. Thirteen added Rust tests cover exclusive admission, scoped cancellation, shutdown, aborted async/blocking callers, settings authorization and validation failures, SQLite rollback, and engine timing/device updates. The six setup commit regressions now exercise the shared configuration path. Startup and folder-collision integration tests use the encapsulated APIs.
+
+The Rust suite ran outside the agent execution sandbox for loopback servers and the nested macOS sandbox regression. No new packaged GUI or real-model inference run is claimed; the PR push triggers the configured macOS ARM bundle CI.
+
 # PR #1 review regressions — 2026-10-25
 
 The three review findings are fixed:

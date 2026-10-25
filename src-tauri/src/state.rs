@@ -1,40 +1,18 @@
 use crate::{
     db::Database,
-    engine::{client::EngineClient, progress::Progress, Engine},
+    engine::{client::EngineClient, manager::EngineManager},
     error::{message, Result},
+    runtime::{Operation, OperationKind, Runtime},
     types::Settings,
 };
-use std::{
-    path::PathBuf,
-    sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
-        Arc, Mutex,
-    },
-};
+use std::{path::PathBuf, sync::Arc};
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Notify;
-use tokio_util::sync::CancellationToken;
-
-#[derive(Clone, serde::Serialize)]
-pub struct JobProgress {
-    pub job_id: String,
-    pub sequence: u64,
-    #[serde(flatten)]
-    pub progress: Progress,
-}
 
 pub struct AppState {
     pub db: Arc<Database>,
     pub resources: PathBuf,
-    pub engine: tokio::sync::Mutex<Option<Engine>>,
-    pub operation: tokio::sync::Mutex<()>,
-    pub running: Mutex<Option<(String, CancellationToken)>>,
-    pub setup_cancel: Mutex<Option<CancellationToken>>,
-    pub shutdown: CancellationToken,
-    pub ready: AtomicBool,
-    pub progress: Mutex<Option<JobProgress>>,
-    progress_sequence: AtomicU64,
-    pub wake: Notify,
+    pub runtime: Arc<Runtime>,
+    engine: EngineManager,
 }
 
 impl AppState {
@@ -42,15 +20,8 @@ impl AppState {
         Self {
             db: Arc::new(db),
             resources,
-            engine: tokio::sync::Mutex::new(None),
-            operation: tokio::sync::Mutex::new(()),
-            running: Mutex::new(None),
-            setup_cancel: Mutex::new(None),
-            shutdown: CancellationToken::new(),
-            ready: AtomicBool::new(false),
-            progress: Mutex::new(None),
-            progress_sequence: AtomicU64::new(0),
-            wake: Notify::new(),
+            runtime: Arc::new(Runtime::default()),
+            engine: EngineManager::default(),
         }
     }
 
@@ -58,261 +29,60 @@ impl AppState {
         let _ = app.emit("library-changed", ());
     }
 
-    pub fn report_progress(&self, app: &AppHandle, sid: &str, progress: Progress) {
-        let _ = self.db.progress(sid, &progress.message());
-        let update = JobProgress {
-            job_id: sid.into(),
-            sequence: self.progress_sequence.fetch_add(1, Ordering::SeqCst),
-            progress,
-        };
-        *self.progress.lock().unwrap() = Some(update.clone());
-        let _ = app.emit("generation-progress", update);
-    }
-
-    // Restore the durable wizard result without reading models or starting the engine.
+    // Restore durable configuration without starting or scanning the engine.
     pub fn restore_setup(&self) -> Result<bool> {
         let complete = self.db.settings()?.setup_complete;
-        self.ready.store(complete, Ordering::SeqCst);
-        if complete {
-            self.wake.notify_one();
-        }
+        self.runtime.set_configured(complete);
         Ok(complete)
     }
 
     pub async fn start_engine(
         &self,
+        operation: &Operation,
         settings: &Settings,
-        cancel: &CancellationToken,
     ) -> Result<EngineClient> {
+        if !operation.belongs_to(&self.runtime) {
+            return Err(message("Operation belongs to another runtime"));
+        }
         if settings.model_provider != "ace-step" {
             return Err(message("Audio analysis is only available with ACE-Step. Choose ACE-Step in the ModelPicker"));
         }
-        let mut engine = self.engine.lock().await;
-        if settings.setup_complete
-            && !self.is_setting_up()
-            && !crate::setup::models_valid_for(self, settings, cancel).await?
-        {
-            return Err(message(
-                "Models are missing or invalid. Open Models and hardware test in Settings.",
-            ));
-        }
-        if engine.as_mut().is_some_and(Engine::alive) {
-            return Ok(engine.as_ref().unwrap().client.clone());
-        }
-        engine.take();
-        let started = Engine::start(
-            &self.resources,
-            &self.db.root.join("logs"),
-            settings,
-            cancel,
-        )
-        .await?;
-        let client = started.client.clone();
-        *engine = Some(started);
-        Ok(client)
-    }
-
-    pub async fn stop_engine(&self) {
-        self.ready.store(false, Ordering::SeqCst);
-        self.engine.lock().await.take();
-    }
-
-    pub fn cancel(&self, sid: &str) {
-        if let Some((running, token)) = self.running.lock().unwrap().as_ref() {
-            if running == sid {
-                token.cancel();
+        let cancel = operation.cancellation();
+        if settings.setup_complete && operation.kind() != OperationKind::Setup {
+            let mut verifier = crate::verification::ModelVerifier::open(&self.db.root);
+            if !crate::catalog::verify(
+                &crate::catalog::Selection::from_settings(settings),
+                std::path::Path::new(&settings.models_dir),
+                &mut verifier,
+                &cancel,
+            )
+            .await?
+            {
+                return Err(message(
+                    "Models are missing or invalid. Open Models and hardware test in Settings.",
+                ));
             }
         }
+        self.engine
+            .start(
+                &self.resources,
+                &self.db.root.join("logs"),
+                settings,
+                &cancel,
+            )
+            .await
     }
 
-    pub fn is_setting_up(&self) -> bool {
-        self.setup_cancel.lock().unwrap().is_some()
+    pub fn stop_engine(&self) {
+        self.engine.stop();
     }
-
+    pub(crate) fn apply_engine_settings(&self, before: &Settings, after: &Settings) {
+        self.engine.apply_settings(before, after);
+    }
+    pub async fn health(&self) -> serde_json::Value {
+        self.engine.health(self.runtime.is_ready()).await
+    }
     pub fn begin_shutdown(&self) {
-        self.shutdown.cancel();
-        if let Some((_, token)) = self.running.lock().unwrap().as_ref() {
-            token.cancel();
-        }
-        if let Some(token) = self.setup_cancel.lock().unwrap().as_ref() {
-            token.cancel();
-        }
-        self.wake.notify_one();
+        self.runtime.shutdown();
     }
-}
-
-pub async fn worker(state: Arc<AppState>, app: AppHandle) {
-    loop {
-        let wake = state.wake.notified();
-        if state.shutdown.is_cancelled() {
-            break;
-        }
-        if !state.ready.load(Ordering::SeqCst) {
-            tokio::select! { _ = state.shutdown.cancelled() => break, _ = wake => continue }
-        }
-        let operation = state.operation.lock().await;
-        if state.shutdown.is_cancelled() {
-            break;
-        }
-        if !state.ready.load(Ordering::SeqCst) {
-            drop(operation);
-            continue;
-        }
-        let next = match state.db.claim_next() {
-            Ok(next) => next,
-            Err(e) => {
-                tracing::error!("Queue: {e}");
-                None
-            }
-        };
-        let Some((sid, params)) = next else {
-            drop(operation);
-            tokio::select! { _ = state.shutdown.cancelled() => break, _ = wake => continue }
-        };
-        let cancel = state.shutdown.child_token();
-        *state.running.lock().unwrap() = Some((sid.clone(), cancel.clone()));
-        if state.db.song(&sid).is_ok_and(|s| s.status != "running") {
-            cancel.cancel();
-        }
-        state.report_progress(&app, &sid, Progress::new("starting"));
-        state.changed(&app);
-        let _awake = crate::power::KeepAwake::new();
-        let outcome = async {
-            let mut settings = state.db.settings()?;
-            // New jobs carry an immutable model snapshot. Legacy rows remain untouched.
-            if let Some(selection) = params.get("model_selection").filter(|v| !v.is_null()) {
-                let selection: crate::catalog::Selection =
-                    serde_json::from_value(selection.clone())?;
-                selection.apply(&mut settings)?;
-            }
-            let selection = crate::catalog::Selection::from_settings(&settings);
-            let progress = |progress: Progress| {
-                state.report_progress(&app, &sid, progress);
-            };
-            // Existing installations lazily fetch only this shared model for blank titles.
-            // Explicit titles require neither a title download nor title inference.
-            if state
-                .db
-                .song(&sid)?
-                .title
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .is_empty()
-            {
-                state.report_progress(&app, &sid, Progress::new("title_download"));
-                crate::titles::install(
-                    &state.db.root,
-                    std::path::Path::new(&settings.models_dir),
-                    &cancel,
-                    |p| {
-                        let _ = app.emit("model-download-progress", p);
-                    },
-                )
-                .await?;
-                let _ = app.emit("models-changed", ());
-            }
-            let (audio, ext, mut meta) = {
-                let client = state.start_engine(&settings, &cancel).await?;
-                client
-                    .generate(
-                        &params,
-                        &selection.language,
-                        &selection.synthesis,
-                        &cancel,
-                        progress,
-                    )
-                    .await?
-            };
-            if state
-                .db
-                .song(&sid)?
-                .title
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .is_empty()
-            {
-                // Free resident music weights before loading the CPU-only text model.
-                state.stop_engine().await;
-                state.restore_setup()?;
-                state.report_progress(&app, &sid, Progress::new("title"));
-                let input = crate::titles::request(&params, &meta);
-                match crate::titles::generate(
-                    &state.resources,
-                    &state.db.root,
-                    std::path::Path::new(&settings.models_dir),
-                    &input,
-                    &cancel,
-                    progress,
-                )
-                .await
-                {
-                    Ok(title) => {
-                        meta["generated_title"] = serde_json::json!(title);
-                        meta["title_model"] = serde_json::json!(crate::titles::manifest().revision);
-                    }
-                    Err(crate::error::Error::Cancelled) => {
-                        return Err(crate::error::Error::Cancelled)
-                    }
-                    Err(error) => {
-                        tracing::warn!("Automatic title: {error}");
-                        meta["title_generation_error"] = serde_json::json!(error.to_string());
-                    }
-                }
-            }
-            state.report_progress(&app, &sid, Progress::new("saving"));
-            let dir = PathBuf::from(settings.songs_dir);
-            tokio::fs::create_dir_all(&dir).await?;
-            let filename = format!("{sid}.{ext}");
-            let path = dir.join(&filename);
-            let temp = dir.join(format!("{sid}.part"));
-            tokio::fs::write(&temp, audio).await?;
-            if cancel.is_cancelled() {
-                let _ = tokio::fs::remove_file(temp).await;
-                return Err(crate::error::Error::Cancelled);
-            }
-            tokio::fs::rename(&temp, &path).await?;
-            if !state.db.finish(&sid, &filename, &meta)? {
-                let _ = tokio::fs::remove_file(path).await;
-            }
-            Ok::<_, crate::error::Error>(())
-        }
-        .await;
-        *state.progress.lock().unwrap() = None;
-        *state.running.lock().unwrap() = None;
-        if let Err(error) = outcome {
-            if !state.shutdown.is_cancelled() {
-                let _ = state.db.fail(&sid, &error.to_string());
-            }
-        }
-        state.changed(&app);
-        drop(operation);
-    }
-    state.stop_engine().await;
-}
-
-pub fn validate_settings(settings: &Settings) -> Result<()> {
-    if !["auto", "cpu"].contains(&settings.lm_device.as_str()) {
-        return Err(message("Unknown language model device"));
-    }
-    if !["wav", "mp3"].contains(&settings.export_format.as_str()) {
-        return Err(message("Unknown export format"));
-    }
-    if !settings.poll_interval.is_finite()
-        || !(0.1..=60.0).contains(&settings.poll_interval)
-        || !settings.timeout_minutes.is_finite()
-        || !(1.0..=600.0).contains(&settings.timeout_minutes)
-    {
-        return Err(message("Invalid timeout or poll interval"));
-    }
-    if !["standard", "xl"].contains(&settings.dit.as_str()) {
-        return Err(message("Unknown synthesis model"));
-    }
-    for path in [&settings.models_dir, &settings.songs_dir] {
-        if !std::path::Path::new(path).is_absolute() {
-            return Err(message("Select an absolute data folder"));
-        }
-    }
-    Ok(())
 }

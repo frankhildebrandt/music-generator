@@ -1,6 +1,7 @@
 pub mod audio_export;
 pub mod catalog;
 mod commands;
+pub mod configuration;
 pub mod db;
 pub mod download;
 pub mod engine;
@@ -8,10 +9,12 @@ pub mod error;
 pub mod exports;
 pub mod hardware;
 pub mod import;
+mod jobs;
 pub mod library;
 pub mod manifest;
 mod model_commands;
 pub mod power;
+pub mod runtime;
 pub mod sandbox;
 pub mod setup;
 pub mod state;
@@ -67,7 +70,7 @@ pub fn run() {
             };
             let state = Arc::new(state::AppState::new(db::Database::open(&root)?, resources));
             app.manage(state.clone());
-            tauri::async_runtime::spawn(state::worker(state, app.handle().clone()));
+            tauri::async_runtime::spawn(jobs::worker(state, app.handle().clone()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -112,7 +115,7 @@ pub fn run() {
         if let tauri::RunEvent::Exit = event {
             let state = app.state::<Arc<state::AppState>>();
             state.begin_shutdown();
-            tauri::async_runtime::block_on(state.stop_engine());
+            state.stop_engine();
             #[cfg(target_os = "macos")]
             sandbox::shutdown();
         }

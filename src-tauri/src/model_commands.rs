@@ -1,6 +1,7 @@
 use crate::{
     catalog::{self, Selection},
     error::{message, Result},
+    runtime::OperationKind,
     state::AppState,
     verification::ModelVerifier,
 };
@@ -39,7 +40,7 @@ pub fn model_catalog(state: State<'_, Arc<AppState>>) -> Result<Value> {
     result["hardware"] = json!(crate::hardware::inspect());
     result["free_bytes"] = json!(fs2::available_space(root).ok());
     result["models_dir"] = json!(settings.models_dir);
-    result["busy"] = json!(state.operation.try_lock().is_err());
+    result["busy"] = json!(state.runtime.is_busy());
     Ok(result)
 }
 
@@ -51,10 +52,7 @@ pub async fn use_models(
     app: AppHandle,
     selection: Selection,
 ) -> Result<Selection> {
-    let _operation = state
-        .operation
-        .try_lock()
-        .map_err(|_| message("Please wait for the current generation, analysis or download"))?;
+    let operation = state.runtime.try_begin(OperationKind::Models)?;
     let settings = state.db.settings()?;
     if !settings.setup_complete {
         return Err(message("Complete the first-run assistant first"));
@@ -66,21 +64,17 @@ pub async fn use_models(
             "This model combination exceeds the estimated RAM budget. Choose smaller models",
         ));
     }
-    let cancel = state.shutdown.child_token();
-    *state.setup_cancel.lock().unwrap() = Some(cancel.clone());
+    let cancel = operation.cancellation();
     // Stopping first releases resident model memory and refreshes the engine's file
     // registry on the next generation, including newly downloaded models.
-    state.stop_engine().await;
+    state.stop_engine();
     let outcome =
         catalog::install_profile(&catalog::catalog(), &state.db, &selection, &cancel, |p| {
             let _ = app.emit("model-download-progress", p);
         })
         .await
         .map(|()| selection);
-    *state.setup_cancel.lock().unwrap() = None;
-    if !state.shutdown.is_cancelled() {
-        state.restore_setup()?;
-    }
+    drop(operation);
     let _ = app.emit("models-changed", ());
     state.changed(&app);
     outcome
@@ -88,25 +82,19 @@ pub async fn use_models(
 
 #[tauri::command]
 pub fn cancel_model_download(state: State<'_, Arc<AppState>>) {
-    if let Some(cancel) = state.setup_cancel.lock().unwrap().as_ref() {
-        cancel.cancel();
-    }
+    state.runtime.cancel_configuration();
 }
 
 /// Shared auxiliary model; installing it never switches the active music profile.
 #[tauri::command]
 pub async fn download_title_model(state: State<'_, Arc<AppState>>, app: AppHandle) -> Result<()> {
-    let _operation = state
-        .operation
-        .try_lock()
-        .map_err(|_| message("Please wait for the current generation, analysis or download"))?;
+    let operation = state.runtime.try_begin(OperationKind::Models)?;
     let settings = state.db.settings()?;
     if !settings.setup_complete {
         return Err(message("Complete the first-run assistant first"));
     }
-    let cancel = state.shutdown.child_token();
-    *state.setup_cancel.lock().unwrap() = Some(cancel.clone());
-    state.stop_engine().await;
+    let cancel = operation.cancellation();
+    state.stop_engine();
     let outcome = crate::titles::install(
         &state.db.root,
         Path::new(&settings.models_dir),
@@ -116,10 +104,7 @@ pub async fn download_title_model(state: State<'_, Arc<AppState>>, app: AppHandl
         },
     )
     .await;
-    *state.setup_cancel.lock().unwrap() = None;
-    if !state.shutdown.is_cancelled() {
-        state.restore_setup()?;
-    }
+    drop(operation);
     let _ = app.emit("models-changed", ());
     outcome
 }

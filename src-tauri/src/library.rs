@@ -1,11 +1,10 @@
 use crate::{
-    db::{safe_song_path, Database},
+    db::Database,
     error::{message, Result},
     types::{id, now},
 };
 use rusqlite::params;
 use serde_json::{json, Value};
-use std::path::Path;
 
 impl Database {
     pub fn folders(&self) -> Result<Value> {
@@ -59,56 +58,12 @@ impl Database {
         )
     }
 
-    pub fn change_songs_dir(&self, new: &Path) -> Result<()> {
-        if !new.is_absolute() {
-            return Err(message("Please select an absolute folder"));
-        }
-        if self.busy()? {
-            return Err(message(
-                "Finish or cancel queued songs before changing folders",
-            ));
-        }
-        std::fs::create_dir_all(new)?;
-        let old = std::path::PathBuf::from(self.settings()?.songs_dir);
-        if old.canonicalize().ok() == new.canonicalize().ok() {
-            return Ok(());
-        }
+    pub(crate) fn audio_files(&self) -> Result<Vec<String>> {
         let con = self.lock();
         let mut stmt = con.prepare("SELECT file FROM songs WHERE file IS NOT NULL")?;
         let files = stmt
             .query_map([], |r| r.get::<_, String>(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        drop(stmt);
-        drop(con);
-        let mut copied = Vec::new();
-        let result = (|| -> Result<()> {
-            for name in &files {
-                let src = safe_song_path(&old, name)?;
-                let dest = safe_song_path(new, name)?;
-                if dest.exists() {
-                    return Err(message(format!("Destination already contains {name}")));
-                }
-                if src.is_file() {
-                    std::fs::copy(&src, &dest)?;
-                    copied.push(dest);
-                }
-            }
-            let mut settings = self.settings()?;
-            settings.songs_dir = new.to_string_lossy().into();
-            self.save_settings(&settings)?;
-            Ok(())
-        })();
-        if result.is_err() {
-            for path in copied {
-                let _ = std::fs::remove_file(path);
-            }
-        } else {
-            for name in files {
-                if let Ok(path) = safe_song_path(&old, &name) {
-                    let _ = std::fs::remove_file(path);
-                }
-            }
-        }
-        result
+        Ok(files)
     }
 }

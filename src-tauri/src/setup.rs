@@ -1,8 +1,10 @@
 use crate::{
+    configuration::Change,
     download::{download_model, ensure_space},
     engine::client::selftest_ok,
     error::{message, Result},
     hardware, manifest,
+    runtime::{Operation, OperationKind},
     state::AppState,
     types::Settings,
     verification::ModelVerifier,
@@ -11,9 +13,8 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
     path::{Path, PathBuf},
-    sync::{atomic::Ordering, Arc},
+    sync::Arc,
 };
-use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -48,65 +49,36 @@ pub fn fingerprint(lm: &str, gpu: &str) -> String {
     )
 }
 
-pub async fn models_valid(state: &AppState, cancel: &CancellationToken) -> Result<bool> {
-    let settings = state.db.settings()?;
-    models_valid_for(state, &settings, cancel).await
-}
-
-pub async fn models_valid_for(
-    state: &AppState,
-    settings: &crate::types::Settings,
-    cancel: &CancellationToken,
-) -> Result<bool> {
-    if !settings.setup_complete {
-        return Ok(false);
-    }
-    let mut verifier = ModelVerifier::open(&state.db.root);
-    crate::catalog::verify(
-        &crate::catalog::Selection::from_settings(settings),
-        Path::new(&settings.models_dir),
-        &mut verifier,
-        cancel,
-    )
-    .await
-}
-
 pub async fn configure(
     state: Arc<AppState>,
-    app: AppHandle,
     request: SetupRequest,
+    progress: impl Fn(crate::download::DownloadProgress) + Sync,
+    stage: impl Fn(&str) + Sync,
+    authorize: impl FnOnce(&Path) -> Result<()>,
 ) -> Result<Value> {
-    let _operation = state
-        .operation
-        .try_lock()
-        .map_err(|_| message("Please wait for the current operation to finish"))?;
-    if state.is_setting_up() {
-        return Err(message("Setup is already running"));
-    }
-    let cancel = state.shutdown.child_token();
-    *state.setup_cancel.lock().unwrap() = Some(cancel.clone());
-    state.stop_engine().await;
-    let outcome = configure_inner(&state, &app, &request, &cancel).await;
-    *state.setup_cancel.lock().unwrap() = None;
-    if outcome.is_err() {
-        state.stop_engine().await;
-        // Cancelling model management must not disable an already working installation.
-        if !state.shutdown.is_cancelled()
-            && models_valid(&state, &state.shutdown).await.unwrap_or(false)
-        {
-            // Restore readiness; the engine starts lazily on the next operation.
-            state.restore_setup()?;
-        }
-    }
-    outcome
+    let change = Change::begin(state.clone(), OperationKind::Setup)?;
+    let cancel = change.cancellation();
+    let settings = prepare_configuration(
+        &state,
+        change.operation(),
+        &request,
+        &cancel,
+        &progress,
+        &stage,
+    )
+    .await?;
+    let settings = change.commit(async { Ok(settings) }, authorize).await?;
+    Ok(json!({"ok":true,"mode":settings.mode}))
 }
 
-async fn configure_inner(
+async fn prepare_configuration(
     state: &AppState,
-    app: &AppHandle,
+    operation: &Operation,
     request: &SetupRequest,
     cancel: &CancellationToken,
-) -> Result<Value> {
+    progress: &impl Fn(crate::download::DownloadProgress),
+    stage: &impl Fn(&str),
+) -> Result<Settings> {
     let selected = plan(request)?;
     let models = PathBuf::from(&request.models_dir);
     let songs = PathBuf::from(&request.songs_dir);
@@ -137,9 +109,15 @@ async fn configure_inner(
         .build()?;
     let mut verifier = ModelVerifier::open(&state.db.root);
     for (model, url) in selected {
-        download_model(&client, &url, &models, &model, &mut verifier, cancel, |p| {
-            let _ = app.emit("setup-progress", p);
-        })
+        download_model(
+            &client,
+            &url,
+            &models,
+            &model,
+            &mut verifier,
+            cancel,
+            progress,
+        )
         .await?;
     }
     crate::titles::probe(&state.resources, cancel).await?;
@@ -167,39 +145,29 @@ async fn configure_inner(
     }
     .apply(&mut settings)?;
     settings.tested_fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
-    let settings = commit_configuration(
-        &state.db,
-        test_hardware(state, app, settings, hw.cpu_only, cancel),
-        cancel,
-        |songs| {
-            app.asset_protocol_scope()
-                .allow_directory(songs, false)
-                .map_err(|e| message(e.to_string()))
-        },
-    )
-    .await?;
-    state.ready.store(true, Ordering::SeqCst);
-    state.wake.notify_one();
-    state.changed(app);
-    Ok(json!({"ok":true,"mode":settings.mode}))
+    let mut settings =
+        test_hardware(state, operation, settings, hw.cpu_only, cancel, stage).await?;
+    settings.setup_complete = true;
+    Ok(settings)
 }
 
 async fn test_hardware(
     state: &AppState,
-    app: &AppHandle,
+    operation: &Operation,
     mut settings: Settings,
     cpu_only: bool,
     cancel: &CancellationToken,
+    stage: &impl Fn(&str),
 ) -> Result<Settings> {
     if cpu_only {
         // The Intel engine contains no GPU backend. A GPU correctness benchmark is
         // inapplicable and can take minutes on older CPUs; verify server readiness.
-        let _ = app.emit("setup-stage", "starting");
-        state.start_engine(&settings, cancel).await?;
+        stage("starting");
+        state.start_engine(operation, &settings).await?;
     } else {
-        let _ = app.emit("setup-stage", "testing");
+        stage("testing");
         let test = json!({"caption":"calm ambient pad, soft piano","lyrics":"[Instrumental]","duration":10,"vocal_language":"unknown","seed":42,"lm_model":settings.lm_model});
-        let accelerated = state.start_engine(&settings, cancel).await;
+        let accelerated = state.start_engine(operation, &settings).await;
         let mut okay = false;
         if let Ok(mut engine) = accelerated {
             engine.timeout = std::time::Duration::from_secs(300);
@@ -212,10 +180,10 @@ async fn test_hardware(
             return Err(crate::error::Error::Cancelled);
         }
         if !okay {
-            state.stop_engine().await;
+            state.stop_engine();
             settings.mode = "split".into();
-            let _ = app.emit("setup-stage", "cpu-fallback");
-            let mut engine = state.start_engine(&settings, cancel).await?;
+            stage("cpu-fallback");
+            let mut engine = state.start_engine(operation, &settings).await?;
             engine.timeout = std::time::Duration::from_secs(300);
             if !selftest_ok(&engine.language_model(&test, cancel, |_| {}).await?) {
                 return Err(message(
@@ -226,30 +194,3 @@ async fn test_hardware(
     }
     Ok(settings)
 }
-
-// Validate first, then grant playback access before committing any library move.
-async fn commit_configuration(
-    db: &crate::db::Database,
-    tested: impl std::future::Future<Output = Result<Settings>>,
-    cancel: &CancellationToken,
-    allow_songs: impl FnOnce(&Path) -> Result<()>,
-) -> Result<Settings> {
-    let mut settings = tested.await?;
-    if cancel.is_cancelled() {
-        return Err(crate::error::Error::Cancelled);
-    }
-    let songs = Path::new(&settings.songs_dir);
-    allow_songs(songs)?;
-    if cancel.is_cancelled() {
-        return Err(crate::error::Error::Cancelled);
-    }
-    if Path::new(&db.settings()?.songs_dir) != songs {
-        db.change_songs_dir(songs)?;
-    }
-    settings.setup_complete = true;
-    db.save_settings(&settings)?;
-    Ok(settings)
-}
-
-#[cfg(test)]
-mod tests;

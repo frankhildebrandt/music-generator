@@ -236,8 +236,8 @@ fn direct_lookup_and_export_work_beyond_the_display_limit() {
     assert_eq!(db.song(&first).unwrap().id, first);
 }
 
-#[test]
-fn folder_move_rolls_back_on_collision() {
+#[tokio::test]
+async fn folder_move_rolls_back_on_collision() {
     let root = tempfile::tempdir().unwrap();
     let db = Database::open(root.path()).unwrap();
     let sid = db.enqueue(&request()).unwrap()[0].clone();
@@ -252,7 +252,20 @@ fn folder_move_rolls_back_on_collision() {
     // Complete/cancel other queued variants before a move.
     let next = db.claim_next().unwrap().unwrap().0;
     db.cancel_or_delete(&next).unwrap();
-    assert!(db.change_songs_dir(&new).is_err());
+    let state = std::sync::Arc::new(music_generator::state::AppState::new(
+        db,
+        root.path().join("resources"),
+    ));
+    let patch = music_generator::configuration::SettingsPatch {
+        songs_dir: Some(new.to_string_lossy().into()),
+        ..Default::default()
+    };
+    assert!(
+        music_generator::configuration::save(state.clone(), patch, |_| Ok(()))
+            .await
+            .is_err()
+    );
+    let db = &state.db;
     assert_eq!(db.settings().unwrap().songs_dir, old.to_string_lossy());
     assert_eq!(std::fs::read(new.join("one.wav")).unwrap(), b"other");
 }
