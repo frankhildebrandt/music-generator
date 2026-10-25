@@ -1,3 +1,13 @@
+# PR #1 review regressions — 2026-10-25
+
+The three review findings are fixed:
+
+- Windows version detection parses the build separately from its update revision. Representative Windows 10 outputs such as `10.0.19045.6456` activate the fixed-WebView2 ACL path; Windows 11, older Windows and invalid output do not. The regression failed before the parser fix and passes afterwards.
+- macOS ZIP export stages archives in Foundation's same-volume item replacement directory, then moves or replaces only the selected destination. Temporary storage is cleaned on success and failure. A macOS `sandbox-exec` regression grants writes to exactly one destination while denying writes to its siblings: creating and replacing the ZIP succeed, and a failed export preserves the existing ZIP. This test failed with the former sibling `.part` file. It models save-panel filesystem permissions; it does not drive a GUI save panel.
+- Reconfiguration finishes the hardware test and grants playback access before moving the song folder. Tests retain existing audio/settings after test failure, cancellation during/following the test, and denied playback access; successful setup grants access before moving and saving. Setup without a folder change still accepts existing queued jobs.
+
+Local validation passed: **79 Rust tests, 28 frontend tests, 14 desktop-script tests, TypeScript/Vite, ESLint, Rustfmt and Clippy with warnings as errors**. The Rust suite runs outside the agent's execution sandbox to permit its loopback HTTP servers and the nested macOS filesystem-sandbox test. Windows GUI startup and a packaged-app save-panel check were not repeated locally; the new push triggers the configured macOS ARM bundle CI.
+
 # Separate Linux CUDA build and ACE-Step-only application — 2026-10-25
 
 The Linux matrix now has independent Vulkan/CPU and NVIDIA CUDA/CPU jobs. The existing `linux-x64.AppImage` name is preserved; CUDA uses `linux-x64-cuda.AppImage`. Target flags, runtime provenance, cache keys, release-build validation and embedded update selection distinguish the variants. CUDA Toolkit 12.8.1 compiler components and Runtime/cuBLAS/cuBLASLt redistributables are pinned to official archive SHA-256 values in `models/cuda-linux.json`. The CUDA build disables direct VMM driver linkage and uses an explicit SM list, so the configured build and CPU package checks do not require a GPU or driver installation.

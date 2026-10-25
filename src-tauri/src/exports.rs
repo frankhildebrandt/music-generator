@@ -1,12 +1,13 @@
 use crate::{
     db::Database,
     error::{message, Result},
-    types::id,
 };
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
+
+mod staging;
 
 impl Database {
     pub fn export_audio(&self, sid: &str, destination: &Path) -> Result<()> {
@@ -59,52 +60,46 @@ impl Database {
         sources: &HashMap<String, PathBuf>,
     ) -> Result<()> {
         let ids = self.export_song_ids(folder)?;
-        let temp = destination.with_extension(format!("{}.part", id()));
-        let outcome = (|| -> Result<()> {
-            let mut zip = zip::ZipWriter::new(std::fs::File::create(&temp)?);
-            let options = zip::write::SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored);
-            let mut names = HashSet::new();
-            for sid in ids {
-                let song = self.song(&sid)?;
-                let Some(original) = song.path else {
-                    continue;
-                };
-                let path = sources
-                    .get(&sid)
-                    .cloned()
-                    .unwrap_or_else(|| PathBuf::from(original));
-                let mut file = std::fs::File::open(&path)?;
-                let title = clean_name(song.title.as_deref().unwrap_or(&song.caption));
-                let base = format!(
-                    "{}{}",
-                    title,
-                    if song.letter.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" {}", song.letter)
-                    }
-                );
-                let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("wav");
-                let mut name = format!("{base}.{ext}");
-                if !names.insert(name.to_lowercase()) {
-                    name = format!("{base}-{}.{ext}", song.id);
-                    names.insert(name.to_lowercase());
+        let temp = staging::StagedExport::new(destination)?;
+        let mut zip = zip::ZipWriter::new(std::fs::File::create(temp.path())?);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        let mut names = HashSet::new();
+        for sid in ids {
+            let song = self.song(&sid)?;
+            let Some(original) = song.path else {
+                continue;
+            };
+            let path = sources
+                .get(&sid)
+                .cloned()
+                .unwrap_or_else(|| PathBuf::from(original));
+            let mut file = std::fs::File::open(&path)?;
+            let title = clean_name(song.title.as_deref().unwrap_or(&song.caption));
+            let base = format!(
+                "{}{}",
+                title,
+                if song.letter.is_empty() {
+                    String::new()
+                } else {
+                    format!(" {}", song.letter)
                 }
-                zip.start_file(name, options)
-                    .map_err(|e| message(e.to_string()))?;
-                std::io::copy(&mut file, &mut zip)?;
+            );
+            let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("wav");
+            let mut name = format!("{base}.{ext}");
+            if !names.insert(name.to_lowercase()) {
+                name = format!("{base}-{}.{ext}", song.id);
+                names.insert(name.to_lowercase());
             }
-            zip.finish()
-                .map_err(|e| message(e.to_string()))?
-                .sync_all()?;
-            std::fs::rename(&temp, destination)?;
-            Ok(())
-        })();
-        if outcome.is_err() {
-            let _ = std::fs::remove_file(temp);
+            zip.start_file(name, options)
+                .map_err(|e| message(e.to_string()))?;
+            std::io::copy(&mut file, &mut zip)?;
         }
-        outcome
+        zip.finish()
+            .map_err(|e| message(e.to_string()))?
+            .sync_all()?;
+        temp.commit(destination)?;
+        Ok(())
     }
 }
 

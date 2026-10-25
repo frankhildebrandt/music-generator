@@ -4,6 +4,7 @@ use crate::{
     error::{message, Result},
     hardware, manifest,
     state::AppState,
+    types::Settings,
     verification::ModelVerifier,
 };
 use serde::Deserialize;
@@ -148,9 +149,6 @@ async fn configure_inner(
             "Finish or cancel queued songs before moving the song folder",
         ));
     }
-    if Path::new(&settings.songs_dir) != songs {
-        state.db.change_songs_dir(&songs)?;
-    }
     let hw = hardware::inspect();
     settings.songs_dir = songs.to_string_lossy().into();
     settings.models_dir = models.to_string_lossy().into();
@@ -168,8 +166,32 @@ async fn configure_inner(
         language: manifest::lm_file(&request.lm),
     }
     .apply(&mut settings)?;
-    let fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
-    if hw.cpu_only {
+    settings.tested_fingerprint = fingerprint(&settings.lm_model, &hw.gpu);
+    let settings = commit_configuration(
+        &state.db,
+        test_hardware(state, app, settings, hw.cpu_only, cancel),
+        cancel,
+        |songs| {
+            app.asset_protocol_scope()
+                .allow_directory(songs, false)
+                .map_err(|e| message(e.to_string()))
+        },
+    )
+    .await?;
+    state.ready.store(true, Ordering::SeqCst);
+    state.wake.notify_one();
+    state.changed(app);
+    Ok(json!({"ok":true,"mode":settings.mode}))
+}
+
+async fn test_hardware(
+    state: &AppState,
+    app: &AppHandle,
+    mut settings: Settings,
+    cpu_only: bool,
+    cancel: &CancellationToken,
+) -> Result<Settings> {
+    if cpu_only {
         // The Intel engine contains no GPU backend. A GPU correctness benchmark is
         // inapplicable and can take minutes on older CPUs; verify server readiness.
         let _ = app.emit("setup-stage", "starting");
@@ -202,17 +224,32 @@ async fn configure_inner(
             }
         }
     }
-    app.asset_protocol_scope()
-        .allow_directory(&songs, false)
-        .map_err(|e| message(e.to_string()))?;
+    Ok(settings)
+}
+
+// Validate first, then grant playback access before committing any library move.
+async fn commit_configuration(
+    db: &crate::db::Database,
+    tested: impl std::future::Future<Output = Result<Settings>>,
+    cancel: &CancellationToken,
+    allow_songs: impl FnOnce(&Path) -> Result<()>,
+) -> Result<Settings> {
+    let mut settings = tested.await?;
     if cancel.is_cancelled() {
         return Err(crate::error::Error::Cancelled);
     }
-    settings.tested_fingerprint = fingerprint;
+    let songs = Path::new(&settings.songs_dir);
+    allow_songs(songs)?;
+    if cancel.is_cancelled() {
+        return Err(crate::error::Error::Cancelled);
+    }
+    if Path::new(&db.settings()?.songs_dir) != songs {
+        db.change_songs_dir(songs)?;
+    }
     settings.setup_complete = true;
-    state.db.save_settings(&settings)?;
-    state.ready.store(true, Ordering::SeqCst);
-    state.wake.notify_one();
-    state.changed(app);
-    Ok(json!({"ok":true,"mode":settings.mode}))
+    db.save_settings(&settings)?;
+    Ok(settings)
 }
+
+#[cfg(test)]
+mod tests;
