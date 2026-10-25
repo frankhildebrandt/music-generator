@@ -6,7 +6,7 @@ Lokale Musikgenerierung als rahmenlose **Tauri-Desktop-App** für macOS, Windows
 
 ## Projektstatus
 
-**Stand: 25. Oktober 2026 · Entwicklungsstand: 0.2.9** (siehe [`package.json`](package.json) und [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json)). Die Anwendung nutzt inzwischen Tauri, Rust und eine TypeScript-/JavaScript-Oberfläche. Der frühere Python-Webserver mit Installations- und ON/OFF-Skripten ist abgelöst.
+**Stand: 25. Oktober 2026 · Entwicklungsstand: 0.1.0** (siehe [`package.json`](package.json) und [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json)). Die Anwendung nutzt inzwischen Tauri, Rust und eine TypeScript-/JavaScript-Oberfläche. Der frühere Python-Webserver mit Installations- und ON/OFF-Skripten ist abgelöst.
 
 ACE-Step ist die unterstützte Musikmodellfamilie. Der aktuelle Stand enthält eine Modellauswahl direkt im Studio, automatische lokale Songtitel, Echtzeit-Fortschritt und native Audio-/Text-/ZIP-Exporte. Die Versionsangabe beschreibt den Quellcode; verfügbare Downloads können einen anderen Stand haben.
 
