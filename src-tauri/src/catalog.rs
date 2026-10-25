@@ -135,7 +135,7 @@ impl Catalog {
     }
 }
 
-/// Called under AppState.operation so downloads, verification and profile writes
+/// Called while holding a runtime operation permit so downloads, verification and profile writes
 /// cannot race setup, analysis, another activation or an engine job.
 pub async fn install_profile(
     catalog: &Catalog,

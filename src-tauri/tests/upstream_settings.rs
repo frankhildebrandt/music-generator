@@ -1,4 +1,4 @@
-use music_generator::{db::Database, state::validate_settings};
+use music_generator::{configuration::validate_settings, db::Database};
 
 #[test]
 fn device_export_and_timeout_survive_restart_without_overwriting_fallback() {
