@@ -18,13 +18,9 @@ pub fn configure_runtime() {
         .creation_flags(0x08000000)
         .output()
         .ok();
-    let windows10 = version.as_ref().is_some_and(|o| {
-        String::from_utf8_lossy(&o.stdout)
-            .split(|c: char| !c.is_ascii_digit() && c != '.')
-            .filter_map(|v| v.strip_prefix("10.0."))
-            .filter_map(|v| v.parse::<u32>().ok())
-            .any(|build| build < 22000)
-    });
+    let windows10 = version
+        .as_ref()
+        .is_some_and(|o| is_windows_10(&String::from_utf8_lossy(&o.stdout)));
     if windows10 {
         for identity in ["*S-1-15-2-2:(OI)(CI)(RX)", "*S-1-15-2-1:(OI)(CI)(RX)"] {
             let _ = Command::new("icacls.exe")
@@ -36,4 +32,41 @@ pub fn configure_runtime() {
     }
     // Called before creating Tauri threads or webviews.
     std::env::set_var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", runtime);
+}
+
+#[cfg(any(windows, test))]
+fn is_windows_10(version: &str) -> bool {
+    version
+        .split(|c: char| !c.is_ascii_digit() && c != '.')
+        .filter_map(|v| v.strip_prefix("10.0."))
+        .filter_map(|v| v.split('.').next())
+        .filter_map(|v| v.parse::<u32>().ok())
+        .any(|build| build < 22000)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn windows_10_builds_with_update_revisions_need_runtime_permissions() {
+        for output in [
+            "Microsoft Windows [Version 10.0.19045.6456]\r\n",
+            "Microsoft Windows [Version 10.0.17763.0]",
+            "Microsoft Windows [Version 10.0.19045]",
+        ] {
+            assert!(super::is_windows_10(output), "{output}");
+        }
+    }
+
+    #[test]
+    fn windows_11_older_windows_and_invalid_output_do_not_match() {
+        for output in [
+            "Microsoft Windows [Version 10.0.22000.0]",
+            "Microsoft Windows [Version 10.0.26100.1]",
+            "Microsoft Windows [Version 6.3.9600]",
+            "Microsoft Windows [Version 10.0.invalid]",
+            "",
+        ] {
+            assert!(!super::is_windows_10(output), "{output}");
+        }
+    }
 }
