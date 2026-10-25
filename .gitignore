@@ -1,5 +1,5 @@
 # Vom Installer erzeugt oder heruntergeladen
-engine/
+/engine/
 .venv/
 *.lnk
 
@@ -13,3 +13,57 @@ __pycache__/
 
 # Quelldatei des Logos (die App nutzt static/alphatester.png)
 274_Alphatester_Schrift.png
+
+# Desktop build output and downloaded runtime resources
+node_modules/
+dist/
+release/
+.cache/
+target/
+src-tauri/gen/
+src-tauri/resources/engine/*
+!src-tauri/resources/engine/.gitkeep
+src-tauri/resources/WebView2/
+
+# Native / CMake build output
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+_deps/
+build.ninja
+.ninja_deps
+.ninja_log
+
+# Compiled binaries, libraries, debug symbols and bundles
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.dSYM/
+*.app/
+*.vst3/
+*.clap
+*.component/
+*.dmg
+*.AppImage
+
+# TypeScript incremental builds and test output
+*.tsbuildinfo
+coverage/
+.nyc_output/
+*.profraw
+*.profdata
