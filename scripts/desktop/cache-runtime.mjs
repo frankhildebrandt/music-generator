@@ -18,7 +18,7 @@ export async function runtimeCacheKey(buildTarget = target) {
   digest.update(JSON.stringify(manifest.engines[buildTarget.platform]));
   const inputs = ["models/title-model.json", "scripts/desktop/common.mjs", "scripts/desktop/prepare-title.mjs", "scripts/desktop/engine-sandbox.mm", "src-tauri/Engine.entitlements"];
   if (buildTarget.platform === "windows") inputs.push("models/webview2.json");
-  inputs.push(...await files(path.join(root, "scripts/desktop/title-runtime")), ...await files(path.join(root, "scripts/desktop/licenses")));
+  inputs.push(...await files(path.join(root, "scripts/desktop/title-runtime")));
   for (const file of inputs.sort()) digest.update(await readFile(path.isAbsolute(file) ? file : path.join(root, file)));
   return `desktop-runtime-v2-${buildTarget.platform}-${buildTarget.arch}-${buildTarget.backend || "native"}-${digest.digest("hex")}`;
 }
